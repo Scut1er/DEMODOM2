@@ -34,6 +34,7 @@ namespace RealityDirector.Util
         static Sprite _iconTear;
         static Sprite _iconDevil;
         static Sprite _iconFamily;
+        static Sprite _iconClap;
 
         public static Sprite Wood => Live(ref _wood, () => Floor(false, false));
         public static Sprite Tile => Live(ref _tile, () => Floor(true, false));
@@ -65,6 +66,7 @@ namespace RealityDirector.Util
         public static Sprite IconTear => Live(ref _iconTear, PaintIconTear);
         public static Sprite IconDevil => Live(ref _iconDevil, PaintIconDevil);
         public static Sprite IconFamily => Live(ref _iconFamily, PaintIconFamily);
+        public static Sprite IconClap => Live(ref _iconClap, PaintIconClap);
 
         // ??= сравнивает ссылку и не видит уничтоженный Unity-объект после выхода из Play Mode.
         static Sprite Live(ref Sprite slot, System.Func<Sprite> paint)
@@ -464,6 +466,22 @@ namespace RealityDirector.Util
             p.Ellipse(38, 30, 2, 3, ink);
             p.Line(24, 20, 32, 16, ink, 2);
             p.Line(32, 16, 40, 20, ink, 2);
+            return p.Bake();
+        }
+
+        static Sprite PaintIconClap()
+        {
+            var p = new Pix(64, 64, true);
+            var board = new Color(0.96f, 0.93f, 0.86f, 1f);
+            var ink = new Color(0.1f, 0.09f, 0.1f, 1f);
+            var stripe = new Color(0.96f, 0.93f, 0.86f, 1f);
+            p.Round(6, 8, 52, 34, board);
+            p.Rect(12, 16, 40, 3, new Color(0.72f, 0.66f, 0.56f, 1f));
+            p.Rect(12, 24, 30, 3, new Color(0.72f, 0.66f, 0.56f, 1f));
+            p.Round(4, 38, 56, 16, ink);
+            p.Line(8, 42, 20, 52, stripe, 5);
+            p.Line(22, 42, 34, 52, stripe, 5);
+            p.Line(36, 42, 48, 52, stripe, 5);
             return p.Bake();
         }
 

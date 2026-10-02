@@ -42,7 +42,6 @@ namespace RealityDirector
         NPCController _dobryak;
         readonly List<NPCController> _cast = new List<NPCController>();
         EventDefinition _armed;
-        bool _endQueued;
         bool _inputLock;
         float _rumble;
         bool _panning;
@@ -561,7 +560,6 @@ namespace RealityDirector
 
         void ResetSet()
         {
-            _endQueued = false;
             _inputLock = false;
             _armed = null;
             _context.Reset();
@@ -578,6 +576,7 @@ namespace RealityDirector
             _ui.ClearSlots();
             _handUntil = 0f;
             _ui.SetHandLocked(false);
+            _ui.SetWrapReady(false);
         }
 
         void ArmAt(int index)
@@ -931,7 +930,7 @@ namespace RealityDirector
                 if (_capture.Moments.Count == 0)
                     return "Space — кадр. Пустой угол съест слот, зрители это не любят.";
                 if (_capture.IsFull)
-                    return "Кадры сняты. Можно закрыть серию.";
+                    return "Слоты полные. Карты ещё можно кидать. Хлопушка закроет серию.";
                 return "Кадр есть. Сними ещё или жми «Конец серии».";
             }
 
@@ -954,6 +953,8 @@ namespace RealityDirector
                 return "Злой на взводе. Теперь «Поджог» на холодильник.";
             if (_fridge.IsOnFire)
                 return "Ждут, кто заметит огонь. Ближний подойдёт первым.";
+            if (_capture.IsFull)
+                return "Слоты полные. Карты ещё можно кидать. Хлопушка — конец серии.";
             if (_capture.Moments.Count > 0)
                 return "Можно снять ещё или закрыть серию.";
             return "Карты внизу. C — камера, Space — кадр.";
@@ -1022,8 +1023,8 @@ namespace RealityDirector
             _shake.Punch(0.05f, 0.08f);
             Sfx.Play(Cue.Shutter, 0.8f);
             StartCoroutine(HitStop());
-            if (_capture.IsFull && !_endQueued)
-                StartCoroutine(AutoEnd());
+            if (_capture.IsFull)
+                _ui.SetWrapReady(true);
         }
 
         void OnFight(NPCController a, NPCController b)
@@ -1046,13 +1047,6 @@ namespace RealityDirector
             if (_phase == PitchPhase.Play)
                 Time.timeScale = 1f;
             _inputLock = false;
-        }
-
-        IEnumerator AutoEnd()
-        {
-            _endQueued = true;
-            yield return new WaitForSecondsRealtime(1.15f);
-            EndEpisode();
         }
 
         static bool OverUi()
