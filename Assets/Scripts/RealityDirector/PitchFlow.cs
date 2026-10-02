@@ -44,8 +44,9 @@ namespace RealityDirector
         EventDefinition _armed;
         bool _endQueued;
         bool _inputLock;
-        bool _suppressHoldCam;
         float _rumble;
+        bool _panning;
+        Vector2 _panLast;
         SeasonTone _tone => GameSession.Tone;
         SeasonState _state => GameSession.State;
         EventDefinition[] _hand = new EventDefinition[0];
@@ -104,6 +105,7 @@ namespace RealityDirector
 
         void Update()
         {
+            TickCamera();
             bool fighting = (_zloi != null && _zloi.IsFighting) || (_dobryak != null && _dobryak.IsFighting);
             if (fighting)
             {
@@ -151,6 +153,50 @@ namespace RealityDirector
             cam.backgroundColor = new Color(0.1f, 0.08f, 0.07f, 1f);
             _shake = cam.gameObject.AddComponent<CameraShake>();
             _shake.Base = cam.transform.position;
+        }
+
+        void TickCamera()
+        {
+            var mouse = Mouse.current;
+            var cam = Camera.main;
+            if (mouse == null || cam == null || _shake == null)
+                return;
+
+            bool drag = mouse.rightButton.isPressed || mouse.middleButton.isPressed;
+            float raw = mouse.scroll.ReadValue().y;
+            if (!mouse.middleButton.isPressed && Mathf.Abs(raw) > 0.01f)
+            {
+                float notches = Mathf.Abs(raw) > 8f ? raw / 120f : raw;
+                cam.orthographicSize = Mathf.Clamp(cam.orthographicSize - notches * 0.9f, 3.15f, 11.5f);
+            }
+
+            Vector2 now = mouse.position.ReadValue();
+            if (!drag)
+            {
+                _panning = false;
+                return;
+            }
+
+            if (!_panning)
+            {
+                _panning = true;
+                _panLast = now;
+                return;
+            }
+
+            Vector2 delta = now - _panLast;
+            _panLast = now;
+            if (delta.sqrMagnitude < 0.01f)
+                return;
+            float pixels = cam.pixelHeight > 1 ? cam.pixelHeight : Screen.height;
+            float worldPerPixel = cam.orthographicSize * 2f / pixels;
+            var pos = _shake.Base;
+            pos.x -= delta.x * worldPerPixel;
+            pos.y -= delta.y * worldPerPixel;
+            pos.x = Mathf.Clamp(pos.x, -7.2f, 7.4f);
+            pos.y = Mathf.Clamp(pos.y, 0.5f, 7.4f);
+            pos.z = -10f;
+            _shake.Base = pos;
         }
 
         static void SetupInput()
@@ -648,14 +694,7 @@ namespace RealityDirector
             {
                 _armed = null;
                 _ui.SetArmed(null);
-                _suppressHoldCam = true;
             }
-
-            if (mouse.rightButton.wasReleasedThisFrame)
-                _suppressHoldCam = false;
-
-            bool hold = mouse.rightButton.isPressed && !_suppressHoldCam && _armed == null;
-            _capture.SetHold(hold);
 
             if (keyboard.spaceKey.wasPressedThisFrame)
             {

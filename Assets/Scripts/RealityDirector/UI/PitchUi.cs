@@ -191,7 +191,9 @@ namespace RealityDirector.UI
                 Bump(cloud.transform, 42f),
                 Bump(cloud.transform, 34f)
             };
-            var fill = Shape(cloud.transform, BubbleRound(), new Vector2(0f, 48f), new Vector2(120f, 48f), true);
+            for (int i = 0; i < lumps.Length; i++)
+                lumps[i].gameObject.SetActive(false);
+            var fill = Shape(cloud.transform, BubbleCloud(), new Vector2(0f, 48f), new Vector2(120f, 48f), false);
             fill.rectTransform.anchorMin = new Vector2(0.5f, 0f);
             fill.rectTransform.anchorMax = new Vector2(0.5f, 0f);
             fill.rectTransform.pivot = new Vector2(0.5f, 0.5f);
@@ -245,9 +247,9 @@ namespace RealityDirector.UI
             bubble.Text.horizontalOverflow = HorizontalWrapMode.Wrap;
             bubble.Text.rectTransform.sizeDelta = new Vector2(inner, 160f);
             float line = Mathf.Max(22f, bubble.Text.preferredHeight);
-            float bodyW = inner + 36f;
-            float bodyH = line + 22f;
-            float tail = thought ? 26f : 14f;
+            float bodyW = inner + (thought ? 56f : 36f);
+            float bodyH = line + (thought ? 40f : 22f);
+            float tail = thought ? 22f : 14f;
             bubble.Rect.sizeDelta = new Vector2(bodyW, bodyH + tail);
 
             var label = bubble.Text.rectTransform;
@@ -259,12 +261,12 @@ namespace RealityDirector.UI
                 float cy = tail + bodyH * 0.5f;
                 bubble.Fill.sizeDelta = new Vector2(bodyW, bodyH);
                 bubble.Fill.anchoredPosition = new Vector2(0f, cy);
-                PlaceLump(bubble.Lumps[0], -bodyW * 0.28f, cy + bodyH * 0.22f, bodyH * 0.72f);
-                PlaceLump(bubble.Lumps[1], 0f, cy + bodyH * 0.32f, bodyH * 0.85f);
-                PlaceLump(bubble.Lumps[2], bodyW * 0.28f, cy + bodyH * 0.2f, bodyH * 0.68f);
-                bubble.Puffs[0].anchoredPosition = new Vector2(10f, tail * 0.55f);
-                bubble.Puffs[1].anchoredPosition = new Vector2(18f, tail * 0.28f);
-                bubble.Puffs[2].anchoredPosition = new Vector2(24f, 0f);
+                bubble.Puffs[0].sizeDelta = new Vector2(11f, 11f);
+                bubble.Puffs[1].sizeDelta = new Vector2(8f, 8f);
+                bubble.Puffs[2].sizeDelta = new Vector2(5f, 5f);
+                bubble.Puffs[0].anchoredPosition = new Vector2(8f, 11f);
+                bubble.Puffs[1].anchoredPosition = new Vector2(16f, 5f);
+                bubble.Puffs[2].anchoredPosition = new Vector2(22f, 0f);
             }
             else
             {
@@ -1186,6 +1188,8 @@ namespace RealityDirector.UI
                 if (!show)
                     continue;
                 bool thought = bubble.Thought != null && bubble.Thought();
+                bubble.Speech.SetActive(!thought);
+                bubble.ThoughtCloud.SetActive(thought);
                 if (value != bubble.Shown || thought != bubble.WasThought)
                     LayoutBubble(bubble, value, thought);
                 Vector3 screen = Camera.main.WorldToScreenPoint(bubble.Target.position);
@@ -1386,6 +1390,7 @@ namespace RealityDirector.UI
 
         static Sprite _bubbleRound;
         static Sprite _bubbleTail;
+        static Sprite _bubbleCloud;
 
         static Sprite BubbleRound()
         {
@@ -1416,6 +1421,50 @@ namespace RealityDirector.UI
             _bubbleRound = Sprite.Create(tex, new Rect(0, 0, n, n), new Vector2(0.5f, 0.5f), 100f, 0, SpriteMeshType.FullRect, new Vector4(24, 24, 24, 24));
             _bubbleRound.hideFlags = HideFlags.HideAndDontSave;
             return _bubbleRound;
+        }
+
+        static Sprite BubbleCloud()
+        {
+            if (_bubbleCloud != null)
+                return _bubbleCloud;
+            const int w = 256;
+            const int h = 168;
+            var tex = new Texture2D(w, h, TextureFormat.RGBA32, false);
+            tex.hideFlags = HideFlags.HideAndDontSave;
+            tex.filterMode = FilterMode.Bilinear;
+            var blobs = new[]
+            {
+                new Vector3(78f, 78f, 52f),
+                new Vector3(128f, 96f, 62f),
+                new Vector3(180f, 78f, 50f),
+                new Vector3(128f, 62f, 46f)
+            };
+            var px = new Color32[w * h];
+            for (int y = 0; y < h; y++)
+            {
+                for (int x = 0; x < w; x++)
+                {
+                    float d = 999f;
+                    for (int i = 0; i < blobs.Length; i++)
+                    {
+                        float dx = x + 0.5f - blobs[i].x;
+                        float dy = y + 0.5f - blobs[i].y;
+                        d = Mathf.Min(d, Mathf.Sqrt(dx * dx + dy * dy) - blobs[i].z);
+                    }
+
+                    px[y * w + x] = d > 1.2f
+                        ? new Color32(0, 0, 0, 0)
+                        : d > -5f
+                            ? new Color32(0, 0, 0, 255)
+                            : new Color32(255, 255, 255, 255);
+                }
+            }
+
+            tex.SetPixels32(px);
+            tex.Apply();
+            _bubbleCloud = Sprite.Create(tex, new Rect(0, 0, w, h), new Vector2(0.5f, 0.5f), 100f);
+            _bubbleCloud.hideFlags = HideFlags.HideAndDontSave;
+            return _bubbleCloud;
         }
 
         static Sprite BubbleTail()

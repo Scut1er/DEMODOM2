@@ -613,16 +613,45 @@ namespace RealityDirector.NPC
             FightStarted?.Invoke(this, other);
         }
 
+        const float BodyGap = 0.76f;
+
         void MoveTowards(Vector2 target, float speed)
         {
             Vector2 current = transform.position;
             Vector2 next = Vector2.MoveTowards(current, target, speed * Time.deltaTime);
-            if (BlockEast && next.x > EastLimit)
-                next.x = Mathf.Min(current.x, EastLimit);
+            next = ClampEast(current, next);
+            next = Separate(current, next);
+            next = ClampEast(current, next);
             Face(next.x - current.x);
             transform.position = next;
             if (_visual != null && _action != NpcActionId.Fight)
                 _visual.localPosition = Vector3.zero;
+        }
+
+        Vector2 ClampEast(Vector2 current, Vector2 next)
+        {
+            if (BlockEast && next.x > EastLimit)
+                next.x = Mathf.Min(current.x, EastLimit);
+            return next;
+        }
+
+        Vector2 Separate(Vector2 current, Vector2 next)
+        {
+            if (Rival == null || IsFighting || Rival.IsFighting)
+                return next;
+            Vector2 other = Rival.transform.position;
+            Vector2 gap = next - other;
+            float dist = gap.magnitude;
+            if (dist >= BodyGap)
+                return next;
+            Vector2 away = dist < 0.0001f ? Vector2.right : gap / dist;
+            Vector2 step = next - current;
+            float into = Vector2.Dot(step, -away);
+            Vector2 resolved = into > 0f ? current + (step + away * into) : next;
+            Vector2 left = resolved - other;
+            if (left.magnitude < BodyGap)
+                resolved = other + (left.sqrMagnitude < 0.0001f ? Vector2.right : left.normalized) * BodyGap;
+            return resolved;
         }
 
         void Face(float dx)
