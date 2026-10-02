@@ -30,14 +30,14 @@ namespace RealityDirector.Meta
                     id = "npc_zloi",
                     name = "Злой",
                     traits = new[] { "агрессивный", "скрытая черта: ???" },
-                    portrait = IllustratedArt.PersonAngry
+                    portrait = GameArt.Head("npc_zloi", Face.Happy) ?? IllustratedArt.PersonAngry
                 },
                 new CastMember
                 {
                     id = "npc_dobryak",
                     name = "Добряк",
                     traits = new[] { "сентиментальный", "скрытая черта: ???" },
-                    portrait = IllustratedArt.PersonKind
+                    portrait = GameArt.Head("npc_dobryak", Face.Happy) ?? IllustratedArt.PersonKind
                 }
             };
         }

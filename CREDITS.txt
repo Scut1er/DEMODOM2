@@ -1,0 +1,18 @@
+CREDITS — звук и музыка
+=======================
+Каждый сторонний файл: название · автор · ссылка · лицензия.
+
+Assets/Resources/Sfx — записи (уже в игре)
+- shutter, coin, splash ............ OwlishMedia — CC0
+- ignite, crackle (огонь) .......... AntumDeluge — CC0
+- click, card, miss, tick, blip, bell, slap0..4 ... Kenney (kenney.nl) — CC0
+
+Assets/Resources/Sfx — синтез (наши, без атрибуции)
+Сгенерированы скриптом Tools/Audio/synth_sfx.ps1 (ffmpeg):
+- alert, notify, levelup, fire_alarm, wifi_off, cam_on, clapper, stamp,
+  fridge_pop, flies, sting, reveal, pipes
+
+Исходники в SOUND/ (аплодисменты и ликование, 14 файлов)
+- Massimiliano Zeuli — «FREE Applause, Cheering, Crowd Effects»
+  https://www.youtube.com/watch?v=2Cj9pXhIXus
+  Лицензия: УТОЧНИТЬ по описанию видео до релиза.

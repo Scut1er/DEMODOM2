@@ -1,0 +1,32 @@
+# Кандидаты на звуки (Freesound, фильтр CC0)
+
+Все ссылки найдены поиском Freesound с фильтром лицензии CC0. **Перед скачиванием проверь лицензию
+на странице звука** (справа, блок License) — фильтр иногда ошибается. Скачивание требует бесплатного аккаунта.
+Сохраняй под именем из колонки «файл» в `Assets/Resources/Sfx/` и добавляй строку в `CREDITS.txt`.
+
+| Звук | файл | Кандидат 1 | Кандидат 2 | Кандидат 3 |
+|---|---|---|---|---|
+| Возгорание холодильника | `fridge_pop` | [Basic Fire Whoosh 2](https://freesound.org/people/LookIMadeAThing/sounds/260555/) | [fire-whoosh](https://freesound.org/people/hnhnh/sounds/244926/) | [Gas Ignition with a Match](https://freesound.org/people/unfa/sounds/212458/) |
+| Пожарная сигнализация | `fire_alarm` | [Smoke detector alarm, close](https://freesound.org/people/SpliceSound/sounds/369848/) | [smoke detector fire alarm](https://freesound.org/people/Garuda1982/sounds/530094/) | [Smoke Detector Test Beep](https://freesound.org/people/loganzsound/sounds/856778/) |
+| «Разозлить» — подначка | `provoke` | [Whisper Evil Little Nothings](https://freesound.org/people/SoundBiterSFX/sounds/730965/) | [Demon Grumble/Whisper](https://freesound.org/people/RaspberryTickle/sounds/232145/) | [whisper](https://freesound.org/people/IanStarGem/sounds/341841/) |
+| Трубы (нет воды) | `pipes` | [Multiple Pipe Banging](https://freesound.org/people/DanJFilms/sounds/687242/) | [Metal Pipes Banging and Dragging](https://freesound.org/people/CHallSmith/sounds/870792/) | [metal pipe gate banging](https://freesound.org/people/Anthousai/sounds/399241/) |
+| Доски отрываются | `boards_break` | [SFX wood cracking](https://freesound.org/people/EricsSoundschmiede/sounds/669457/) | [Wood Break](https://freesound.org/people/BOAAY/sounds/520720/) | [Wood Breaking Ply](https://freesound.org/people/Sonicquinn/sounds/518791/) |
+| Мухи (тухлятина) | `flies` | [Fly Buzzing Edited](https://freesound.org/people/AmberdeMeillon/sounds/443059/) | [fly buzz around mic](https://freesound.org/people/kyles/sounds/452627/) | — |
+| Нет сети (отключение) | `wifi_off` | [sl50 power off](https://freesound.org/people/sonoplastico/sounds/98002/) | [Printer Power OFF](https://freesound.org/people/TheRandomSoundByte2637/sounds/684033/) | [On/Off Button](https://freesound.org/people/Fission9/sounds/693859/) |
+| Злость, рычание | `angry0…2` | [Angry Grunt](https://freesound.org/people/Rocotilos/sounds/341489/) | [male grunt](https://freesound.org/people/lipalearning/sounds/427972/) | [Grunt](https://freesound.org/people/punisherman/sounds/370036/) |
+| Крик «Эй!» | `shout` | [Men Shouting Hey](https://freesound.org/people/Jace/sounds/57204/) | [Hey Sample](https://freesound.org/people/lil-lugger/sounds/593436/) | [Yelling Eyoh](https://freesound.org/people/qubodup/sounds/859347/) |
+| Заметил «!» | `alert` | [alert sound single](https://freesound.org/people/_def/sounds/751861/) | [Ping](https://freesound.org/people/LilMati/sounds/444918/) | [Pings001](https://freesound.org/people/klangfabrik/sounds/211946/) |
+| «Ай!» в драке | `ouch0…2` | [ouch](https://freesound.org/people/hfornazari/sounds/628183/) | [ouch (manuelpalomares1)](https://freesound.org/people/manuelpalomares1/sounds/477823/) | [hit ouch](https://freesound.org/people/zeteny_zpx/sounds/474557/) |
+| Паника, визг | `panic0…2` | [Panic-stricken screaming #2](https://freesound.org/people/Klangkobold/sounds/547964/) | [male scream small crowd panic](https://freesound.org/people/JohnsonBrandEditing/sounds/173945/) | [scream female dry](https://freesound.org/people/perspektywa_tn/sounds/844112/) |
+| Плач | `cry0…2` | [Man sobbing, crying](https://freesound.org/people/SnowFightStudios/sounds/643669/) | [sobbing crying male](https://freesound.org/people/takareads/sounds/852987/) | [Girl Crying](https://freesound.org/people/mvVoiceActing/sounds/218184/) |
+| Раскрытие черты / «дун-дун-ДУН» | `reveal`, `sting` | [5 Super Dramatic Stings](https://freesound.org/people/SoundsExciting/sounds/213101/) | [Dissonant Piano Sting 8](https://freesound.org/people/nomiqbomi/sounds/578358/) | [Spooky Sting](https://freesound.org/people/nomiqbomi/sounds/578370/) |
+| Камера вкл | `cam_on` | [digital camera on/off beep, servo zoom](https://freesound.org/people/kyles/sounds/453950/) | [Camera focusing and zooming](https://freesound.org/people/Jesus2345/sounds/689005/) | [camera lens zooming](https://freesound.org/people/CorneRoose/sounds/654182/) |
+| Хлопушка «Мотор/Снято» | `clapper` | [JM MOVIE Clapperboard](https://freesound.org/people/Julien_Matthey/sounds/484323/) | [Clapperboard Filmklappe](https://freesound.org/people/jeromeblum/sounds/716967/) | [Clapboard sound](https://freesound.org/people/uEffects/sounds/207867/) |
+| Закадровый смех | `laugh0…2` | [Laugh (applause) track material](https://freesound.org/people/unfa/sounds/245123/) | [Female crowd laughing](https://freesound.org/people/kikorurelas/sounds/767470/) | [Crowd awkward laughter](https://freesound.org/people/deleted_user_2104797/sounds/346682/) |
+| Студийное «ооо» | `ooh` | [Crowd Ooohs and Ahhhs](https://freesound.org/people/noah0189/sounds/264499/) | [small crowd gasp shock surprise](https://freesound.org/people/HowardV/sounds/264376/) | [Ooh and Ahhs — man impressed](https://freesound.org/people/jeffjb91/sounds/826789/) |
+| Освистывание | `boo` | [crowd booing](https://freesound.org/people/HowardV/sounds/264378/) | [Crowd Small Expression Boo](https://freesound.org/people/Nox_Sound/sounds/752707/) | [Crowd Boo](https://freesound.org/people/deleted_user_2104797/sounds/324893/) |
+| Отзыв появился | `notify` | [Pop](https://freesound.org/people/deleted_user_15584536/sounds/718832/) | [Pops — Mouth](https://freesound.org/people/JelloApocalypse/sounds/802606/) | [UI Pack (Glorb)](https://freesound.org/people/bassimat/sounds/855481/) |
+| Апгрейд — «левел-ап» | `levelup` | [Level Up / Mission Complete](https://freesound.org/people/Beetlemuse/sounds/528958/) | [Level Up (qubodup)](https://freesound.org/people/qubodup/sounds/442943/) | [Level Up (BustedEarLobes)](https://freesound.org/people/BustedEarLobes/sounds/156447/) |
+| Печать «утверждено» | `stamp` | [es-stamp](https://freesound.org/people/eddies2000/sounds/448474/) | [traditional stamp](https://freesound.org/people/I.fekry/sounds/470710/) | [stamp, rubber, plastic](https://freesound.org/people/15FPanska_KristynaHaupt/sounds/461888/) |
+
+Аплодисменты и ликование (`applause`, `cheer`) — уже есть в папке `SOUND/`.

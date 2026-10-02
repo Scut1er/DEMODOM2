@@ -12,6 +12,8 @@ namespace RealityDirector.UI.Hub
     {
         [SerializeField] Button button;
         [SerializeField] Image frame;
+        [Tooltip("Тёмная подложка под прозрачным окном рамки художника.")]
+        [SerializeField] Image window;
         [SerializeField] Image art;
         [SerializeField] Text title;
         [SerializeField] Text status;
@@ -33,19 +35,38 @@ namespace RealityDirector.UI.Hub
         public void Bind(PrepCard card, bool shop, Action onClick)
         {
             _onClick = onClick;
+            // Рамка по тону карты (красная — трэш, зелёная — семья, синяя — драма). Нет арта — цветная плашка.
+            var frameArt = card.moods != null && card.moods.Length > 0 ? GameArt.CardFrame(card.moods[0]) : null;
+            bool framed = frameArt != null;
             if (frame != null)
-                frame.color = card.picked ? pickedColor : card.color;
+            {
+                if (framed)
+                {
+                    frame.sprite = frameArt;
+                    frame.type = Image.Type.Simple;
+                    frame.color = card.picked ? pickedColor : Color.white;
+                }
+                else
+                {
+                    frame.color = card.picked ? pickedColor : card.color;
+                }
+            }
+
+            if (window != null)
+                window.gameObject.SetActive(framed);
             if (art != null)
             {
                 art.sprite = card.art;
                 art.enabled = card.art != null;
             }
 
-            Color text = card.picked ? pickedInk : shop && !card.affordable ? poorInk : ink;
+            // На тёмном окне рамки текст всегда светлый.
+            Color titleInk = card.picked && !framed ? pickedInk : ink;
+            Color text = card.picked && !framed ? pickedInk : shop && !card.affordable ? poorInk : ink;
             if (title != null)
             {
                 title.text = card.title;
-                title.color = card.picked ? pickedInk : ink;
+                title.color = titleInk;
             }
 
             if (status != null)

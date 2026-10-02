@@ -686,6 +686,8 @@ namespace RealityDirector.UI
                 onClick();
             });
 
+            // Рамка художника по тону карты: окно внутри прозрачное, под ним тёмная подложка.
+            var frameArt = def.moods != null && def.moods.Count > 0 ? GameArt.CardFrame(def.moods[0]) : null;
             var inner = Panel("inner", frame.transform, new Color(0.95f, 0.91f, 0.84f, 1f));
             var innerRect = inner.rectTransform;
             innerRect.anchorMin = Vector2.zero;
@@ -693,6 +695,15 @@ namespace RealityDirector.UI
             innerRect.offsetMin = new Vector2(8f, 8f);
             innerRect.offsetMax = new Vector2(-8f, -8f);
             inner.raycastTarget = false;
+            if (frameArt != null)
+            {
+                frame.sprite = frameArt;
+                frame.color = Color.white;
+                inner.color = new Color(0.07f, 0.05f, 0.08f, 0.96f);
+                innerRect.offsetMin = new Vector2(18f, 60f);
+                innerRect.offsetMax = new Vector2(-18f, -36f);
+                inner.transform.SetAsFirstSibling();
+            }
 
             var badge = Panel("badge", frame.transform, new Color(0.14f, 0.09f, 0.08f, 1f));
             var badgeRect = badge.rectTransform;
@@ -735,6 +746,11 @@ namespace RealityDirector.UI
             bodyRect.pivot = new Vector2(0.5f, 0f);
             bodyRect.anchoredPosition = new Vector2(0f, 8f);
             bodyRect.sizeDelta = new Vector2(-12f, 64f);
+            if (frameArt != null)
+            {
+                title.color = Paper;
+                body.color = new Color(0.82f, 0.76f, 0.7f, 1f);
+            }
 
             var status = MakeText(frame.transform, "сыграно", 16, new Color(0.55f, 0.32f, 0.08f), TextAnchor.MiddleCenter);
             var statusRect = status.rectTransform;
@@ -751,7 +767,7 @@ namespace RealityDirector.UI
                 Frame = frame,
                 Status = status,
                 Root = frame.rectTransform,
-                Base = def.cardColor
+                Base = frameArt != null ? Color.white : def.cardColor
             };
         }
 

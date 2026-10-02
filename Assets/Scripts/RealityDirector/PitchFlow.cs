@@ -217,18 +217,20 @@ namespace RealityDirector
             var root = new GameObject("Apartment").transform;
             const float y = 2.6f;
             SpriteUtil.Box(root, "foundation", new Vector3(0.15f, y, 0f), new Vector2(16.6f, 5.35f), new Color(0.16f, 0.12f, 0.1f), -2);
-            Place(root, "Living", IllustratedArt.Wood, new Vector3(-5.35f, y, 0f), new Vector2(4.55f, 4.55f), 0);
-            Place(root, "Kitchen", IllustratedArt.Tile, new Vector3(0.05f, y, 0f), new Vector2(5.15f, 4.55f), 0);
+            Floor(root, "Living", GameArt.FloorParquetLight, IllustratedArt.Wood, new Vector3(-5.35f, y, 0f), new Vector2(4.55f, 4.55f));
+            Floor(root, "Kitchen", GameArt.FloorTiles, IllustratedArt.Tile, new Vector3(0.05f, y, 0f), new Vector2(5.15f, 4.55f));
+            BackWall(root, GameArt.WallStripes, -5.35f, 4.5f, 4.55f);
+            BackWall(root, GameArt.WallStripes, 0.05f, 4.5f, 5.15f);
             WallV(root, -2.85f);
             WallV(root, 2.75f);
             WallH(root, -1.55f, 4.95f, 1.9f);
             WallH(root, 1.65f, 4.95f, 1.9f);
 
             Place(root, "Rug", IllustratedArt.Rug, new Vector3(-5.45f, 3.15f, 0f), new Vector2(2.1f, 1.25f), 1);
-            Place(root, "Sofa", IllustratedArt.Sofa, new Vector3(-5.45f, 3.35f, 0f), new Vector2(2.15f, 1.15f), 4);
+            PlaceArt(root, "Sofa", GameArt.Sofa, IllustratedArt.Sofa, new Vector3(-5.45f, 3.35f, 0f), new Vector2(2.2f, 1.5f), new Vector2(2.15f, 1.15f), 4);
             Place(root, "Table", IllustratedArt.Table, new Vector3(-0.55f, 2.9f, 0f), new Vector2(1.45f, 0.95f), 4);
             Place(root, "Stove", IllustratedArt.Stove, new Vector3(2.05f, 3.55f, 0f), new Vector2(0.85f, 0.85f), 4);
-            Place(root, "Plant", IllustratedArt.Plant, new Vector3(-7.15f, 4.15f, 0f), new Vector2(0.7f, 0.9f), 5);
+            PlaceArt(root, "Plant", GameArt.Plant, IllustratedArt.Plant, new Vector3(-7.15f, 4.15f, 0f), new Vector2(0.7f, 1.1f), new Vector2(0.7f, 0.9f), 5);
             Place(root, "WindowL", IllustratedArt.Window, new Vector3(-5.4f, 4.45f, 0f), new Vector2(1.35f, 0.7f), 5);
 
             _fridge = BuildFridge(root);
@@ -275,6 +277,33 @@ namespace RealityDirector
             SpriteUtil.Fit(renderer, size);
         }
 
+        // Арт художника вписывается без искажений; нет арта — старая рисованная заглушка.
+        static void PlaceArt(Transform parent, string name, Sprite art, Sprite fallback, Vector3 pos, Vector2 artBox, Vector2 fallbackSize, int order)
+        {
+            if (art == null)
+            {
+                Place(parent, name, fallback, pos, fallbackSize, order);
+                return;
+            }
+
+            GameArt.FitInside(SpriteUtil.Show(parent, name, pos, art, order), artBox);
+        }
+
+        static void Floor(Transform parent, string name, Sprite art, Sprite fallback, Vector3 pos, Vector2 size)
+        {
+            if (art != null)
+                GameArt.Tiled(parent, name, art, pos, size, 0);
+            else
+                Place(parent, name, fallback, pos, size, 0);
+        }
+
+        // Полоса стены вдоль верхнего края комнаты (на ней висят окна).
+        static void BackWall(Transform parent, Sprite art, float x, float y, float width)
+        {
+            if (art != null)
+                GameArt.Tiled(parent, "backWall", art, new Vector3(x, y, 0f), new Vector2(width, 0.75f), 1);
+        }
+
         static void WallV(Transform root, float x)
         {
             Place(root, "wall", IllustratedArt.Wall, new Vector3(x, 3.75f, 0f), new Vector2(0.28f, 2.15f), 3);
@@ -291,11 +320,12 @@ namespace RealityDirector
             var go = new GameObject("Bathroom");
             go.transform.SetParent(root, false);
             var t = go.transform;
-            Place(t, "floor", IllustratedArt.BathTile, new Vector3(0.05f, 6.4f, 0f), new Vector2(4.9f, 3.55f), 0);
+            Floor(t, "floor", GameArt.FloorTiles, IllustratedArt.BathTile, new Vector3(0.05f, 6.4f, 0f), new Vector2(4.9f, 3.55f));
+            BackWall(t, GameArt.WallBathTiles, 0.05f, 7.8f, 4.9f);
             Place(t, "wallL", IllustratedArt.Wall, new Vector3(-2.3f, 6.55f, 0f), new Vector2(0.24f, 3.05f), 3);
             Place(t, "wallR", IllustratedArt.Wall, new Vector3(2.4f, 6.55f, 0f), new Vector2(0.24f, 3.05f), 3);
             Place(t, "wallT", IllustratedArt.Wall, new Vector3(0.05f, 8.05f, 0f), new Vector2(4.7f, 0.28f), 3);
-            Place(t, "shower", IllustratedArt.Shower, new Vector3(-1.35f, 7.15f, 0f), new Vector2(1.2f, 1.2f), 4);
+            PlaceArt(t, "shower", GameArt.Bath, IllustratedArt.Shower, new Vector3(-1.25f, 7.0f, 0f), new Vector2(1.7f, 1.0f), new Vector2(1.2f, 1.2f), 4);
             Place(t, "toilet", IllustratedArt.Toilet, new Vector3(0.15f, 7.2f, 0f), new Vector2(0.6f, 0.85f), 4);
             Place(t, "sink", IllustratedArt.Sink, new Vector3(1.45f, 7.15f, 0f), new Vector2(1.05f, 0.7f), 4);
             return go;
@@ -306,6 +336,9 @@ namespace RealityDirector
             var go = new GameObject("BathDoor");
             go.transform.SetParent(root, false);
             go.transform.position = new Vector3(0.05f, 5.15f, 0f);
+            // Дверь под досками — видна, когда доски сорвали.
+            if (GameArt.DoorWhite != null)
+                GameArt.FitInside(SpriteUtil.Show(root, "BathDoorArt", go.transform.position, GameArt.DoorWhite, 4), new Vector2(1.0f, 1.45f));
             var collider = go.AddComponent<BoxCollider2D>();
             collider.size = new Vector2(1.15f, 1.45f);
             var ring = SpriteUtil.Show(go.transform, "ring", Vector3.zero, IllustratedArt.Glow, 5);
@@ -404,7 +437,8 @@ namespace RealityDirector
             var go = new GameObject("Bedroom");
             go.transform.SetParent(root, false);
             var t = go.transform;
-            Place(t, "floor", IllustratedArt.Wood, new Vector3(5.5f, 2.6f, 0f), new Vector2(4.7f, 4.55f), 0);
+            Floor(t, "floor", GameArt.FloorParquetDark, IllustratedArt.Wood, new Vector3(5.5f, 2.6f, 0f), new Vector2(4.7f, 4.55f));
+            BackWall(t, GameArt.WallStripes, 5.5f, 4.5f, 4.7f);
             Place(t, "Bed", IllustratedArt.Bed, new Vector3(6.2f, 3.15f, 0f), new Vector2(1.85f, 2.35f), 4);
             Place(t, "WindowR", IllustratedArt.Window, new Vector3(6.3f, 4.45f, 0f), new Vector2(1.35f, 0.7f), 5);
             return go;
@@ -415,6 +449,8 @@ namespace RealityDirector
             var go = new GameObject("BedDoor");
             go.transform.SetParent(root, false);
             go.transform.position = new Vector3(2.75f, 2.05f, 0f);
+            if (GameArt.DoorWood != null)
+                GameArt.FitInside(SpriteUtil.Show(root, "BedDoorArt", go.transform.position, GameArt.DoorWood, 4), new Vector2(0.75f, 1.35f));
             var collider = go.AddComponent<BoxCollider2D>();
             collider.size = new Vector2(0.7f, 1.35f);
             var ring = SpriteUtil.Show(go.transform, "ring", Vector3.zero, IllustratedArt.Glow, 5);
@@ -454,6 +490,7 @@ namespace RealityDirector
             npc.Rules = rules;
             npc.Home = home;
             npc.BindVisual(visual, ring);
+            NpcLook.Attach(npc, visual, body);
             npc.ResetState();
             return npc;
         }
