@@ -342,7 +342,6 @@ namespace RealityDirector
             var go = new GameObject("BathDoor");
             go.transform.SetParent(root, false);
             go.transform.position = new Vector3(0.05f, 5.15f, 0f);
-            // Дверь под досками — видна, когда доски сорвали.
             if (GameArt.DoorWhite != null)
                 GameArt.FitInside(SpriteUtil.Show(root, "BathDoorArt", go.transform.position, GameArt.DoorWhite, 4), new Vector2(1.0f, 1.45f));
             var collider = go.AddComponent<BoxCollider2D>();
@@ -582,11 +581,16 @@ namespace RealityDirector
             _state.ratingSum += result.score;
             _state.rated++;
             result.payLine = PayLine(pay, hadTasks, wishDone);
-            Sfx.Play(Cue.Coin, wishDone ? 0.7f : 0.5f, wishDone ? 1.12f : 1f);
             _offerId = result.nextWish;
             _offerLabel = result.wish;
-            _ui.ShowFeedback(result, ContinueAfterFeedback);
-            RefreshTasks(true);
+            int scene = _state.episodeIndex + 1;
+            bool paid = wishDone;
+            _ui.PlaySlate(scene, () =>
+            {
+                Sfx.Play(Cue.Coin, paid ? 0.7f : 0.5f, paid ? 1.12f : 1f);
+                _ui.ShowFeedback(result, ContinueAfterFeedback);
+                RefreshTasks(true);
+            });
         }
 
         void BackToHub()

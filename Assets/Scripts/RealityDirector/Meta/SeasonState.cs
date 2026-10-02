@@ -27,7 +27,7 @@ namespace RealityDirector.Meta
         public int step;
         public int mapSeed;
         public int mapFloors;
-        public int ratingSum;
+        public float ratingSum;
         public int rated;
 
         public void Reset(IList<string> starters)

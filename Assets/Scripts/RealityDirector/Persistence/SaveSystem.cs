@@ -31,7 +31,7 @@ namespace RealityDirector.Persistence
         public int step;
         public int mapSeed;
         public int mapFloors;
-        public int ratingSum;
+        public float ratingSum;
         public int rated;
         public int drama;
         public int trash;

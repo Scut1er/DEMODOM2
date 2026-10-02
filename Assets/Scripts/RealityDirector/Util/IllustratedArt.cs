@@ -35,6 +35,8 @@ namespace RealityDirector.Util
         static Sprite _iconDevil;
         static Sprite _iconFamily;
         static Sprite _iconClap;
+        static Sprite _slateBoard;
+        static Sprite _slateStick;
 
         public static Sprite Wood => Live(ref _wood, () => Floor(false, false));
         public static Sprite Tile => Live(ref _tile, () => Floor(true, false));
@@ -67,6 +69,8 @@ namespace RealityDirector.Util
         public static Sprite IconDevil => Live(ref _iconDevil, PaintIconDevil);
         public static Sprite IconFamily => Live(ref _iconFamily, PaintIconFamily);
         public static Sprite IconClap => Live(ref _iconClap, PaintIconClap);
+        public static Sprite SlateBoard => Live(ref _slateBoard, PaintSlateBoard);
+        public static Sprite SlateStick => Live(ref _slateStick, PaintSlateStick);
 
         // ??= сравнивает ссылку и не видит уничтоженный Unity-объект после выхода из Play Mode.
         static Sprite Live(ref Sprite slot, System.Func<Sprite> paint)
@@ -466,6 +470,50 @@ namespace RealityDirector.Util
             p.Ellipse(38, 30, 2, 3, ink);
             p.Line(24, 20, 32, 16, ink, 2);
             p.Line(32, 16, 40, 20, ink, 2);
+            return p.Bake();
+        }
+
+        static Sprite PaintSlateBoard()
+        {
+            var p = new Pix(480, 320, true);
+            var black = new Color(0.04f, 0.04f, 0.05f, 1f);
+            var edge = new Color(0.9f, 0.88f, 0.82f, 1f);
+            var line = new Color(0.22f, 0.21f, 0.2f, 1f);
+            p.Round(4, 4, 472, 312, black);
+            p.Rect(4, 4, 472, 8, edge);
+            p.Rect(4, 308, 472, 8, edge);
+            p.Rect(4, 4, 8, 312, edge);
+            p.Rect(468, 4, 8, 312, edge);
+            p.Rect(28, 78, 424, 3, line);
+            p.Rect(28, 168, 424, 3, line);
+            p.Rect(250, 78, 3, 90, line);
+            p.Ellipse(40, 286, 9, 9, edge);
+            p.Ellipse(440, 286, 9, 9, edge);
+            p.Ellipse(40, 286, 4, 4, black);
+            p.Ellipse(440, 286, 4, 4, black);
+            return p.Bake();
+        }
+
+        static Sprite PaintSlateStick()
+        {
+            var p = new Pix(480, 108, true);
+            var white = new Color(0.95f, 0.93f, 0.88f, 1f);
+            var black = new Color(0.03f, 0.03f, 0.04f, 1f);
+            var rail = new Color(0.9f, 0.88f, 0.82f, 1f);
+            p.Rect(0, 0, 480, 108, rail);
+            for (int y = 14; y < 94; y++)
+            {
+                for (int x = 8; x < 472; x++)
+                {
+                    int band = ((x + y * 2) / 26) & 1;
+                    p.Rect(x, y, 1, 1, band == 0 ? black : white);
+                }
+            }
+
+            p.Rect(0, 0, 480, 12, rail);
+            p.Rect(0, 96, 480, 12, rail);
+            p.Rect(0, 0, 8, 108, rail);
+            p.Rect(472, 0, 8, 108, rail);
             return p.Bake();
         }
 
