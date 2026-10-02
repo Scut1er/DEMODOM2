@@ -28,7 +28,7 @@ namespace RealityDirector.Persistence
         public List<string> picked = new List<string>();
         public List<SavedTask> tasks = new List<SavedTask>();
         public int step;
-        public int ratingSum;
+        public float ratingSum;
         public int rated;
         public int drama;
         public int trash;

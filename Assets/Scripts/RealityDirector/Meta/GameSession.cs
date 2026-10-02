@@ -16,6 +16,8 @@ namespace RealityDirector.Meta
         public static bool Embarked;
         // Узел карты выпуска, ради которого загрузили сцену съёмки. Хаб закрывает его, когда сцена вернулась.
         public static string RoomNodeId;
+        // Квартира закрыла сцену — хаб открывает карту, а не меню продакшена.
+        public static bool ReturnToMap;
 
         public static bool Active => State != null;
         public static bool InEpisode => Active && State.episode != null;
@@ -31,6 +33,7 @@ namespace RealityDirector.Meta
             SceneTitle = null;
             Embarked = false;
             RoomNodeId = null;
+            ReturnToMap = false;
             Hand.Clear();
         }
 

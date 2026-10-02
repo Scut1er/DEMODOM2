@@ -93,6 +93,8 @@ namespace RealityDirector.UI.Hub
             }
 
             Bind();
+            // Квартира закрыла сцену. Карту выпуска открывает Resume (выпуск идёт), комнату закрывает RoomNodeId.
+            GameSession.ReturnToMap = false;
             // Вернулись со съёмки — комната пройдена, дальше по карте выпуска.
             if (!string.IsNullOrEmpty(GameSession.RoomNodeId) && _episode.Active)
             {

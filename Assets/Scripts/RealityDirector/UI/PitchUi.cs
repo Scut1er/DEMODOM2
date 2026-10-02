@@ -18,6 +18,12 @@ namespace RealityDirector.UI
         static readonly Color Muted = new Color(0.62f, 0.56f, 0.52f, 1f);
         static readonly Color Accent = new Color(0.93f, 0.33f, 0.22f, 1f);
         static readonly Color Good = new Color(0.49f, 0.86f, 0.62f, 1f);
+
+        static Color ScoreColor(float score)
+        {
+            float t = Mathf.InverseLerp(1f, 10f, score);
+            return Color.HSVToRGB(t * (120f / 360f), 0.78f, 0.95f);
+        }
         static readonly Color PanelColor = new Color(0.13f, 0.11f, 0.14f, 1f);
         static readonly Color Hud = new Color(0.08f, 0.07f, 0.09f, 0.82f);
 
@@ -482,6 +488,133 @@ namespace RealityDirector.UI
             StartCoroutine(FlyRoutine(photo, slot, screen, framed, _slotEpoch));
         }
 
+        public void PlaySlate(int scene, Action onBlack)
+        {
+            StartCoroutine(SlateRoutine(scene, onBlack));
+        }
+
+        IEnumerator SlateRoutine(int scene, Action onBlack)
+        {
+            var root = new GameObject("Slate", typeof(RectTransform), typeof(Image));
+            root.transform.SetParent(transform, false);
+            var rootRect = root.GetComponent<RectTransform>();
+            Stretch(rootRect);
+            var black = root.GetComponent<Image>();
+            black.color = new Color(0f, 0f, 0f, 0f);
+            black.raycastTarget = true;
+
+            var board = new GameObject("board", typeof(RectTransform), typeof(Image), typeof(CanvasGroup));
+            board.transform.SetParent(root.transform, false);
+            var boardRect = board.GetComponent<RectTransform>();
+            boardRect.anchorMin = boardRect.anchorMax = new Vector2(0.5f, 0.5f);
+            boardRect.pivot = new Vector2(0.5f, 0.5f);
+            boardRect.sizeDelta = new Vector2(980f, 620f);
+            var boardImg = board.GetComponent<Image>();
+            boardImg.sprite = IllustratedArt.SlateBoard;
+            boardImg.color = Color.white;
+            boardImg.type = Image.Type.Simple;
+            boardImg.raycastTarget = false;
+            var group = board.GetComponent<CanvasGroup>();
+
+            var stick = new GameObject("stick", typeof(RectTransform), typeof(Image));
+            stick.transform.SetParent(board.transform, false);
+            var stickRect = stick.GetComponent<RectTransform>();
+            stickRect.anchorMin = stickRect.anchorMax = new Vector2(0f, 1f);
+            stickRect.pivot = new Vector2(0f, 1f);
+            stickRect.anchoredPosition = new Vector2(22f, -18f);
+            stickRect.sizeDelta = new Vector2(936f, 150f);
+            var stickImg = stick.GetComponent<Image>();
+            stickImg.sprite = IllustratedArt.SlateStick;
+            stickImg.color = Color.white;
+            stickImg.raycastTarget = false;
+
+            var caption = MakeText(board.transform, "СЦЕНА", 36, new Color(0.9f, 0.88f, 0.82f, 1f), TextAnchor.MiddleCenter);
+            var capRect = caption.rectTransform;
+            capRect.anchorMin = capRect.anchorMax = new Vector2(0.5f, 0.5f);
+            capRect.sizeDelta = new Vector2(800f, 48f);
+            capRect.anchoredPosition = new Vector2(0f, 20f);
+            var number = MakeText(board.transform, scene.ToString(), 140, Color.white, TextAnchor.MiddleCenter);
+            var numRect = number.rectTransform;
+            numRect.anchorMin = numRect.anchorMax = new Vector2(0.5f, 0.5f);
+            numRect.sizeDelta = new Vector2(800f, 170f);
+            numRect.anchoredPosition = new Vector2(0f, -90f);
+
+            stickRect.localRotation = Quaternion.Euler(0f, 0f, 38f);
+            float t = 0f;
+            const float drop = 0.5f;
+            while (t < drop)
+            {
+                t += Time.unscaledDeltaTime;
+                float k = 1f - Mathf.Pow(1f - Mathf.Clamp01(t / drop), 3f);
+                black.color = new Color(0f, 0f, 0f, Mathf.Lerp(0f, 0.82f, k));
+                boardRect.anchoredPosition = new Vector2(0f, Mathf.Lerp(640f, 0f, k));
+                boardRect.localScale = Vector3.one * Mathf.Lerp(1.12f, 1f, k);
+                yield return null;
+            }
+
+            boardRect.anchoredPosition = Vector2.zero;
+            boardRect.localScale = Vector3.one;
+            black.color = new Color(0f, 0f, 0f, 0.82f);
+            yield return new WaitForSecondsRealtime(0.14f);
+
+            t = 0f;
+            const float clap = 0.16f;
+            bool hit = false;
+            while (t < clap)
+            {
+                t += Time.unscaledDeltaTime;
+                float k = Mathf.Clamp01(t / clap);
+                stickRect.localRotation = Quaternion.Euler(0f, 0f, Mathf.Lerp(38f, 0f, k * k));
+                if (!hit && k > 0.86f)
+                {
+                    hit = true;
+                    Sfx.Play(Cue.Slap, 1f, 0.66f);
+                    boardRect.anchoredPosition = new Vector2(0f, -8f);
+                }
+
+                yield return null;
+            }
+
+            stickRect.localRotation = Quaternion.identity;
+            t = 0f;
+            while (t < 0.12f)
+            {
+                t += Time.unscaledDeltaTime;
+                boardRect.anchoredPosition = Vector2.Lerp(new Vector2(0f, -8f), Vector2.zero, t / 0.12f);
+                yield return null;
+            }
+
+            yield return new WaitForSecondsRealtime(0.85f);
+            t = 0f;
+            const float fade = 2.4f;
+            while (t < fade)
+            {
+                t += Time.unscaledDeltaTime;
+                float k = Mathf.Clamp01(t / fade);
+                float e = k * k * (3f - 2f * k);
+                black.color = new Color(0f, 0f, 0f, Mathf.Lerp(0.82f, 1f, e));
+                group.alpha = 1f - e;
+                yield return null;
+            }
+
+            black.color = Color.black;
+            group.alpha = 0f;
+            yield return new WaitForSecondsRealtime(0.55f);
+            onBlack?.Invoke();
+            root.transform.SetAsLastSibling();
+            t = 0f;
+            const float outFade = 1.15f;
+            while (t < outFade)
+            {
+                t += Time.unscaledDeltaTime;
+                float k = Mathf.Clamp01(t / outFade);
+                black.color = new Color(0f, 0f, 0f, 1f - k * k);
+                yield return null;
+            }
+
+            Destroy(root);
+        }
+
         public void SetWrapReady(bool on)
         {
             if (_endPlate == null)
@@ -550,7 +683,8 @@ namespace RealityDirector.UI
                 bool offer = review.offer;
                 _reviewAuthors[i].text = offer ? "★  " + review.author : review.author;
                 _reviewBodies[i].text = review.body;
-                _reviewScores[i].text = review.score + "/10";
+                _reviewScores[i].text = review.score.ToString();
+                _reviewScores[i].color = ScoreColor(review.score);
                 _stars[i].gameObject.SetActive(offer);
                 if (!offer)
                     continue;
@@ -560,8 +694,8 @@ namespace RealityDirector.UI
                 _stars[i].image.color = new Color(0.22f, 0.2f, 0.24f, 1f);
             }
 
-            _scoreText.text = result.score + "/10";
-            _scoreText.color = result.score >= 7 ? Good : Accent;
+            _scoreText.text = result.score.ToString("0.0");
+            _scoreText.color = ScoreColor(result.score);
             _wishText.text = "";
             _payText.text = result.payLine ?? "";
             _feedbackNext = onNext;
@@ -760,8 +894,6 @@ namespace RealityDirector.UI
                 onClick();
             });
 
-            // Рамка художника по тону карты: окно внутри прозрачное, под ним тёмная подложка.
-            var frameArt = def.moods != null && def.moods.Count > 0 ? GameArt.CardFrame(def.moods[0]) : null;
             var inner = Panel("inner", frame.transform, new Color(0.95f, 0.91f, 0.84f, 1f));
             var innerRect = inner.rectTransform;
             innerRect.anchorMin = Vector2.zero;
@@ -769,15 +901,6 @@ namespace RealityDirector.UI
             innerRect.offsetMin = new Vector2(8f, 8f);
             innerRect.offsetMax = new Vector2(-8f, -8f);
             inner.raycastTarget = false;
-            if (frameArt != null)
-            {
-                frame.sprite = frameArt;
-                frame.color = Color.white;
-                inner.color = new Color(0.07f, 0.05f, 0.08f, 0.96f);
-                innerRect.offsetMin = new Vector2(18f, 60f);
-                innerRect.offsetMax = new Vector2(-18f, -36f);
-                inner.transform.SetAsFirstSibling();
-            }
 
             var badge = Panel("badge", frame.transform, new Color(0.14f, 0.09f, 0.08f, 1f));
             var badgeRect = badge.rectTransform;
@@ -820,11 +943,6 @@ namespace RealityDirector.UI
             bodyRect.pivot = new Vector2(0.5f, 0f);
             bodyRect.anchoredPosition = new Vector2(0f, 8f);
             bodyRect.sizeDelta = new Vector2(-12f, 64f);
-            if (frameArt != null)
-            {
-                title.color = Paper;
-                body.color = new Color(0.82f, 0.76f, 0.7f, 1f);
-            }
 
             var status = MakeText(frame.transform, "сыграно", 16, new Color(0.55f, 0.32f, 0.08f), TextAnchor.MiddleCenter);
             var statusRect = status.rectTransform;
@@ -841,7 +959,7 @@ namespace RealityDirector.UI
                 Frame = frame,
                 Status = status,
                 Root = frame.rectTransform,
-                Base = frameArt != null ? Color.white : def.cardColor,
+                Base = def.cardColor,
                 Button = button,
                 Group = group
             };
@@ -1087,31 +1205,31 @@ namespace RealityDirector.UI
                 _stars[i] = star;
                 _starLabels[i] = star.GetComponentInChildren<Text>();
 
-                _reviewScores[i] = MakeText(row.transform, "", 22, Good, TextAnchor.UpperRight);
+                _reviewScores[i] = MakeText(row.transform, "", 46, Good, TextAnchor.MiddleRight);
                 var scoreRect = _reviewScores[i].rectTransform;
-                scoreRect.anchorMin = new Vector2(1f, 1f);
-                scoreRect.anchorMax = new Vector2(1f, 1f);
-                scoreRect.pivot = new Vector2(1f, 1f);
-                scoreRect.anchoredPosition = new Vector2(-22f, -12f);
-                scoreRect.sizeDelta = new Vector2(120f, 32f);
+                scoreRect.anchorMin = new Vector2(1f, 0.5f);
+                scoreRect.anchorMax = new Vector2(1f, 0.5f);
+                scoreRect.pivot = new Vector2(1f, 0.5f);
+                scoreRect.anchoredPosition = new Vector2(-18f, -4f);
+                scoreRect.sizeDelta = new Vector2(96f, 64f);
 
                 _reviewBodies[i] = MakeText(row.transform, "", 26, Paper, TextAnchor.UpperLeft);
                 var bodyRect = _reviewBodies[i].rectTransform;
                 bodyRect.anchorMin = new Vector2(0f, 0f);
                 bodyRect.anchorMax = new Vector2(1f, 1f);
                 bodyRect.offsetMin = new Vector2(22f, 12f);
-                bodyRect.offsetMax = new Vector2(-22f, -46f);
+                bodyRect.offsetMax = new Vector2(-120f, -46f);
             }
 
-            _scoreText = MakeText(panel.transform, "7/10", 72, Good, TextAnchor.MiddleCenter);
-            Place(_scoreText.rectTransform, new Vector2(0.5f, 0f), new Vector2(-160f, 150f), new Vector2(320f, 90f));
+            _scoreText = MakeText(panel.transform, "7.0", 72, Good, TextAnchor.MiddleCenter);
+            Place(_scoreText.rectTransform, new Vector2(0.5f, 0f), new Vector2(-430f, 176f), new Vector2(280f, 84f));
             var scoreCaption = MakeText(panel.transform, "оценка серии", 18, Muted, TextAnchor.MiddleCenter);
-            Place(scoreCaption.rectTransform, new Vector2(0.5f, 0f), new Vector2(-160f, 108f), new Vector2(320f, 28f));
+            Place(scoreCaption.rectTransform, new Vector2(0.5f, 0f), new Vector2(-430f, 118f), new Vector2(280f, 28f));
 
             _wishText = MakeText(panel.transform, "", 20, Muted, TextAnchor.MiddleLeft);
-            Place(_wishText.rectTransform, new Vector2(0.5f, 0f), new Vector2(180f, 168f), new Vector2(640f, 70f));
+            Place(_wishText.rectTransform, new Vector2(0.5f, 0f), new Vector2(150f, 196f), new Vector2(520f, 52f));
             _payText = MakeText(panel.transform, "", 22, new Color(0.95f, 0.82f, 0.45f, 1f), TextAnchor.MiddleLeft);
-            Place(_payText.rectTransform, new Vector2(0.5f, 0f), new Vector2(180f, 108f), new Vector2(640f, 36f));
+            Place(_payText.rectTransform, new Vector2(0.5f, 0f), new Vector2(150f, 128f), new Vector2(520f, 36f));
 
             MakeButton(panel.transform, "ДАЛЬШЕ", new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(0.5f, 0f),
                 new Vector2(0f, 42f), new Vector2(320f, 58f), Accent, () => _feedbackNext?.Invoke());

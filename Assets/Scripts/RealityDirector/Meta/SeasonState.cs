@@ -21,7 +21,7 @@ namespace RealityDirector.Meta
         public readonly List<string> owned = new List<string>();
         public readonly HashSet<string> played = new HashSet<string>();
         public readonly List<string> picked = new List<string>();
-        public int ratingSum;
+        public float ratingSum;
         public int rated;
 
         // Сезон и карьера.

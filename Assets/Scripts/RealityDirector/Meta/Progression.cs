@@ -56,7 +56,7 @@ namespace RealityDirector.Meta
             return t * 0.25f;
         }
 
-        public static int Payout(int score, int castLevel, bool wishDone)
+        public static int Payout(float score, int castLevel, bool wishDone)
         {
             float mult = score / 10f;
             mult *= 1f + HypeBonus(castLevel);

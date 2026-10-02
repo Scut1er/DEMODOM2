@@ -17,7 +17,7 @@ namespace RealityDirector.Meta
     public struct FeedbackResult
     {
         public List<ViewerReview> reviews;
-        public int score;
+        public float score;
         public string wish;
         public string payLine;
         public ViewerWishId nextWish;
@@ -118,11 +118,12 @@ namespace RealityDirector.Meta
             int sum = 0;
             for (int i = 0; i < reviews.Count; i++)
                 sum += reviews[i].score;
+            float avg = reviews.Count > 0 ? sum / (float)reviews.Count : 0f;
 
             return new FeedbackResult
             {
                 reviews = reviews,
-                score = UnityEngine.Mathf.RoundToInt(sum / (float)reviews.Count),
+                score = UnityEngine.Mathf.Round(avg * 10f) / 10f,
                 wish = OfferLabel(id, soft, tone),
                 nextWish = id
             };
