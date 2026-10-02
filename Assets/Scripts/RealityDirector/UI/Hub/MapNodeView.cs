@@ -77,6 +77,8 @@ namespace RealityDirector.UI.Hub
                 case MapNodeKind.Elimination: return IllustratedArt.IconDevil;
                 case MapNodeKind.Party: return IllustratedArt.IconFire;
                 case MapNodeKind.Climax: return IllustratedArt.IconCamera;
+                case MapNodeKind.Shop: return IllustratedArt.IconCast;
+                case MapNodeKind.Mystery: return IllustratedArt.IconDevil;
                 default: return IllustratedArt.IconCamera;
             }
         }

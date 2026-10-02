@@ -129,10 +129,10 @@ namespace RealityDirector.Meta
             return true;
         }
 
+        // Снимать можно с любым числом выбранных карт — от нуля до лимита слотов.
         public bool CanStart()
         {
-            int need = Mathf.Min(SlotsNow(), _state.UnplayedCount());
-            return need > 0 && _state.picked.Count == need;
+            return _state.picked.Count <= SlotsNow();
         }
 
         // Переносит выбранные карты в руку сессии. Неиспользованные вернутся в колоду.
@@ -150,6 +150,12 @@ namespace RealityDirector.Meta
         public void ClearReject()
         {
             Reject = null;
+        }
+
+        // Подсказка внизу окна колоды (например, «собери колоду перед съёмкой»).
+        public void Note(string text)
+        {
+            Reject = text;
         }
 
         public EventDefinition Find(string id)
@@ -253,7 +259,7 @@ namespace RealityDirector.Meta
             {
                 rating = _state.rated > 0 ? (_state.ratingSum / (float)_state.rated).ToString("0.0") + " / 10" : "—",
                 budget = _state.money + " кр",
-                episode = Mathf.Min(_state.episodeIndex + 1, Progression.SeasonLength) + " / " + Progression.SeasonLength,
+                episode = (_state.episodeIndex + 1).ToString(),
                 drama = _tone != null ? _tone.Drama / (float)SeasonTone.Cap : 0f,
                 trash = _tone != null ? _tone.Trash / (float)SeasonTone.Cap : 0f,
                 family = _tone != null ? _tone.Family / (float)SeasonTone.Cap : 0f

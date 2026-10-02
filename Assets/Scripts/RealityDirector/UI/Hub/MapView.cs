@@ -19,10 +19,15 @@ namespace RealityDirector.UI.Hub
         [SerializeField] RectTransform edgesRoot;
         [SerializeField] RectTransform nodesRoot;
         [SerializeField] MapNodeView nodePrefab;
-        [Tooltip("Центр колонки 0 и шаг между колонками/строками, в пикселях доски.")]
+        [Tooltip("Раскладывать узлы по размеру доски (под любое число рядов и дорожек).")]
+        [SerializeField] bool autoFit = true;
+        [SerializeField] Vector2 boardMargin = new Vector2(130f, 90f);
+        [Tooltip("Ручная раскладка, если autoFit выключен: центр колонки 0 и шаги, в пикселях доски.")]
         [SerializeField] Vector2 origin = new Vector2(-660f, 0f);
         [SerializeField] float layerStep = 265f;
         [SerializeField] float rowStep = 175f;
+        [Tooltip("Размер карточки узла в префабе — для уменьшения при плотной карте.")]
+        [SerializeField] Vector2 nodeSize = new Vector2(220f, 150f);
         [SerializeField] float edgeWidth = 6f;
         [SerializeField] Color routeColor = new Color(0.98f, 0.8f, 0.3f, 1f);
         [SerializeField] Color openColor = new Color(0.98f, 0.38f, 0.62f, 1f);
@@ -36,6 +41,10 @@ namespace RealityDirector.UI.Hub
         [SerializeField] Text shootLabel;
         [SerializeField] Button back;
         [SerializeField] Button random;
+        [Tooltip("Выбор карт перед съёмкой — прямо на карте, без возврата в хаб.")]
+        [SerializeField] DeckPanelView deck;
+
+        public DeckPanelView Deck => deck;
 
         public event Action<string> Select;
         public event Action Shoot;
@@ -55,7 +64,8 @@ namespace RealityDirector.UI.Hub
         public void Show(MapService map, MapNode selected, StatsModel statsModel, int episodeNumber, IList<string> tasks)
         {
             if (subtitle != null)
-                subtitle.text = "Сезон 1  ·  Выпуск " + episodeNumber + " из " + Progression.SeasonLength;
+                subtitle.text = "Сезон 1  ·  шаг " + Mathf.Min(map.Step + 1, map.Map.Layers) + " из " + map.Map.Layers + "  ·  выпуск " + episodeNumber;
+            Layout(map.Map);
             if (stats != null)
                 stats.Show(statsModel);
 
@@ -71,9 +81,34 @@ namespace RealityDirector.UI.Hub
             ShowInfo(map, selected);
         }
 
+        Vector2 _origin;
+        float _layerStep;
+        float _rowStep;
+        float _nodeScale = 1f;
+
+        // Подгоняет шаги сетки и размер карточек под доску.
+        void Layout(MapGraph graph)
+        {
+            _origin = origin;
+            _layerStep = layerStep;
+            _rowStep = rowStep;
+            _nodeScale = 1f;
+            if (!autoFit || board == null || graph.Layers < 2)
+                return;
+
+            Vector2 size = board.rect.size;
+            float width = Mathf.Max(100f, size.x - boardMargin.x * 2f);
+            float height = Mathf.Max(100f, size.y - boardMargin.y * 2f);
+            _layerStep = width / (graph.Layers - 1);
+            _rowStep = height * 0.5f;
+            _origin = new Vector2(-width * 0.5f, 0f);
+            float laneGap = graph.Lanes > 1 ? height / (graph.Lanes - 1) : height;
+            _nodeScale = Mathf.Clamp(Mathf.Min(_layerStep * 0.82f / nodeSize.x, laneGap * 0.88f / nodeSize.y), 0.45f, 1f);
+        }
+
         Vector2 PositionOf(MapNode node)
         {
-            return origin + new Vector2(node.layer * layerStep, -node.row * rowStep) + node.offset;
+            return _origin + new Vector2(node.layer * _layerStep, -node.row * _rowStep) + node.offset * _nodeScale;
         }
 
         void DrawNodes(MapService map, MapNode selected)
@@ -88,8 +123,8 @@ namespace RealityDirector.UI.Hub
                 var view = Instantiate(nodePrefab, nodesRoot);
                 view.name = "Node_" + node.id;
                 ((RectTransform)view.transform).anchoredPosition = PositionOf(node);
-                if (node.kind == MapNodeKind.Climax)
-                    view.transform.localScale = Vector3.one * 1.2f;
+                float scale = _nodeScale * (node.kind == MapNodeKind.Climax ? 1.2f : 1f);
+                view.transform.localScale = Vector3.one * scale;
                 string id = node.id;
                 view.Show(node, map.StateOf(node), map.LockReason(node), selected == node, () => Select?.Invoke(id));
             }
@@ -153,7 +188,7 @@ namespace RealityDirector.UI.Hub
 
         void ShowInfo(MapService map, MapNode selected)
         {
-            bool can = map.CanShoot(selected);
+            bool can = map.CanEnter(selected);
             if (selected == null)
             {
                 if (infoTitle != null)
@@ -186,7 +221,27 @@ namespace RealityDirector.UI.Hub
             if (shoot != null)
                 shoot.interactable = can;
             if (shootLabel != null)
-                shootLabel.text = can ? "СНИМАТЬ" : selected == null ? "ВЫБОР" : "НЕДОСТУПНО";
+                shootLabel.text = !can ? (selected == null ? "ВЫБОР" : "НЕДОСТУПНО") : ActionLabel(selected.type);
+        }
+
+        // Сообщение в инфо-панели поверх обычного текста (например, «событие пока не реализовано»).
+        public void Notice(string title, string body)
+        {
+            if (infoTitle != null)
+                infoTitle.text = title;
+            if (infoBody != null)
+                infoBody.text = body;
+        }
+
+        static string ActionLabel(MapNodeType type)
+        {
+            switch (type)
+            {
+                case MapNodeType.Shop: return "В МАГАЗИН";
+                case MapNodeType.RandomEvent:
+                case MapNodeType.Editing: return "ПРОЙТИ";
+                default: return "СНИМАТЬ";
+            }
         }
 
         static string Capital(string s)

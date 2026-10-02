@@ -87,7 +87,7 @@ namespace RealityDirector
         {
             if (!GameSession.Active && !GameSession.Continue())
                 GameSession.NewSeason(_content.StarterIds());
-            if (GameSession.Hand.Count > 0)
+            if (GameSession.Embarked)
                 return;
             var meta = new MetaService(_state, _tone, _content.All);
             meta.AutoPick();
@@ -534,7 +534,7 @@ namespace RealityDirector
             _capture.Capacity = Progression.CaptureSlots(_state.operatorLevel);
             _ui.SetCaptureCapacity(_capture.Capacity);
             string scene = string.IsNullOrEmpty(GameSession.SceneTitle) ? "" : "  ·  " + GameSession.SceneTitle;
-            _ui.SetEpisodeTitle("СЕРИЯ " + (_state.episodeIndex + 1) + " / " + Progression.SeasonLength + scene + "\nты режиссёр, не участник");
+            _ui.SetEpisodeTitle("СЕРИЯ " + (_state.episodeIndex + 1) + scene + "\nты режиссёр, не участник");
             _phase = PitchPhase.Play;
             _ui.ShowPlay();
             _ui.RefreshTone(_tone);
@@ -549,6 +549,8 @@ namespace RealityDirector
             if (_ui.TaskTaken)
                 _state.Accept(_offerId, _offerLabel);
             _state.episodeIndex++;
+            // Съёмка — узел карты сезона: отснятый выпуск закрывает текущий шаг.
+            _state.step++;
             BackToHub();
         }
 
@@ -591,6 +593,7 @@ namespace RealityDirector
         {
             StopAllCoroutines();
             GameSession.Hand.Clear();
+            GameSession.Embarked = false;
             GameSession.Save();
             SceneFlow.ToHub();
         }

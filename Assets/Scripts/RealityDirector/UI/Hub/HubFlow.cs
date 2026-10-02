@@ -18,12 +18,13 @@ namespace RealityDirector.UI.Hub
         [SerializeField] MapView map;
         [SerializeField] SeasonEndView seasonEnd;
         [SerializeField] SettingsView settings;
-        [Tooltip("Карта сезона. Пусто — встроенная по умолчанию.")]
-        [SerializeField] EpisodeMap episodeMap;
+        [Tooltip("Настройки генерации карты сезона. Пусто — встроенные по умолчанию.")]
+        [SerializeField] SeasonMapConfig mapConfig;
 
         PitchContent _content;
         MetaService _meta;
         MapService _map;
+        MapGraph _graph;
         MapNode _selected;
         CastMember[] _cast;
         GameObject _back;
@@ -32,8 +33,8 @@ namespace RealityDirector.UI.Hub
         {
             _content = PitchContent.Create();
             _cast = CastRoster.All();
-            if (episodeMap == null)
-                episodeMap = EpisodeMap.CreateDefault();
+            if (mapConfig == null)
+                mapConfig = SeasonMapConfig.CreateDefault();
             EnsureEventSystem();
             Sfx.Bind(gameObject);
 
@@ -51,12 +52,32 @@ namespace RealityDirector.UI.Hub
             hub.Toggle += id => Act(_meta.TogglePick(id), Cue.Click, 0.3f);
             hub.Buy += id => Act(_meta.TryBuy(id), Cue.Coin, 0.5f);
             hub.OpenDeck += tab => { Click(); _meta.ClearReject(); hub.Deck.Open(tab, _meta.BuildPrep()); };
-            hub.CloseDeck += () => { Click(); hub.Deck.Hide(); RefreshHub(); };
+            hub.CloseDeck += () =>
+            {
+                Click();
+                bool leavingShop = hub.Deck.ShopOpen;
+                hub.Deck.Hide();
+                if (leavingShop)
+                    LeaveShop();
+                else
+                    RefreshHub();
+            };
             hub.StartShoot += OpenMap;
             hub.OpenSettings += () => { Click(); ShowSettings(hub.gameObject); };
             hub.Menu += () => { Click(); ShowMenu(); };
 
-            map.Select += id => { Click(); _selected = episodeMap.Find(id); RefreshMap(); };
+            map.Select += id => { Click(); _selected = _graph.Find(id); RefreshMap(); };
+            // Выбор карт для съёмки — прямо на карте сезона.
+            map.Deck.Toggle += id =>
+            {
+                bool ok = _meta.TogglePick(id);
+                Sfx.Play(ok ? Cue.Click : Cue.Miss, ok ? 0.3f : 0.45f);
+                if (ok)
+                    GameSession.Save();
+                map.Deck.Show(_meta.BuildPrep());
+            };
+            map.Deck.Close += () => { Click(); BeginFilming(_selected); };
+            map.Deck.Cancel += () => { Click(); map.Deck.Hide(); };
             map.Random += PickRandom;
             map.Back += () => { Click(); ShowHub(); };
             map.Shoot += Shoot;
@@ -108,8 +129,16 @@ namespace RealityDirector.UI.Hub
 
         void Bind()
         {
-            _meta = new MetaService(GameSession.State, GameSession.Tone, _content.All);
-            _map = new MapService(GameSession.State, GameSession.Tone, episodeMap);
+            var state = GameSession.State;
+            _meta = new MetaService(state, GameSession.Tone, _content.All);
+
+            // Карта строится из seed: тот же seed + конфиг = та же карта, поэтому «Продолжить» её восстанавливает.
+            if (state.mapSeed == 0)
+                state.mapSeed = Random.Range(1, int.MaxValue);
+            int seed = mapConfig.seed != 0 ? mapConfig.seed : state.mapSeed;
+            _graph = MapGenerator.Generate(mapConfig, seed);
+            state.mapFloors = _graph.Layers;
+            _map = new MapService(state, GameSession.Tone, _graph);
         }
 
         void ShowMenu()
@@ -145,15 +174,9 @@ namespace RealityDirector.UI.Hub
             hub.Show(_meta.BuildPrep(), _meta.Stats(), crew, _cast, _meta.CastLevel, _meta.TaskLines());
         }
 
+        // Карта открыта всегда; колода нужна только для узла-съёмки.
         void OpenMap()
         {
-            if (!_meta.CanStart())
-            {
-                Sfx.Play(Cue.Miss, 0.4f);
-                hub.Deck.Open(DeckPanelView.DeckTab, _meta.BuildPrep());
-                return;
-            }
-
             Click();
             _selected = _map.CurrentChoice;
             Show(map.gameObject);
@@ -179,9 +202,41 @@ namespace RealityDirector.UI.Hub
             RefreshMap();
         }
 
+        // Кнопка действия на карте: зайти в выбранный узел по его типу.
         void Shoot()
         {
-            if (!_map.CanShoot(_selected) || !_map.Choose(_selected))
+            if (!_map.CanEnter(_selected))
+            {
+                Sfx.Play(Cue.Miss, 0.4f);
+                return;
+            }
+
+            switch (_selected.type)
+            {
+                case MapNodeType.Shop: EnterShop(_selected); break;
+                case MapNodeType.RandomEvent: RunRandomEvent(_selected); break;
+                case MapNodeType.Editing: RunEditing(_selected); break;
+                default: StartFilming(_selected); break;
+            }
+        }
+
+        // Съёмка: сначала выбор карт прямо на карте, «Начать съёмку» — сразу в квартиру.
+        void StartFilming(MapNode node)
+        {
+            _meta.TrimPicked();
+            _meta.ClearReject();
+            map.Deck.Open(DeckPanelView.DeckTab, _meta.BuildPrep());
+        }
+
+        void BeginFilming(MapNode node)
+        {
+            if (node == null || !_map.CanEnter(node) || !_meta.CanStart())
+            {
+                Sfx.Play(Cue.Miss, 0.4f);
+                return;
+            }
+
+            if (!_map.Choose(node))
             {
                 Sfx.Play(Cue.Miss, 0.4f);
                 return;
@@ -197,9 +252,72 @@ namespace RealityDirector.UI.Hub
             }
 
             Sfx.Play(Cue.Card, 0.45f, 0.8f);
-            GameSession.SceneTitle = _selected.title;
+            GameSession.Embarked = true;
+            GameSession.SceneTitle = node.title;
             GameSession.Save();
             SceneFlow.ToEpisode();
+        }
+
+        // Магазин: окно колоды с вкладкой магазина. «Готово» закрывает шаг (LeaveShop).
+        void EnterShop(MapNode node)
+        {
+            if (!_map.Choose(node))
+            {
+                Sfx.Play(Cue.Miss, 0.4f);
+                return;
+            }
+
+            Sfx.Play(Cue.Coin, 0.4f);
+            GameSession.Save();
+            ShowHub();
+            hub.Deck.Open(DeckPanelView.ShopTab, _meta.BuildPrep(), true);
+        }
+
+        void LeaveShop()
+        {
+            _map.CompleteStep();
+            GameSession.Save();
+            AfterStep();
+        }
+
+        // Случайное событие — пока не реализовано: шаг засчитывается сразу.
+        void RunRandomEvent(MapNode node)
+        {
+            if (!_map.Choose(node))
+                return;
+            // TODO: здесь будет экран события (выбор вариантов, эффекты на героев/бюджет/тон).
+            Sfx.Play(Cue.Blip, 0.5f);
+            _map.CompleteStep();
+            GameSession.Save();
+            AfterStep("Случайное событие", "Пока не реализовано — шаг засчитан. Здесь будет выбор с последствиями.");
+        }
+
+        // Монтаж — пока не реализовано: шаг засчитывается сразу.
+        void RunEditing(MapNode node)
+        {
+            if (!_map.Choose(node))
+                return;
+            // TODO: здесь будет перемонтаж отснятых кадров (улучшение оценки прошлых выпусков).
+            Sfx.Play(Cue.Blip, 0.5f);
+            _map.CompleteStep();
+            GameSession.Save();
+            AfterStep("Монтаж", "Пока не реализовано — шаг засчитан. Здесь будет перемонтаж отснятого.");
+        }
+
+        // После не-съёмочного шага: конец сезона или снова карта (с пояснением, если есть).
+        void AfterStep(string noticeTitle = null, string noticeBody = null)
+        {
+            if (GameSession.SeasonOver)
+            {
+                ShowSeasonEnd();
+                return;
+            }
+
+            _selected = null;
+            Show(map.gameObject);
+            RefreshMap();
+            if (noticeTitle != null)
+                map.Notice(noticeTitle, noticeBody);
         }
 
         void ShowSeasonEnd()

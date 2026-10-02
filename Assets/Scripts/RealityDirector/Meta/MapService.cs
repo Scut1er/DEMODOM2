@@ -21,34 +21,36 @@ namespace RealityDirector.Meta
         Route
     }
 
-    // Правила карты сезона: что уже снято, куда можно пойти, что закрыто.
+    // Правила карты сезона: что пройдено, куда можно пойти, что закрыто.
+    // Шаг (state.step) = номер текущего ряда. route[i] — узел, выбранный в ряду i.
     public class MapService
     {
         readonly SeasonState _state;
         readonly SeasonTone _tone;
-        readonly EpisodeMap _map;
+        readonly MapGraph _map;
 
-        public EpisodeMap Map => _map;
+        public MapGraph Map => _map;
+        public int Step => _state.step;
 
-        public MapService(SeasonState state, SeasonTone tone, EpisodeMap map)
+        public MapService(SeasonState state, SeasonTone tone, MapGraph map)
         {
             _state = state;
             _tone = tone;
             _map = map;
         }
 
-        // Узел, выбранный на текущую серию, но ещё не снятый.
+        // Узел текущего ряда, уже выбранный, но ещё не пройденный (например, съёмка не досмотрена).
         public MapNode CurrentChoice =>
-            _state.route.Count > _state.episodeIndex ? _map.Find(_state.route[_state.episodeIndex]) : null;
+            _state.route.Count > _state.step ? _map.Find(_state.route[_state.step]) : null;
 
         public MapNodeState StateOf(MapNode node)
         {
             int index = _state.route.IndexOf(node.id);
             if (index >= 0)
-                return index < _state.episodeIndex ? MapNodeState.Done : MapNodeState.Current;
-            if (node.layer < _state.episodeIndex)
+                return index < _state.step ? MapNodeState.Done : MapNodeState.Current;
+            if (node.layer < _state.step)
                 return MapNodeState.Skipped;
-            if (node.layer > _state.episodeIndex)
+            if (node.layer > _state.step)
                 return MapNodeState.Future;
             if (CurrentChoice != null || !Reachable(node))
                 return MapNodeState.Skipped;
@@ -72,7 +74,7 @@ namespace RealityDirector.Meta
             int b = _state.route.IndexOf(to.id);
             if (a >= 0 && b == a + 1)
                 return MapEdgeState.Route;
-            if (a >= 0 && a == _state.episodeIndex - 1)
+            if (a >= 0 && a == _state.step - 1)
             {
                 var s = StateOf(to);
                 if (s == MapNodeState.Available || s == MapNodeState.Current)
@@ -94,7 +96,7 @@ namespace RealityDirector.Meta
             return list;
         }
 
-        public bool CanShoot(MapNode node)
+        public bool CanEnter(MapNode node)
         {
             if (node == null)
                 return false;
@@ -113,7 +115,7 @@ namespace RealityDirector.Meta
             if (StateOf(node) != MapNodeState.Available)
                 return false;
 
-            while (_state.route.Count < _state.episodeIndex)
+            while (_state.route.Count < _state.step)
                 _state.route.Add("");
             _state.route.Add(node.id);
             _state.money = Mathf.Max(0, _state.money + node.budget);
@@ -121,6 +123,15 @@ namespace RealityDirector.Meta
                 _tone.Add(node.mood, node.toneGain);
             return true;
         }
+
+        // Закрывает текущий шаг (магазин, событие, монтаж). Съёмку закрывает квартира после отзывов.
+        public void CompleteStep()
+        {
+            if (CurrentChoice != null)
+                _state.step++;
+        }
+
+        public bool SeasonDone => _state.step >= _map.Layers;
 
         public string EffectText(MapNode node)
         {
@@ -134,11 +145,11 @@ namespace RealityDirector.Meta
 
         bool Reachable(MapNode node)
         {
-            if (_state.episodeIndex <= 0)
+            if (_state.step <= 0)
                 return node.layer == 0;
-            int prevIndex = _state.episodeIndex - 1;
+            int prevIndex = _state.step - 1;
             var prev = prevIndex < _state.route.Count ? _map.Find(_state.route[prevIndex]) : null;
-            // Нет записи о прошлой серии (старый сейв / старт из квартиры) — открыта вся колонка.
+            // Нет записи о прошлом шаге (старый сейв / старт из квартиры) — открыт весь ряд.
             return prev == null || prev.next.Contains(node.id);
         }
 
@@ -148,7 +159,7 @@ namespace RealityDirector.Meta
             for (int i = 0; i < _map.nodes.Count; i++)
             {
                 var n = _map.nodes[i];
-                if (n.layer == _state.episodeIndex && Reachable(n) && LockReason(n) == null)
+                if (n.layer == _state.step && Reachable(n) && LockReason(n) == null)
                     return false;
             }
 
@@ -172,6 +183,17 @@ namespace RealityDirector.Meta
                 case CrewTrack.Cast: return "Кастинг";
                 case CrewTrack.Operators: return "Съёмочная";
                 default: return "Сценарная";
+            }
+        }
+
+        public static string TypeName(MapNodeType type)
+        {
+            switch (type)
+            {
+                case MapNodeType.Shop: return "магазин";
+                case MapNodeType.RandomEvent: return "случайное событие";
+                case MapNodeType.Editing: return "монтаж";
+                default: return "съёмка";
             }
         }
     }

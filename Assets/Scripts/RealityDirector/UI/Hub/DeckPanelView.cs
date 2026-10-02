@@ -25,15 +25,21 @@ namespace RealityDirector.UI.Hub
         [SerializeField] Text deckInfo;
         [SerializeField] Text footer;
         [SerializeField] Button close;
+        [Tooltip("Необязательно: вторая кнопка («Назад») — например, в выборе карт на карте сезона.")]
+        [SerializeField] Button cancel;
 
         public event Action<string> Toggle;
         public event Action<string> Buy;
         public event Action Close;
+        public event Action Cancel;
 
         int _tab;
         PrepModel _model;
+        bool _shopOpen;
 
         public bool IsOpen => gameObject.activeSelf;
+        // Магазин доступен только на узле «Магазин» карты сезона.
+        public bool ShopOpen => _shopOpen;
 
         void Awake()
         {
@@ -46,12 +52,17 @@ namespace RealityDirector.UI.Hub
 
             if (close != null)
                 close.onClick.AddListener(() => Close?.Invoke());
+            if (cancel != null)
+                cancel.onClick.AddListener(() => Cancel?.Invoke());
         }
 
-        public void Open(int tab, PrepModel model)
+        public void Open(int tab, PrepModel model, bool shopOpen = false)
         {
             gameObject.SetActive(true);
-            _tab = Mathf.Clamp(tab, 0, tabPages.Length - 1);
+            _shopOpen = shopOpen;
+            if (ShopTab < tabButtons.Length && tabButtons[ShopTab] != null)
+                tabButtons[ShopTab].gameObject.SetActive(shopOpen);
+            _tab = shopOpen ? Mathf.Clamp(tab, 0, tabPages.Length - 1) : DeckTab;
             Show(model);
         }
 
@@ -62,6 +73,8 @@ namespace RealityDirector.UI.Hub
 
         public void SetTab(int tab)
         {
+            if (tab == ShopTab && !_shopOpen)
+                return;
             _tab = Mathf.Clamp(tab, 0, tabPages.Length - 1);
             if (_model != null)
                 Show(_model);
@@ -124,12 +137,12 @@ namespace RealityDirector.UI.Hub
             if (!string.IsNullOrEmpty(model.reject))
                 return model.reject;
             if (_tab == ShopTab)
-                return "Купленная карта попадает в колоду. Сыгранная сгорает до конца сезона.";
+                return "Купленная карта попадает в колоду. «Готово» — уйти из магазина и продолжить путь по карте.";
             if (model.available == 0)
-                return "Колода пуста. Загляни в магазин.";
-            if (!model.canStart)
-                return "Возьми " + Mathf.Min(model.slots, model.available) + " несыгранных. Неиспользованные вернутся.";
-            return "Набор собран. Неиспользованные карты вернутся в колоду.";
+                return "Колода пуста — снимать можно и без карт. Новые карты — в магазине на карте сезона.";
+            if (model.picked == 0)
+                return "Можно снимать и без карт, но провоцировать будет нечем. Лимит: " + model.slots + ".";
+            return "В серию: " + model.picked + " из " + model.slots + ". Неиспользованные карты вернутся в колоду.";
         }
     }
 }

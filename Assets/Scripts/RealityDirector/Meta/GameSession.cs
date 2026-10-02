@@ -12,9 +12,12 @@ namespace RealityDirector.Meta
         public static SeasonTone Tone { get; private set; }
         public static readonly List<string> Hand = new List<string>();
         public static string SceneTitle;
+        // Серию запустили с карты (рука могла быть и пустой). Нет — квартиру открыли напрямую из редактора.
+        public static bool Embarked;
 
         public static bool Active => State != null;
-        public static bool SeasonOver => Active && State.episodeIndex >= Progression.SeasonLength;
+        // Сезон снят, когда пройдены все ряды карты (последний — финал).
+        public static bool SeasonOver => Active && State.mapFloors > 0 && State.step >= State.mapFloors;
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
         static void Clear()
@@ -22,6 +25,7 @@ namespace RealityDirector.Meta
             State = null;
             Tone = null;
             SceneTitle = null;
+            Embarked = false;
             Hand.Clear();
         }
 
@@ -29,6 +33,8 @@ namespace RealityDirector.Meta
         {
             State = new SeasonState();
             State.Reset(starters);
+            // Карту генерирует хаб по этому seed; 0 в конфиге — новая карта каждый сезон.
+            State.mapSeed = Random.Range(1, int.MaxValue);
             Tone = new SeasonTone();
             Hand.Clear();
             Save();

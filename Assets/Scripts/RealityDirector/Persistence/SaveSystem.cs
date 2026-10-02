@@ -28,6 +28,9 @@ namespace RealityDirector.Persistence
         public List<string> picked = new List<string>();
         public List<SavedTask> tasks = new List<SavedTask>();
         public List<string> route = new List<string>();
+        public int step;
+        public int mapSeed;
+        public int mapFloors;
         public int ratingSum;
         public int rated;
         public int drama;
@@ -57,6 +60,9 @@ namespace RealityDirector.Persistence
                 played = new List<string>(state.played),
                 picked = new List<string>(state.picked),
                 route = new List<string>(state.route),
+                step = state.step,
+                mapSeed = state.mapSeed,
+                mapFloors = state.mapFloors,
                 ratingSum = state.ratingSum,
                 rated = state.rated,
                 drama = tone.Drama,
@@ -104,6 +110,9 @@ namespace RealityDirector.Persistence
             state.played.UnionWith(data.played);
             state.picked.AddRange(data.picked);
             state.route.AddRange(data.route);
+            state.step = data.step;
+            state.mapSeed = data.mapSeed;
+            state.mapFloors = data.mapFloors;
             state.ratingSum = data.ratingSum;
             state.rated = data.rated;
             for (int i = 0; i < data.tasks.Count; i++)

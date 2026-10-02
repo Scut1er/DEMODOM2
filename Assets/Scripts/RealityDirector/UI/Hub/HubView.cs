@@ -126,13 +126,20 @@ namespace RealityDirector.UI.Hub
 
             if (deckButtonLabel != null)
                 deckButtonLabel.text = "Колода " + prep.picked + "/" + prep.slots;
+            // Магазин — только на узле «Магазин» карты сезона.
+            if (shopButton != null)
+                shopButton.gameObject.SetActive(false);
             if (startCaption != null)
-                startCaption.text = prep.canStart
-                    ? "Выпуск " + prep.episodeNumber + "  ·  колода собрана — дальше выбор сцены"
-                    : "Выпуск " + prep.episodeNumber + "  ·  собери колоду: " + prep.picked + "/" + Mathf.Min(prep.slots, prep.available);
+                startCaption.text = "Выпуск " + prep.episodeNumber + "  ·  дальше карта сезона: выбор сцены и карт";
 
             if (deck != null && deck.IsOpen)
                 deck.Show(prep);
+        }
+
+        public void SetSubtitle(string text)
+        {
+            if (subtitle != null)
+                subtitle.text = text;
         }
     }
 }

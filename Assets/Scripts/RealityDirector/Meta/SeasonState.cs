@@ -23,6 +23,10 @@ namespace RealityDirector.Meta
         public readonly List<string> picked = new List<string>();
         // Путь по карте сезона: id узла на каждую серию.
         public readonly List<string> route = new List<string>();
+        // Шаг по карте сезона (сколько рядов пройдено), seed генерации и число рядов карты.
+        public int step;
+        public int mapSeed;
+        public int mapFloors;
         public int ratingSum;
         public int rated;
 
@@ -38,6 +42,9 @@ namespace RealityDirector.Meta
             played.Clear();
             picked.Clear();
             route.Clear();
+            step = 0;
+            mapSeed = 0;
+            mapFloors = 0;
             ratingSum = 0;
             rated = 0;
             if (starters == null)
