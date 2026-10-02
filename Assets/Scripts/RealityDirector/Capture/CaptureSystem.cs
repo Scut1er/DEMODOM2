@@ -23,6 +23,9 @@ namespace RealityDirector.Capture
         EpisodeContext _context;
         List<NPCController> _cast;
         Func<bool> _sceneOnFire;
+        Transform _fridge;
+        Transform _bathroom;
+        Func<bool> _bathOpen;
         Transform _reticle;
         bool _sticky;
         bool _hold;
@@ -33,11 +36,14 @@ namespace RealityDirector.Capture
         public event Action<CapturedMoment> Captured;
         public event Action Missed;
 
-        public void Init(EpisodeContext context, List<NPCController> cast, Func<bool> sceneOnFire)
+        public void Init(EpisodeContext context, List<NPCController> cast, Func<bool> sceneOnFire, Transform fridge, Transform bathroom, Func<bool> bathOpen)
         {
             _context = context;
             _cast = cast;
             _sceneOnFire = sceneOnFire;
+            _fridge = fridge;
+            _bathroom = bathroom;
+            _bathOpen = bathOpen;
             _reticle = BuildReticle();
             _reticle.gameObject.SetActive(false);
         }
@@ -81,12 +87,6 @@ namespace RealityDirector.Capture
                     inside.Add(_cast[i]);
             }
 
-            if (inside.Count == 0)
-            {
-                Missed?.Invoke();
-                return false;
-            }
-
             _busy = true;
             _reticle.gameObject.SetActive(false);
             StartCoroutine(Shoot(origin, inside));
@@ -111,19 +111,51 @@ namespace RealityDirector.Capture
                 yield break;
             }
 
-            var tags = _context != null ? _context.RecentTags(5f) : new List<string>();
-            AddLiveTags(tags, inside);
-            bool onFire = _sceneOnFire != null && _sceneOnFire();
-            ShowMood mood = ResolveMood(inside, tags, onFire);
-            if (mood == ShowMood.Family)
-                Add(tags, MomentTags.Warmth);
+            bool fridgeIn = InFrame(origin, _fridge) && _sceneOnFire != null && _sceneOnFire();
+            bool bathIn = InFrame(origin, _bathroom) && _bathOpen != null && _bathOpen();
+            bool cast = inside.Count > 0;
+            var tags = cast && _context != null ? _context.RecentTags(5f) : new List<string>();
+            if (!fridgeIn)
+                tags.Remove(MomentTags.Fire);
+            AddLiveTags(tags, inside, fridgeIn);
+            ShowMood mood;
+            CaptureGrade grade;
+            if (cast)
+            {
+                grade = CaptureGrade.Cast;
+                mood = ResolveMood(inside, tags, fridgeIn);
+                if (mood == ShowMood.Family)
+                    Add(tags, MomentTags.Warmth);
+            }
+            else if (fridgeIn || bathIn)
+            {
+                grade = CaptureGrade.Prop;
+                if (fridgeIn)
+                {
+                    mood = ShowMood.Trash;
+                    Add(tags, MomentTags.Fire);
+                    Add(tags, MomentTags.Chaos);
+                }
+                else
+                {
+                    mood = ShowMood.Family;
+                    Add(tags, MomentTags.Warmth);
+                }
+            }
+            else
+            {
+                grade = CaptureGrade.Blank;
+                mood = ShowMood.Family;
+            }
+
             var moment = new CapturedMoment
             {
                 time = Time.time,
                 tags = tags,
                 photo = photo,
                 screenPoint = screen,
-                mood = mood
+                mood = mood,
+                grade = grade
             };
             for (int i = 0; i < inside.Count; i++)
                 moment.actorNames.Add(inside[i].DisplayName);
@@ -176,7 +208,27 @@ namespace RealityDirector.Capture
             return tex;
         }
 
-        void AddLiveTags(List<string> tags, List<NPCController> inside)
+        static bool InFrame(Vector2 origin, Transform prop)
+        {
+            if (prop == null || !prop.gameObject.activeInHierarchy)
+                return false;
+            var renderers = prop.GetComponentsInChildren<SpriteRenderer>();
+            for (int i = 0; i < renderers.Length; i++)
+            {
+                if (!renderers[i].enabled)
+                    continue;
+                Bounds b = renderers[i].bounds;
+                if (b.max.x < origin.x - HalfX || b.min.x > origin.x + HalfX)
+                    continue;
+                if (b.max.y < origin.y - HalfY || b.min.y > origin.y + HalfY)
+                    continue;
+                return true;
+            }
+
+            return false;
+        }
+
+        void AddLiveTags(List<string> tags, List<NPCController> inside, bool fridgeIn)
         {
             for (int i = 0; i < inside.Count; i++)
             {
@@ -194,7 +246,7 @@ namespace RealityDirector.Capture
                     Add(tags, MomentTags.Conflict);
             }
 
-            if (_sceneOnFire != null && _sceneOnFire())
+            if (fridgeIn)
             {
                 Add(tags, MomentTags.Fire);
                 Add(tags, MomentTags.Chaos);

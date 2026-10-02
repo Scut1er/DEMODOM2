@@ -4,6 +4,13 @@ using UnityEngine;
 
 namespace RealityDirector.Capture
 {
+    public enum CaptureGrade
+    {
+        Blank,
+        Prop,
+        Cast
+    }
+
     public class CapturedMoment
     {
         public List<string> actorNames = new List<string>();
@@ -12,11 +19,16 @@ namespace RealityDirector.Capture
         public Texture2D photo;
         public Vector2 screenPoint;
         public ShowMood mood;
+        public CaptureGrade grade;
+
+        public bool Framed => grade != CaptureGrade.Blank;
 
         public string Title
         {
             get
             {
+                if (grade == CaptureGrade.Blank)
+                    return "ПУСТО";
                 if (tags.Contains(MomentTags.Fight))
                     return "ДРАКА";
                 if (tags.Contains(MomentTags.Crying))

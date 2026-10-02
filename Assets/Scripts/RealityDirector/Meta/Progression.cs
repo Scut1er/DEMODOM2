@@ -84,6 +84,8 @@ namespace RealityDirector.Meta
                 return false;
             for (int i = 0; i < moments.Count; i++)
             {
+                if (moments[i].grade == CaptureGrade.Blank)
+                    continue;
                 if (moments[i].tags != null && moments[i].tags.Contains(tag))
                     return true;
             }
@@ -97,6 +99,10 @@ namespace RealityDirector.Meta
                 return false;
             for (int i = 0; i < moments.Count; i++)
             {
+                if (moments[i].grade == CaptureGrade.Blank)
+                    continue;
+                if (mood == ShowMood.Family && moments[i].grade != CaptureGrade.Cast)
+                    continue;
                 if (moments[i].mood == mood)
                     return true;
             }

@@ -252,11 +252,11 @@ namespace RealityDirector.UI
             }
         }
 
-        public void FlyPhoto(Texture2D photo, int slot, Vector2 screen, string caption)
+        public void FlyPhoto(Texture2D photo, int slot, Vector2 screen, bool framed)
         {
             if (photo == null || slot < 0 || slot >= _slots.Length)
                 return;
-            StartCoroutine(FlyRoutine(photo, slot, screen, caption, _slotEpoch));
+            StartCoroutine(FlyRoutine(photo, slot, screen, framed, _slotEpoch));
         }
 
         public void SetCaptureMode(bool on)
@@ -1288,7 +1288,7 @@ namespace RealityDirector.UI
             }
         }
 
-        IEnumerator FlyRoutine(Texture2D photo, int slot, Vector2 screen, string caption, int epoch)
+        IEnumerator FlyRoutine(Texture2D photo, int slot, Vector2 screen, bool framed, int epoch)
         {
             _slots[slot].Placeholder.gameObject.SetActive(false);
             var polaroid = new GameObject("Polaroid", typeof(RectTransform), typeof(Image));
@@ -1302,25 +1302,31 @@ namespace RealityDirector.UI
             bg.color = new Color(0.97f, 0.96f, 0.93f, 1f);
             bg.raycastTarget = false;
 
+            if (framed)
+            {
+                var ring = new GameObject("ring", typeof(RectTransform), typeof(Image));
+                ring.transform.SetParent(polaroid.transform, false);
+                var ringRt = ring.GetComponent<RectTransform>();
+                ringRt.anchorMin = Vector2.zero;
+                ringRt.anchorMax = Vector2.one;
+                ringRt.offsetMin = new Vector2(6f, 6f);
+                ringRt.offsetMax = new Vector2(-6f, -6f);
+                var ringImg = ring.GetComponent<Image>();
+                ringImg.color = new Color(0.93f, 0.76f, 0.28f, 1f);
+                ringImg.raycastTarget = false;
+            }
+
             var shotGo = new GameObject("shot", typeof(RectTransform), typeof(Image));
             shotGo.transform.SetParent(polaroid.transform, false);
             var shotRt = shotGo.GetComponent<RectTransform>();
             shotRt.anchorMin = Vector2.zero;
             shotRt.anchorMax = Vector2.one;
-            shotRt.offsetMin = new Vector2(12f, 42f);
+            shotRt.offsetMin = new Vector2(12f, 12f);
             shotRt.offsetMax = new Vector2(-12f, -12f);
             var shot = shotGo.GetComponent<Image>();
             shot.raycastTarget = false;
             shot.preserveAspect = false;
             shot.sprite = Sprite.Create(photo, new Rect(0f, 0f, photo.width, photo.height), new Vector2(0.5f, 0.5f), 100f);
-
-            var cap = MakeText(polaroid.transform, caption, 16, Ink, TextAnchor.MiddleCenter);
-            var capRt = cap.rectTransform;
-            capRt.anchorMin = new Vector2(0f, 0f);
-            capRt.anchorMax = new Vector2(1f, 0f);
-            capRt.pivot = new Vector2(0.5f, 0f);
-            capRt.anchoredPosition = new Vector2(0f, 6f);
-            capRt.sizeDelta = new Vector2(-16f, 32f);
 
             RectTransformUtility.ScreenPointToLocalPointInRectangle(_canvasRect, screen, null, out var start);
             var slotScreen = RectTransformUtility.WorldToScreenPoint(null, _slots[slot].Well.position);

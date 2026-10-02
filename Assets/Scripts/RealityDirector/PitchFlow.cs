@@ -63,11 +63,11 @@ namespace RealityDirector
             WireTags();
             _executor = gameObject.AddComponent<EventExecutor>();
             _capture = gameObject.AddComponent<CaptureSystem>();
-            _capture.Init(_context, _cast, () => _fridge != null && _fridge.IsOnFire);
+            _capture.Init(_context, _cast, () => _fridge != null && _fridge.IsOnFire, _fridge.transform, _bathroom.transform, () => _bathOpen);
             _capture.Captured += OnCaptured;
             _capture.Missed += () =>
             {
-                _ui.Toast("В рамке никого.");
+                _ui.Toast("Кадр не вышел.");
                 Sfx.Play(Cue.Miss, 0.45f);
             };
             _ui.ShowIntro();
@@ -937,7 +937,7 @@ namespace RealityDirector
             if (_capture.Mode)
             {
                 if (_capture.Moments.Count == 0)
-                    return "Наведи рамку на них и жми Space.";
+                    return "Space — кадр. Пустой угол съест слот, зрители это не любят.";
                 if (_capture.IsFull)
                     return "Кадры сняты. Можно закрыть серию.";
                 return "Кадр есть. Сними ещё или жми «Конец серии».";
@@ -996,14 +996,16 @@ namespace RealityDirector
 
         void OnCaptured(CapturedMoment moment)
         {
-            int gained = _tone.Add(moment.mood, SeasonTone.MomentGain);
+            int amount = moment.grade == CaptureGrade.Cast
+                ? SeasonTone.MomentGain
+                : moment.grade == CaptureGrade.Prop ? SeasonTone.PropGain : 0;
+            int gained = amount > 0 ? _tone.Add(moment.mood, amount) : 0;
             _ui.RefreshTone(_tone);
             if (gained > 0)
                 _ui.FlashTone(moment.mood, gained);
 
             int index = _capture.Moments.Count - 1;
-            string caption = "<color=" + MoodStyle.Hex(moment.mood) + ">" + moment.Title + "</color>";
-            _ui.FlyPhoto(moment.photo, index, moment.screenPoint, caption);
+            _ui.FlyPhoto(moment.photo, index, moment.screenPoint, moment.Framed);
             _ui.Pulse(new Color(1f, 1f, 1f, 0.72f));
             _shake.Punch(0.05f, 0.08f);
             Sfx.Play(Cue.Shutter, 0.8f);

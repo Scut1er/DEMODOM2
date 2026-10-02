@@ -108,6 +108,8 @@ namespace RealityDirector.Meta
             reviews[index].wish = id;
             reviews[index].body = OfferBody(id, soft, tone);
 
+            PunishBlanks(reviews, moments, index);
+
             int sum = 0;
             for (int i = 0; i < reviews.Count; i++)
                 sum += reviews[i].score;
@@ -119,6 +121,46 @@ namespace RealityDirector.Meta
                 wish = OfferLabel(id, soft, tone),
                 nextWish = id
             };
+        }
+
+        static void PunishBlanks(List<ViewerReview> reviews, IReadOnlyList<CapturedMoment> moments, int offerIndex)
+        {
+            int blanks = 0;
+            int total = moments != null ? moments.Count : 0;
+            if (moments != null)
+            {
+                for (int i = 0; i < moments.Count; i++)
+                {
+                    if (moments[i].grade == CaptureGrade.Blank)
+                        blanks++;
+                }
+            }
+
+            if (blanks == 0)
+                return;
+
+            bool onlyBlanks = total > 0 && blanks == total;
+            for (int i = 0; i < reviews.Count; i++)
+            {
+                if (i == offerIndex)
+                {
+                    reviews[i].score = UnityEngine.Mathf.Max(1, reviews[i].score - blanks);
+                    continue;
+                }
+
+                if (onlyBlanks)
+                {
+                    reviews[i].score = 2;
+                    reviews[i].body = "В кадре никого. Пустые слоты, мы это выключили.";
+                    continue;
+                }
+
+                reviews[i].score = UnityEngine.Mathf.Max(1, reviews[i].score - blanks);
+                if (i == (offerIndex == 1 ? 2 : 1))
+                    reviews[i].body = blanks == 1
+                        ? "Один кадр — голая стена. Слот зря сожгли, такое мы не смотрим."
+                        : "Часть кадров — пустой угол. Нам это не понравилось.";
+            }
         }
 
         static ViewerWishId PickWish(bool crying, bool familyShot, bool trashShot, SeasonTone tone)
@@ -172,6 +214,10 @@ namespace RealityDirector.Meta
                 return false;
             for (int i = 0; i < moments.Count; i++)
             {
+                if (moments[i].grade == CaptureGrade.Blank)
+                    continue;
+                if (mood == ShowMood.Family && moments[i].grade != CaptureGrade.Cast)
+                    continue;
                 if (moments[i].mood == mood)
                     return true;
             }
@@ -185,6 +231,8 @@ namespace RealityDirector.Meta
                 return false;
             for (int i = 0; i < moments.Count; i++)
             {
+                if (moments[i].grade == CaptureGrade.Blank)
+                    continue;
                 if (moments[i].tags != null && moments[i].tags.Contains(tag))
                     return true;
             }

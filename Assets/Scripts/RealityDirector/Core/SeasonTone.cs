@@ -6,6 +6,7 @@ namespace RealityDirector.Core
     public class SeasonTone
     {
         public const int CardGain = 6;
+        public const int PropGain = 8;
         public const int MomentGain = 18;
         public const int Cap = 100;
 
