@@ -115,3 +115,6 @@ InitTestScene*.unity*
 
 # Claude Code local config (contains account info)
 /.claude.json
+
+# Plastic SCM / Unity Version Control: not used, GitHub only
+/.plastic/
