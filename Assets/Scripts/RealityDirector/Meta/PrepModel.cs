@@ -9,6 +9,8 @@ namespace RealityDirector.Meta
         public string title;
         public string hint;
         public int price;
+        public string unit;
+        public bool temporary;
         public bool picked;
         public bool affordable;
         public Color color;
@@ -58,6 +60,8 @@ namespace RealityDirector.Meta
     {
         public int episodeNumber;
         public int money;
+        public string moneyText;
+        public string shopFooter;
         public int slots;
         public int picked;
         public int available;

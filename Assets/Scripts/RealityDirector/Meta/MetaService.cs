@@ -75,7 +75,7 @@ namespace RealityDirector.Meta
             int cost = Progression.UpgradeCost(track == CrewTrack.Cast, level);
             if (level >= Progression.MaxLevel || cost <= 0 || _state.money < cost)
             {
-                Reject = level >= Progression.MaxLevel ? "Уже максимум." : "Не хватает бюджета.";
+                Reject = level >= Progression.MaxLevel ? "Уже максимум." : "Не хватает кр.";
                 return false;
             }
 
@@ -92,6 +92,8 @@ namespace RealityDirector.Meta
 
         public bool TogglePick(string id)
         {
+            if (IsTemp(id))
+                return true;
             if (_state.IsPlayed(id) || !_state.Owns(id))
                 return false;
             if (_state.picked.Contains(id))
@@ -117,14 +119,40 @@ namespace RealityDirector.Meta
             if (_state.Owns(id))
                 return false;
             var def = Find(id);
-            if (def == null || def.price <= 0 || _state.money < def.price)
+            if (def == null || def.price <= 0 || def.sponsor || _state.money < def.price)
             {
-                Reject = "Не хватает бюджета.";
+                Reject = "Не хватает кр.";
                 return false;
             }
 
             _state.money -= def.price;
             _state.owned.Add(id);
+            Reject = null;
+            return true;
+        }
+
+        // Магазин выпуска: карта в руку до эфира, потом сгорает. Платит нал, не кр.
+        public bool TryBuyRun(string id)
+        {
+            var ep = _state.episode;
+            if (ep == null || ep.tempCards.Contains(id))
+                return false;
+            var def = Find(id);
+            int cost = def != null ? def.runPrice : 0;
+            if (def == null || cost <= 0 || ep.cash < cost)
+            {
+                Reject = "Не хватает нала.";
+                return false;
+            }
+
+            if (!def.sponsor && _state.Owns(id))
+            {
+                Reject = "Уже в колоде сезона.";
+                return false;
+            }
+
+            ep.cash -= cost;
+            ep.tempCards.Add(id);
             Reject = null;
             return true;
         }
@@ -143,6 +171,16 @@ namespace RealityDirector.Meta
             hand.Clear();
             hand.AddRange(_state.picked);
             _state.picked.Clear();
+            var ep = _state.episode;
+            if (ep != null)
+            {
+                for (int i = 0; i < ep.tempCards.Count; i++)
+                {
+                    if (!hand.Contains(ep.tempCards[i]))
+                        hand.Add(ep.tempCards[i]);
+                }
+            }
+
             Reject = null;
             return true;
         }
@@ -180,6 +218,11 @@ namespace RealityDirector.Meta
                 ? "ур. " + _state.writerLevel + "\nсейчас 1 карта\nдальше " + later
                 : "ур. " + _state.writerLevel + "\nкарт в серию: " + later;
             int hype = Mathf.RoundToInt(Progression.HypeBonus(_state.castLevel) * 100f);
+            string slotsLabel = _state.episodeIndex <= 0
+                ? "Обучение: в серию берётся 1 карта. Со следующей серии слоты от сценаристов, минимум 2."
+                : "Карт в серию: " + slots + "  ·  несыгранных в колоде: " + available;
+            if (_state.episode != null && _state.episode.tempCards.Count > 0)
+                slotsLabel += "  ·  из магазина выпуска уже в руке: " + _state.episode.tempCards.Count;
 
             return new PrepModel
             {
@@ -190,9 +233,9 @@ namespace RealityDirector.Meta
                 available = available,
                 canStart = CanStart(),
                 reject = Reject,
-                slotsLabel = _state.episodeIndex <= 0
-                    ? "Обучение: в серию берётся 1 карта. Со следующей серии слоты от сценаристов, минимум 2."
-                    : "Карт в серию: " + slots + "  ·  несыгранных в колоде: " + available,
+                moneyText = MoneyLine(),
+                shopFooter = "Покупка открывает карту навсегда — она остаётся в колоде сезона.",
+                slotsLabel = slotsLabel,
                 crew = new[]
                 {
                     CrewButtonOf("УЧАСТНИКИ", true, _state.castLevel, "ур. " + _state.castLevel + "\nчек +" + hype + "%\nв кадре пока 2"),
@@ -258,7 +301,7 @@ namespace RealityDirector.Meta
             return new StatsModel
             {
                 rating = _state.rated > 0 ? (_state.ratingSum / (float)_state.rated).ToString("0.0") + " / 10" : "—",
-                budget = _state.money + " кр",
+                budget = MoneyLine(),
                 episode = (_state.episodeIndex + 1).ToString(),
                 drama = _tone != null ? _tone.Drama / (float)SeasonTone.Cap : 0f,
                 trash = _tone != null ? _tone.Trash / (float)SeasonTone.Cap : 0f,
@@ -320,10 +363,12 @@ namespace RealityDirector.Meta
             for (int i = 0; i < _catalog.Count; i++)
             {
                 var def = _catalog[i];
+                if (def == null)
+                    continue;
                 bool owned = _state.Owns(def.id);
                 if (shop)
                 {
-                    if (owned || def.price <= 0)
+                    if (owned || def.sponsor || def.price <= 0)
                         continue;
                 }
                 else if (!owned || _state.IsPlayed(def.id))
@@ -348,7 +393,96 @@ namespace RealityDirector.Meta
                 });
             }
 
+            if (!shop && _state.episode != null)
+            {
+                var temps = _state.episode.tempCards;
+                for (int i = 0; i < temps.Count; i++)
+                {
+                    if (Listed(list, temps[i]))
+                        continue;
+                    var def = Find(temps[i]);
+                    if (def != null)
+                        list.Add(CardOf(def, true, "нал"));
+                }
+            }
+
             return list.ToArray();
+        }
+
+        public PrepModel BuildRunShop()
+        {
+            var prep = BuildPrep();
+            prep.moneyText = MoneyLine();
+            prep.shopFooter = "Только до эфира этого выпуска, потом сгорят. Спонсор в кадре: больше кр, отзывы хуже.";
+            prep.shop = CollectRun();
+            return prep;
+        }
+
+        PrepCard[] CollectRun()
+        {
+            var list = new List<PrepCard>();
+            var ep = _state.episode;
+            if (_catalog == null || ep == null)
+                return list.ToArray();
+            for (int i = 0; i < _catalog.Count; i++)
+            {
+                var def = _catalog[i];
+                if (def == null || def.runPrice <= 0 || ep.tempCards.Contains(def.id))
+                    continue;
+                if (!def.sponsor && _state.Owns(def.id))
+                    continue;
+                list.Add(CardOf(def, false, "нал"));
+            }
+
+            return list.ToArray();
+        }
+
+        bool IsTemp(string id)
+        {
+            return _state.episode != null && _state.episode.tempCards.Contains(id);
+        }
+
+        string MoneyLine()
+        {
+            if (_state.episode == null)
+                return _state.money + " кр";
+            return _state.money + " кр   ·   " + _state.episode.cash + " нал";
+        }
+
+        PrepCard CardOf(EventDefinition def, bool inHand, string unit)
+        {
+            bool temp = IsTemp(def.id);
+            int price = unit == "нал" ? def.runPrice : def.price;
+            var moods = new ShowMood[def.moods != null ? def.moods.Count : 0];
+            for (int m = 0; m < moods.Length; m++)
+                moods[m] = def.moods[m];
+            return new PrepCard
+            {
+                id = def.id,
+                title = def.displayName,
+                hint = def.sponsor ? "спонсор · " + def.hint : def.hint,
+                price = price,
+                unit = unit,
+                temporary = temp,
+                picked = inHand || _state.picked.Contains(def.id),
+                affordable = unit == "нал"
+                    ? _state.episode != null && _state.episode.cash >= price
+                    : _state.money >= price,
+                color = def.cardColor,
+                art = def.cardArt,
+                moods = moods
+            };
+        }
+
+        static bool Listed(List<PrepCard> list, string id)
+        {
+            for (int i = 0; i < list.Count; i++)
+            {
+                if (list[i].id == id)
+                    return true;
+            }
+
+            return false;
         }
     }
 }

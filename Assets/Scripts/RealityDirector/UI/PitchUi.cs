@@ -671,9 +671,12 @@ namespace RealityDirector.UI
         {
             _hud.SetActive(false);
             SetTagsVisible(false);
+            if (_toneRoot != null)
+                _toneRoot.SetActive(false);
+            if (_tasksRoot != null)
+                _tasksRoot.SetActive(false);
             _feedback.SetActive(true);
-            _toneRoot.SetActive(true);
-            _toneRoot.transform.SetAsLastSibling();
+            _feedback.transform.SetAsLastSibling();
             SetCaptureMode(false);
             _taskTaken = false;
             _offerRow = -1;
@@ -1176,7 +1179,7 @@ namespace RealityDirector.UI
 
         GameObject BuildFeedback()
         {
-            var panel = Panel("Feedback", transform, Ink).gameObject;
+            var panel = Panel("Feedback", transform, new Color(0.06f, 0.05f, 0.07f, 1f)).gameObject;
             Stretch(panel.GetComponent<RectTransform>());
             var title = MakeText(panel.transform, "РЕАКЦИЯ ЗРИТЕЛЕЙ", 28, Muted, TextAnchor.MiddleCenter);
             Place(title.rectTransform, new Vector2(0.5f, 1f), new Vector2(0f, -48f), new Vector2(800f, 40f));

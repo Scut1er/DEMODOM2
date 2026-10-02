@@ -126,9 +126,8 @@ namespace RealityDirector.UI.Hub
 
             if (deckButtonLabel != null)
                 deckButtonLabel.text = "Колода " + prep.picked + "/" + prep.slots;
-            // Магазин — только на узле «Магазин» карты сезона.
             if (shopButton != null)
-                shopButton.gameObject.SetActive(false);
+                shopButton.gameObject.SetActive(true);
             if (startCaption != null)
                 startCaption.text = "Выпуск " + prep.episodeNumber + "  ·  дальше сценарий: выбор сцены и карт";
 

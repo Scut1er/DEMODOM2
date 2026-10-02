@@ -86,7 +86,7 @@ namespace RealityDirector.UI.Hub
             if (deckTabLabel != null)
                 deckTabLabel.text = "КОЛОДА  " + model.picked + "/" + model.slots;
             if (money != null)
-                money.text = model.money + " кр";
+                money.text = string.IsNullOrEmpty(model.moneyText) ? model.money + " кр" : model.moneyText;
             for (int i = 0; i < tabPages.Length; i++)
             {
                 if (tabPages[i] != null)
@@ -137,9 +137,11 @@ namespace RealityDirector.UI.Hub
             if (!string.IsNullOrEmpty(model.reject))
                 return model.reject;
             if (_tab == ShopTab)
-                return "Купленная карта попадает в колоду. «Готово» — уйти из магазина и продолжить сценарий.";
+                return string.IsNullOrEmpty(model.shopFooter)
+                    ? "Купленная карта попадает в колоду."
+                    : model.shopFooter;
             if (model.available == 0)
-                return "Колода пуста — снимать можно и без карт. Новые карты — в магазине сценария.";
+                return "Колода пуста — снимать можно и без карт. Новые карты — в магазине хаба, разовые — у спонсоров выпуска.";
             if (model.picked == 0)
                 return "Можно снимать и без карт, но провоцировать будет нечем. Лимит: " + model.slots + ".";
             return "В серию: " + model.picked + " из " + model.slots + ". Неиспользованные карты вернутся в колоду.";

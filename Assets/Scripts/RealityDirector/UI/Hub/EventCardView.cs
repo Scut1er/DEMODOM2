@@ -71,7 +71,10 @@ namespace RealityDirector.UI.Hub
 
             if (status != null)
             {
-                status.text = shop ? card.price + " кр" : card.picked ? "В СЕРИИ" : card.hint;
+                string unit = string.IsNullOrEmpty(card.unit) ? "кр" : card.unit;
+                status.text = shop ? card.price + " " + unit
+                    : card.temporary ? "В РУКЕ"
+                    : card.picked ? "В СЕРИИ" : card.hint;
                 status.color = text;
             }
 

@@ -31,7 +31,15 @@ namespace RealityDirector.Meta
         public void Begin(IList<string> cast)
         {
             ReleaseCatalog();
-            var ep = new EpisodeState { index = _state.episodeIndex, budgetAtStart = _state.money };
+            int cash = _season != null ? _season.startingCash : 90;
+            if (cash <= 0)
+                cash = 90;
+            var ep = new EpisodeState
+            {
+                index = _state.episodeIndex,
+                budgetAtStart = _state.money,
+                cash = cash
+            };
             if (cast != null)
                 ep.cast.AddRange(cast);
             _state.episode = ep;

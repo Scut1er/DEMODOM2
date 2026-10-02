@@ -575,13 +575,27 @@ namespace RealityDirector
             _ui.SetArmed(null);
             _ui.SetCaptureMode(false);
             var result = FeedbackGenerator.Build(_context, _capture.Moments, _cast, _tone);
+            int sponsorPay = 0;
+            int sponsorHit = 0;
+            if (_state.episode != null)
+            {
+                sponsorPay = _state.episode.sponsorPay;
+                sponsorHit = _state.episode.sponsorHit;
+                _state.episode.sponsorPay = 0;
+                _state.episode.sponsorHit = 0;
+            }
+
+            if (sponsorHit > 0)
+                result = FeedbackGenerator.ApplySponsor(result, sponsorHit);
             bool hadTasks = _state.tasks.Count > 0;
             bool wishDone = _state.Resolve(_capture.Moments, _tone);
-            int pay = Progression.Payout(result.score, _state.castLevel, wishDone);
+            int pay = Progression.Payout(result.score, _state.castLevel, wishDone) + sponsorPay;
             _state.money += pay;
             _state.ratingSum += result.score;
             _state.rated++;
             result.payLine = PayLine(pay, hadTasks, wishDone);
+            if (sponsorPay > 0)
+                result.payLine += "   ·   спонсор +" + sponsorPay + " кр, отзывы −" + sponsorHit;
             _offerId = result.nextWish;
             _offerLabel = result.wish;
             int scene = _state.episodeIndex + 1;
@@ -590,7 +604,6 @@ namespace RealityDirector
             {
                 Sfx.Play(Cue.Coin, paid ? 0.7f : 0.5f, paid ? 1.12f : 1f);
                 _ui.ShowFeedback(result, ContinueAfterFeedback);
-                RefreshTasks(true);
             });
         }
 
@@ -679,7 +692,7 @@ namespace RealityDirector
                 Sfx.Play(Cue.Miss, 0.35f);
                 return;
             }
-            if (_state.played.Contains(def.id))
+            if (_state.played.Contains(def.id) && !TempCard(def.id))
             {
                 _ui.Toast("Уже сыграно.");
                 return;
@@ -1020,11 +1033,23 @@ namespace RealityDirector
             FadeBit.Burst(at + Vector3.up * 0.4f, 8, fx);
         }
 
+        bool TempCard(string id)
+        {
+            return _state.episode != null && _state.episode.tempCards.Contains(id);
+        }
+
         void NoteCard(EventDefinition def)
         {
             if (def == null)
                 return;
-            _state.played.Add(def.id);
+            bool temp = _state.episode != null && _state.episode.tempCards.Remove(def.id);
+            if (!temp)
+                _state.played.Add(def.id);
+            if (def.sponsor && _state.episode != null)
+            {
+                _state.episode.sponsorPay += def.sponsorPay;
+                _state.episode.sponsorHit += def.sponsorScoreHit;
+            }
             _handUntil = Time.unscaledTime + 3.4f;
             _armed = null;
             _ui.SetArmed(null);

@@ -64,6 +64,8 @@ namespace RealityDirector.UI.Hub
 
         public void Show(MapService map, MapNode selected, StatsModel statsModel, int episodeNumber, int seasonLength, IList<string> tasks)
         {
+            if (back != null)
+                back.gameObject.SetActive(false);
             if (subtitle != null)
                 subtitle.text = "Выпуск " + episodeNumber + " из " + seasonLength + "  ·  сцена " + Mathf.Min(map.Step + 1, map.Map.Layers)
                                 + " из " + map.Map.Layers + "  ·  в конце — монтаж";

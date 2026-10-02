@@ -22,6 +22,8 @@ namespace RealityDirector
         public EventDefinition CutWifi;
         public EventDefinition MeditationBell;
         public EventDefinition Confession;
+        public EventDefinition SponsorCola;
+        public EventDefinition SponsorEnergy;
         public EventDefinition[] All;
 
         // Jam EventCatalog, не спавнить в питче:
@@ -82,6 +84,14 @@ namespace RealityDirector
             content.MeditationBell.price = 140;
             content.Confession.price = 160;
             content.OpenBedroom.price = 100;
+            content.SpoiledFood.runPrice = 35;
+            content.CutWifi.runPrice = 30;
+            content.MeditationBell.runPrice = 40;
+
+            content.SponsorCola = Sponsor("sponsor_cola", "Банка колы", new Color(0.75f, 0.12f, 0.14f, 1f),
+                IllustratedArt.IconWater, 45, 110, 2);
+            content.SponsorEnergy = Sponsor("sponsor_energy", "Энергетик", new Color(0.85f, 0.55f, 0.1f, 1f),
+                IllustratedArt.IconAnger, 25, 70, 1);
 
             Stamp(content.Provoke, ShowMood.Trash, ShowMood.Drama);
             Stamp(content.FridgeFire, ShowMood.Trash);
@@ -97,8 +107,15 @@ namespace RealityDirector
             content.All = Meta.CardLibrary.Merge(new[]
             {
                 content.Provoke, content.FridgeFire, content.NoHotWater, content.OpenBathroom, content.OpenBedroom,
-                content.SpoiledFood, content.CutWifi, content.MeditationBell, content.Confession
+                content.SpoiledFood, content.CutWifi, content.MeditationBell, content.Confession,
+                content.SponsorCola, content.SponsorEnergy
             });
+            // Ассет карты затирает поля, которых в нём ещё нет. Цены нала и спонсоров возвращаем, если пусто.
+            KeepRun(content.All, "spoiled_food", 35);
+            KeepRun(content.All, "cut_wifi", 30);
+            KeepRun(content.All, "meditation_bell", 40);
+            KeepSponsor(content.All, "sponsor_cola", 45, 110, 2);
+            KeepSponsor(content.All, "sponsor_energy", 25, 70, 1);
             return content;
         }
 
@@ -175,6 +192,47 @@ namespace RealityDirector
                 emote = emote,
                 priority = priority
             };
+        }
+
+        static void KeepRun(EventDefinition[] all, string id, int price)
+        {
+            var def = Find(all, id);
+            if (def != null && def.runPrice <= 0)
+                def.runPrice = price;
+        }
+
+        static void KeepSponsor(EventDefinition[] all, string id, int price, int pay, int hit)
+        {
+            var def = Find(all, id);
+            if (def == null || def.sponsor)
+                return;
+            def.runPrice = price;
+            def.sponsor = true;
+            def.sponsorPay = pay;
+            def.sponsorScoreHit = hit;
+        }
+
+        static EventDefinition Find(EventDefinition[] all, string id)
+        {
+            if (all == null)
+                return null;
+            for (int i = 0; i < all.Length; i++)
+            {
+                if (all[i] != null && all[i].id == id)
+                    return all[i];
+            }
+
+            return null;
+        }
+
+        static EventDefinition Sponsor(string id, string title, Color color, Sprite art, int runPrice, int pay, int hit)
+        {
+            var def = Event(id, title, "в эфир: чек выше, отзывы хуже", TargetType.Global, null, color, 0f, false, art);
+            def.runPrice = runPrice;
+            def.sponsor = true;
+            def.sponsorPay = pay;
+            def.sponsorScoreHit = hit;
+            return def;
         }
 
         static EventDefinition Event(string id, string title, string hint, TargetType target, string objectId, Color color, float rage, bool ignite, Sprite art, params string[] tags)

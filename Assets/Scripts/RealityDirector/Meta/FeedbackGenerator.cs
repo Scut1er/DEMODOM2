@@ -129,6 +129,25 @@ namespace RealityDirector.Meta
             };
         }
 
+        // Спонсор уже в кадре: каждый отзыв ниже, оценка серии пересчитывается.
+        public static FeedbackResult ApplySponsor(FeedbackResult result, int hit)
+        {
+            if (hit <= 0 || result.reviews == null || result.reviews.Count == 0)
+                return result;
+            int sum = 0;
+            for (int i = 0; i < result.reviews.Count; i++)
+            {
+                var review = result.reviews[i];
+                review.score = UnityEngine.Mathf.Max(1, review.score - hit);
+                if (i == 0)
+                    review.body += " Реклама в кадре — дёшево.";
+                sum += review.score;
+            }
+
+            result.score = UnityEngine.Mathf.Round(sum * 10f / result.reviews.Count) / 10f;
+            return result;
+        }
+
         static void PunishBlanks(List<ViewerReview> reviews, IReadOnlyList<CapturedMoment> moments, int offerIndex)
         {
             int blanks = 0;

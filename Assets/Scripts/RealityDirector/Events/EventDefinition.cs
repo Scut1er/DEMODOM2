@@ -27,6 +27,12 @@ namespace RealityDirector.Events
         public float rageSeconds;
         public bool ignite;
         public int price;
+        [Tooltip("Цена в магазине выпуска (нал). 0 — в этот магазин не попадает. Карта живёт только до эфира выпуска.")]
+        public int runPrice;
+        [Tooltip("Продакт-плейсмент: сыгранная карта даёт кр в конце сцены и режет отзывы.")]
+        public bool sponsor;
+        public int sponsorPay;
+        public int sponsorScoreHit;
         public bool starter;
         public bool limitTrait;
         public TraitId targetTrait;

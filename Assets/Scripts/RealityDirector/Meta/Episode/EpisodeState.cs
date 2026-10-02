@@ -72,6 +72,11 @@ namespace RealityDirector.Meta
         public int index;
         public List<string> cast = new List<string>();
         public int budgetAtStart;
+        [Tooltip("Нал выпуска. Тратится в магазине на карте, в хаб не переносится.")]
+        public int cash;
+        [Tooltip("Сыгранные в этой сцене спонсоры. Списываются в фидбеке.")]
+        public int sponsorPay;
+        public int sponsorHit;
 
         [Header("Карта выпуска")]
         public int mapSeed;

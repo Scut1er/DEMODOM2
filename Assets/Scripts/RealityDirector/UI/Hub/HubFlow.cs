@@ -27,6 +27,7 @@ namespace RealityDirector.UI.Hub
         EpisodeService _episode;
         MapNode _selected;
         string _hubNotice;
+        bool _runShop;
         CastMember[] _cast;
         GameObject _back;
 
@@ -52,16 +53,18 @@ namespace RealityDirector.UI.Hub
             hub.Upgrade += track => Act(_meta.TryUpgrade(track), Cue.Coin, 0.45f, 0.9f);
             hub.Toggle += id => Act(_meta.TogglePick(id), Cue.Click, 0.3f);
             hub.Buy += id => Act(_meta.TryBuy(id), Cue.Coin, 0.5f);
-            hub.OpenDeck += tab => { Click(); _meta.ClearReject(); hub.Deck.Open(tab, _meta.BuildPrep()); };
+            hub.OpenDeck += tab =>
+            {
+                Click();
+                _meta.ClearReject();
+                bool shop = tab == DeckPanelView.ShopTab;
+                hub.Deck.Open(tab, _meta.BuildPrep(), shop);
+            };
             hub.CloseDeck += () =>
             {
                 Click();
-                bool leavingShop = hub.Deck.ShopOpen;
                 hub.Deck.Hide();
-                if (leavingShop)
-                    LeaveShop();
-                else
-                    RefreshHub();
+                RefreshHub();
             };
             hub.StartShoot += () => { Click(); StartOrResumeEpisode(); };
             hub.OpenSettings += () => { Click(); ShowSettings(hub.gameObject); };
@@ -75,12 +78,38 @@ namespace RealityDirector.UI.Hub
                 Sfx.Play(ok ? Cue.Click : Cue.Miss, ok ? 0.3f : 0.45f);
                 if (ok)
                     GameSession.Save();
-                map.Deck.Show(_meta.BuildPrep());
+                map.Deck.Show(_runShop ? _meta.BuildRunShop() : _meta.BuildPrep());
             };
-            map.Deck.Close += () => { Click(); BeginFilming(_selected); };
-            map.Deck.Cancel += () => { Click(); map.Deck.Hide(); };
+            map.Deck.Close += () =>
+            {
+                Click();
+                if (_runShop)
+                {
+                    map.Deck.Hide();
+                    LeaveRunShop();
+                    return;
+                }
+
+                BeginFilming(_selected);
+            };
+            map.Deck.Cancel += () =>
+            {
+                Click();
+                map.Deck.Hide();
+                if (_runShop)
+                    LeaveRunShop();
+            };
+            map.Deck.Buy += id =>
+            {
+                bool ok = _meta.TryBuyRun(id);
+                Sfx.Play(ok ? Cue.Coin : Cue.Miss, ok ? 0.5f : 0.45f);
+                if (ok)
+                    GameSession.Save();
+                map.Deck.Show(_meta.BuildRunShop());
+            };
             map.Random += PickRandom;
-            map.Back += () => { Click(); ShowHub(); };
+            // Выпуск уже идёт — в хаб только после эфира.
+            map.Back += () => { };
             map.Shoot += Shoot;
         }
 
@@ -266,6 +295,7 @@ namespace RealityDirector.UI.Hub
         // Съёмка: сначала выбор карт прямо на карте, «Начать съёмку» — сразу в квартиру.
         void StartFilming(MapNode node)
         {
+            _runShop = false;
             _meta.TrimPicked();
             _meta.ClearReject();
             map.Deck.Open(DeckPanelView.DeckTab, _meta.BuildPrep());
@@ -287,10 +317,10 @@ namespace RealityDirector.UI.Hub
 
             if (!_meta.TryEmbark(GameSession.Hand))
             {
-                // Колода развалилась (например, после правок в другом окне) — назад собирать.
                 GameSession.Save();
                 Sfx.Play(Cue.Miss, 0.4f);
-                ShowHub();
+                map.Deck.Hide();
+                RefreshMap();
                 return;
             }
 
@@ -303,8 +333,7 @@ namespace RealityDirector.UI.Hub
             SceneFlow.ToScene(situation != null && !string.IsNullOrEmpty(situation.scene) ? situation.scene : SceneFlow.Episode);
         }
 
-        // Маркетинг: пока это старый магазин карт (окно колоды). «Готово» закрывает комнату (LeaveShop).
-        // TODO: офферы и спонсорские контракты — шаг Marketing room.
+        // Магазин выпуска: временные карты и спонсоры за нал. Хаб отсюда не открывается.
         void EnterMarketing(MapNode node)
         {
             if (!_episode.Map.Choose(node))
@@ -313,17 +342,19 @@ namespace RealityDirector.UI.Hub
                 return;
             }
 
+            _runShop = true;
+            _meta.ClearReject();
             Sfx.Play(Cue.Coin, 0.4f);
             GameSession.Save();
-            ShowHub();
-            hub.Deck.Open(DeckPanelView.ShopTab, _meta.BuildPrep(), true);
+            map.Deck.Open(DeckPanelView.ShopTab, _meta.BuildRunShop(), true);
         }
 
-        void LeaveShop()
+        void LeaveRunShop()
         {
+            _runShop = false;
             if (!_episode.Active)
             {
-                RefreshHub();
+                RefreshMap();
                 return;
             }
 
