@@ -11,6 +11,7 @@ namespace RealityDirector.Capture
         public float time;
         public Texture2D photo;
         public Vector2 screenPoint;
+        public ShowMood mood;
 
         public string Title
         {
@@ -18,6 +19,10 @@ namespace RealityDirector.Capture
             {
                 if (tags.Contains(MomentTags.Fight))
                     return "ДРАКА";
+                if (tags.Contains(MomentTags.Crying))
+                    return "СЛЁЗЫ";
+                if (mood == ShowMood.Family)
+                    return "СЕМЬЯ";
                 if (tags.Contains(MomentTags.Fire))
                     return "ОГОНЬ";
                 if (tags.Contains(MomentTags.Conflict))

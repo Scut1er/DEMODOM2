@@ -2,6 +2,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using RealityDirector.Capture;
+using RealityDirector.Core;
 using RealityDirector.Events;
 using RealityDirector.Meta;
 using RealityDirector.Util;
@@ -37,13 +38,28 @@ namespace RealityDirector.UI
         int _slotEpoch;
         readonly List<Tag> _tags = new List<Tag>();
         readonly List<Card> _cards = new List<Card>();
-        readonly Slot[] _slots = new Slot[2];
+        readonly Slot[] _slots = new Slot[5];
         readonly Text[] _reviewAuthors = new Text[3];
         readonly Text[] _reviewBodies = new Text[3];
         readonly Text[] _reviewScores = new Text[3];
+        readonly Button[] _stars = new Button[3];
+        readonly Text[] _starLabels = new Text[3];
         Text _scoreText;
         Text _wishText;
+        Text _payText;
+        GameObject _tasksRoot;
+        Text _tasksBody;
+        bool _taskTaken;
+        int _offerRow = -1;
+
+        public bool TaskTaken => _taskTaken;
+        Text _episodeTitle;
+        GameObject _prep;
+        GameObject _seasonEnd;
         Coroutine _flashRoutine;
+        GameObject _toneRoot;
+        Text _toneLead;
+        readonly ToneRow[] _toneRows = new ToneRow[3];
 
         class Tag
         {
@@ -66,8 +82,18 @@ namespace RealityDirector.UI
 
         class Slot
         {
+            public GameObject Root;
             public RectTransform Well;
             public Text Placeholder;
+        }
+
+        class ToneRow
+        {
+            public ShowMood Mood;
+            public RectTransform Fill;
+            public Text Value;
+            public Text Delta;
+            public float DeltaUntil;
         }
 
         public static PitchUi Build()
@@ -123,6 +149,17 @@ namespace RealityDirector.UI
             _tagsRoot.SetActive(on);
         }
 
+        public void ClearHand()
+        {
+            for (int i = 0; i < _cards.Count; i++)
+            {
+                if (_cards[i].Root != null)
+                    Destroy(_cards[i].Root.gameObject);
+            }
+
+            _cards.Clear();
+        }
+
         public void BindCards(EventDefinition[] hand, Action<EventDefinition> onCard)
         {
             for (int i = 0; i < hand.Length; i++)
@@ -169,6 +206,26 @@ namespace RealityDirector.UI
                 _cards[i].Frame.color = _cards[i].Base;
                 _cards[i].Root.localScale = Vector3.one;
             }
+        }
+
+        public void SetCaptureCapacity(int capacity)
+        {
+            capacity = Mathf.Clamp(capacity, 1, _slots.Length);
+            for (int i = 0; i < _slots.Length; i++)
+            {
+                bool on = i < capacity;
+                _slots[i].Root.SetActive(on);
+                if (!on)
+                    continue;
+                var rect = _slots[i].Root.GetComponent<RectTransform>();
+                rect.anchoredPosition = new Vector2(-14f - (capacity - 1 - i) * 160f, -132f);
+            }
+        }
+
+        public void SetEpisodeTitle(string text)
+        {
+            if (_episodeTitle != null)
+                _episodeTitle.text = text;
         }
 
         public void SetSlots(IReadOnlyList<CapturedMoment> moments, int capacity)
@@ -226,8 +283,17 @@ namespace RealityDirector.UI
             _feedback.SetActive(false);
             _vision.SetActive(false);
             _hud.SetActive(false);
+            if (_prep != null)
+                _prep.SetActive(false);
+            if (_seasonEnd != null)
+                _seasonEnd.SetActive(false);
+            if (_toneRoot != null)
+                _toneRoot.SetActive(false);
             SetTagsVisible(false);
             SetCaptureMode(false);
+            _hubTab = 0;
+            if (_tasksRoot != null)
+                _tasksRoot.SetActive(false);
         }
 
         public void ShowPlay()
@@ -236,33 +302,83 @@ namespace RealityDirector.UI
             _feedback.SetActive(false);
             _vision.SetActive(false);
             _hud.SetActive(true);
+            _hubTab = 0;
+            if (_prep != null)
+                _prep.SetActive(false);
+            if (_seasonEnd != null)
+                _seasonEnd.SetActive(false);
             SetTagsVisible(true);
+            _toneRoot.SetActive(true);
+            _toneRoot.transform.SetAsLastSibling();
         }
 
         public void ShowFeedback(FeedbackResult result, Action onNext)
         {
             _hud.SetActive(false);
+            if (_prep != null)
+                _prep.SetActive(false);
             SetTagsVisible(false);
             _feedback.SetActive(true);
+            _toneRoot.SetActive(true);
+            _toneRoot.transform.SetAsLastSibling();
             SetCaptureMode(false);
+            _taskTaken = false;
+            _offerRow = -1;
             for (int i = 0; i < 3; i++)
             {
                 var review = result.reviews[i];
-                _reviewAuthors[i].text = review.author;
+                bool offer = review.offer;
+                _reviewAuthors[i].text = offer ? "★  " + review.author : review.author;
                 _reviewBodies[i].text = review.body;
                 _reviewScores[i].text = review.score + "/10";
+                _stars[i].gameObject.SetActive(offer);
+                if (!offer)
+                    continue;
+                _offerRow = i;
+                _starLabels[i].text = "☆ взять";
+                _starLabels[i].color = Paper;
+                _stars[i].image.color = new Color(0.22f, 0.2f, 0.24f, 1f);
             }
 
             _scoreText.text = result.score + "/10";
             _scoreText.color = result.score >= 7 ? Good : Accent;
-            _wishText.text = result.wish;
+            _wishText.text = "";
+            _payText.text = result.payLine ?? "";
             _feedbackNext = onNext;
+        }
+
+        public void SetTasks(IList<string> lines, bool visible)
+        {
+            bool show = visible && lines != null && lines.Count > 0;
+            _tasksRoot.SetActive(show);
+            if (!show)
+                return;
+            var body = "ЗАДАЧИ";
+            for (int i = 0; i < lines.Count; i++)
+                body += "\n★  " + lines[i];
+            _tasksBody.text = body;
+            _tasksRoot.transform.SetAsLastSibling();
+        }
+
+        void ToggleTask()
+        {
+            if (_offerRow < 0)
+                return;
+            _taskTaken = !_taskTaken;
+            _starLabels[_offerRow].text = _taskTaken ? "★ в задачах" : "☆ взять";
+            _starLabels[_offerRow].color = _taskTaken ? Ink : Paper;
+            _stars[_offerRow].image.color = _taskTaken
+                ? new Color(0.93f, 0.76f, 0.28f, 1f)
+                : new Color(0.22f, 0.2f, 0.24f, 1f);
         }
 
         public void ShowVision()
         {
             _feedback.SetActive(false);
+            if (_prep != null)
+                _prep.SetActive(false);
             _vision.SetActive(true);
+            _toneRoot.SetActive(false);
         }
 
         public void Pulse(Color color)
@@ -286,6 +402,61 @@ namespace RealityDirector.UI
             _onReplay = onReplay;
         }
 
+        Action<int> _onUpgrade;
+        Action<string> _onToggle;
+        Action<string> _onBuy;
+        Action _onEmbark;
+        PrepModel _hubModel;
+        int _hubTab;
+
+        public void BindMeta(Action<int> onUpgrade, Action<string> onToggle, Action<string> onBuy, Action onEmbark)
+        {
+            _onUpgrade = onUpgrade;
+            _onToggle = onToggle;
+            _onBuy = onBuy;
+            _onEmbark = onEmbark;
+        }
+
+        public void ShowPrep(PrepModel model)
+        {
+            _intro.SetActive(false);
+            _hud.SetActive(false);
+            _feedback.SetActive(false);
+            _vision.SetActive(false);
+            if (_seasonEnd != null)
+                _seasonEnd.SetActive(false);
+            SetTagsVisible(false);
+            SetCaptureMode(false);
+            _hubModel = model;
+            if (_prep != null)
+            {
+                _prep.SetActive(false);
+                Destroy(_prep);
+            }
+
+            _prep = BuildPrep(model);
+            _toneRoot.SetActive(true);
+            _toneRoot.transform.SetAsLastSibling();
+        }
+
+        public void ShowSeasonEnd(string body, Action onRestart)
+        {
+            _intro.SetActive(false);
+            _hud.SetActive(false);
+            _feedback.SetActive(false);
+            _vision.SetActive(false);
+            if (_prep != null)
+                _prep.SetActive(false);
+            SetTagsVisible(false);
+            if (_tasksRoot != null)
+                _tasksRoot.SetActive(false);
+            if (_seasonEnd != null)
+                Destroy(_seasonEnd);
+            _seasonEnd = BuildSeasonEnd(body, onRestart);
+            _toneRoot.SetActive(true);
+            _toneRoot.transform.SetAsLastSibling();
+        }
+
         void Construct()
         {
             _tagsRoot = NewRect("Tags", transform);
@@ -299,6 +470,8 @@ namespace RealityDirector.UI
             _intro = BuildIntro();
             _feedback = BuildFeedback();
             _vision = BuildVision();
+            BuildTone();
+            BuildTasks();
             ShowIntro();
         }
 
@@ -312,7 +485,8 @@ namespace RealityDirector.UI
             topRect.sizeDelta = new Vector2(0f, 118f);
             topRect.anchoredPosition = Vector2.zero;
 
-            var title = MakeText(top.transform, "СЕРИЯ 1  ·  ПИТЧ\nты режиссёр, не участник", 22, Paper, TextAnchor.UpperLeft);
+            _episodeTitle = MakeText(top.transform, "СЕРИЯ 1\nты режиссёр, не участник", 22, Paper, TextAnchor.UpperLeft);
+            var title = _episodeTitle;
             var titleRect = title.rectTransform;
             titleRect.anchorMin = new Vector2(0f, 1f);
             titleRect.anchorMax = new Vector2(0f, 1f);
@@ -320,19 +494,19 @@ namespace RealityDirector.UI
             titleRect.anchoredPosition = new Vector2(28f, -16f);
             titleRect.sizeDelta = new Vector2(520f, 80f);
 
-            for (int i = 0; i < 2; i++)
+            for (int i = 0; i < _slots.Length; i++)
             {
                 var slotImg = Panel("slot" + i, _hud.transform, new Color(0.1f, 0.09f, 0.08f, 0.92f));
                 var slotRect = slotImg.rectTransform;
                 slotRect.anchorMin = new Vector2(1f, 1f);
                 slotRect.anchorMax = new Vector2(1f, 1f);
                 slotRect.pivot = new Vector2(1f, 1f);
-                slotRect.sizeDelta = new Vector2(188f, 252f);
-                slotRect.anchoredPosition = new Vector2(-18f - (1 - i) * 200f, -14f);
+                slotRect.sizeDelta = new Vector2(148f, 200f);
+                slotRect.anchoredPosition = new Vector2(-14f - (_slots.Length - 1 - i) * 160f, -132f);
                 var placeholder = MakeText(slotImg.transform, "СЛОТ " + (i + 1) + "\nпусто", 18, Muted, TextAnchor.MiddleCenter);
                 Stretch(placeholder.rectTransform);
                 var well = NewRect("well", slotImg.transform);
-                _slots[i] = new Slot { Well = well.GetComponent<RectTransform>(), Placeholder = placeholder };
+                _slots[i] = new Slot { Root = slotImg.gameObject, Well = well.GetComponent<RectTransform>(), Placeholder = placeholder };
             }
 
             var cam = MakeButton(_hud.transform, "КАМЕРА  C", new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(0f, 1f),
@@ -386,6 +560,7 @@ namespace RealityDirector.UI
             toastRect.sizeDelta = new Vector2(900f, 32f);
             toastRect.anchoredPosition = new Vector2(0f, 392f);
             _toast.gameObject.SetActive(false);
+            SetCaptureCapacity(1);
         }
 
         Card MakeCard(int index, EventDefinition def, Action onClick)
@@ -399,7 +574,11 @@ namespace RealityDirector.UI
             var nav = button.navigation;
             nav.mode = Navigation.Mode.None;
             button.navigation = nav;
-            button.onClick.AddListener(() => onClick());
+            button.onClick.AddListener(() =>
+            {
+                Sfx.Play(Cue.Click, 0.3f);
+                onClick();
+            });
 
             var inner = Panel("inner", frame.transform, new Color(0.95f, 0.91f, 0.84f, 1f));
             var innerRect = inner.rectTransform;
@@ -420,13 +599,15 @@ namespace RealityDirector.UI
             var number = MakeText(badge.transform, (index + 1).ToString(), 18, Paper, TextAnchor.MiddleCenter);
             Stretch(number.rectTransform);
 
+            int moodCount = def.moods != null ? def.moods.Count : 0;
             var title = MakeText(inner.transform, def.displayName.ToUpperInvariant(), 18, new Color(0.18f, 0.12f, 0.1f), TextAnchor.MiddleCenter);
             var titleRect = title.rectTransform;
             titleRect.anchorMin = new Vector2(0f, 1f);
             titleRect.anchorMax = new Vector2(1f, 1f);
             titleRect.pivot = new Vector2(0.5f, 1f);
-            titleRect.anchoredPosition = new Vector2(0f, -6f);
-            titleRect.sizeDelta = new Vector2(-8f, 36f);
+            titleRect.anchoredPosition = new Vector2(moodCount > 0 ? -6f : 0f, -6f);
+            titleRect.sizeDelta = new Vector2(moodCount > 0 ? -28f : -8f, 36f);
+            StampMoods(frame.transform, def);
 
             var art = Panel("art", inner.transform, new Color(0.9f, 0.86f, 0.78f, 1f));
             var artRect = art.rectTransform;
@@ -468,6 +649,414 @@ namespace RealityDirector.UI
             };
         }
 
+        void StampMoods(Transform frame, EventDefinition def)
+        {
+            if (def.moods == null)
+                return;
+
+            int count = def.moods.Count > 2 ? 2 : def.moods.Count;
+            for (int i = 0; i < count; i++)
+            {
+                var stamp = Panel("mood", frame, Color.white);
+                var rect = stamp.rectTransform;
+                rect.anchorMin = new Vector2(1f, 1f);
+                rect.anchorMax = new Vector2(1f, 1f);
+                rect.pivot = new Vector2(1f, 1f);
+                rect.sizeDelta = new Vector2(26f, 26f);
+                rect.anchoredPosition = new Vector2(-8f - (count - 1 - i) * 30f, -8f);
+                stamp.sprite = MoodIcon(def.moods[i]);
+                stamp.preserveAspect = true;
+                stamp.raycastTarget = false;
+            }
+        }
+
+        public void RefreshTone(SeasonTone tone)
+        {
+            if (tone == null)
+                return;
+
+            for (int i = 0; i < _toneRows.Length; i++)
+            {
+                var row = _toneRows[i];
+                float k = Mathf.Clamp01(tone.Get(row.Mood) / (float)SeasonTone.Cap);
+                row.Fill.sizeDelta = new Vector2(156f * k, 0f);
+                row.Value.text = tone.Get(row.Mood).ToString();
+            }
+
+            if (tone.Total <= 0)
+                _toneLead.text = "тон ещё не выбран";
+            else if (tone.TryLead(out ShowMood lead))
+                _toneLead.text = "ведёт " + MoodStyle.Paint(MoodStyle.Full(lead), lead);
+            else
+                _toneLead.text = "тон на распутье";
+        }
+
+        public void FlashTone(ShowMood mood, int delta)
+        {
+            if (delta <= 0)
+                return;
+
+            for (int i = 0; i < _toneRows.Length; i++)
+            {
+                if (_toneRows[i].Mood != mood)
+                    continue;
+                _toneRows[i].Delta.text = "+" + delta;
+                _toneRows[i].Delta.color = MoodStyle.ColorOf(mood);
+                _toneRows[i].Delta.gameObject.SetActive(true);
+                _toneRows[i].DeltaUntil = Time.unscaledTime + 1.15f;
+                Sfx.Play(Cue.Tick, 0.22f, mood == ShowMood.Drama ? 1.15f : mood == ShowMood.Trash ? 0.82f : 1f);
+            }
+        }
+
+        void BuildTone()
+        {
+            var plate = Panel("Tone", transform, Hud);
+            _toneRoot = plate.gameObject;
+            var rect = plate.rectTransform;
+            rect.anchorMin = new Vector2(1f, 1f);
+            rect.anchorMax = new Vector2(1f, 1f);
+            rect.pivot = new Vector2(1f, 1f);
+            rect.anchoredPosition = new Vector2(-12f, -6f);
+            rect.sizeDelta = new Vector2(400f, 118f);
+            plate.raycastTarget = false;
+
+            ShowMood[] moods = { ShowMood.Drama, ShowMood.Trash, ShowMood.Family };
+            for (int i = 0; i < moods.Length; i++)
+            {
+                ShowMood mood = moods[i];
+                var row = NewRect("tone" + i, plate.transform);
+                var rowRect = row.GetComponent<RectTransform>();
+                rowRect.anchorMin = new Vector2(0f, 1f);
+                rowRect.anchorMax = new Vector2(1f, 1f);
+                rowRect.pivot = new Vector2(0.5f, 1f);
+                rowRect.sizeDelta = new Vector2(-20f, 26f);
+                rowRect.anchoredPosition = new Vector2(0f, -6f - i * 28f);
+
+                var icon = Panel("icon", row.transform, Color.white);
+                var iconRect = icon.rectTransform;
+                iconRect.anchorMin = new Vector2(0f, 0.5f);
+                iconRect.anchorMax = new Vector2(0f, 0.5f);
+                iconRect.pivot = new Vector2(0f, 0.5f);
+                iconRect.anchoredPosition = Vector2.zero;
+                iconRect.sizeDelta = new Vector2(22f, 22f);
+                icon.sprite = MoodIcon(mood);
+                icon.preserveAspect = true;
+                icon.raycastTarget = false;
+
+                var label = MakeText(row.transform, MoodStyle.Short(mood).ToUpperInvariant(), 15, MoodStyle.ColorOf(mood), TextAnchor.MiddleLeft);
+                var labelRect = label.rectTransform;
+                labelRect.anchorMin = new Vector2(0f, 0f);
+                labelRect.anchorMax = new Vector2(0f, 1f);
+                labelRect.pivot = new Vector2(0f, 0.5f);
+                labelRect.anchoredPosition = new Vector2(28f, 0f);
+                labelRect.sizeDelta = new Vector2(78f, 0f);
+
+                var track = Panel("track", row.transform, new Color(0f, 0f, 0f, 0.45f));
+                var trackRect = track.rectTransform;
+                trackRect.anchorMin = new Vector2(0f, 0.5f);
+                trackRect.anchorMax = new Vector2(0f, 0.5f);
+                trackRect.pivot = new Vector2(0f, 0.5f);
+                trackRect.anchoredPosition = new Vector2(112f, 0f);
+                trackRect.sizeDelta = new Vector2(156f, 10f);
+                track.raycastTarget = false;
+
+                var fill = Panel("fill", track.transform, MoodStyle.ColorOf(mood));
+                var fillRect = fill.rectTransform;
+                fillRect.anchorMin = new Vector2(0f, 0f);
+                fillRect.anchorMax = new Vector2(0f, 1f);
+                fillRect.pivot = new Vector2(0f, 0.5f);
+                fillRect.anchoredPosition = Vector2.zero;
+                fillRect.sizeDelta = new Vector2(0f, 0f);
+                fill.raycastTarget = false;
+
+                var value = MakeText(row.transform, "0", 15, Paper, TextAnchor.MiddleRight);
+                var valueRect = value.rectTransform;
+                valueRect.anchorMin = new Vector2(1f, 0f);
+                valueRect.anchorMax = new Vector2(1f, 1f);
+                valueRect.pivot = new Vector2(1f, 0.5f);
+                valueRect.anchoredPosition = new Vector2(-30f, 0f);
+                valueRect.sizeDelta = new Vector2(36f, 0f);
+
+                var delta = MakeText(row.transform, "", 14, MoodStyle.ColorOf(mood), TextAnchor.MiddleRight);
+                var deltaRect = delta.rectTransform;
+                deltaRect.anchorMin = new Vector2(1f, 0f);
+                deltaRect.anchorMax = new Vector2(1f, 1f);
+                deltaRect.pivot = new Vector2(1f, 0.5f);
+                deltaRect.anchoredPosition = Vector2.zero;
+                deltaRect.sizeDelta = new Vector2(32f, 0f);
+                delta.gameObject.SetActive(false);
+
+                _toneRows[i] = new ToneRow
+                {
+                    Mood = mood,
+                    Fill = fillRect,
+                    Value = value,
+                    Delta = delta
+                };
+            }
+
+            _toneLead = MakeText(plate.transform, "тон ещё не выбран", 13, Muted, TextAnchor.MiddleLeft);
+            var leadRect = _toneLead.rectTransform;
+            leadRect.anchorMin = new Vector2(0f, 0f);
+            leadRect.anchorMax = new Vector2(1f, 0f);
+            leadRect.pivot = new Vector2(0f, 0f);
+            leadRect.anchoredPosition = new Vector2(10f, 4f);
+            leadRect.sizeDelta = new Vector2(-20f, 18f);
+        }
+
+        void BuildTasks()
+        {
+            var plate = Panel("Tasks", transform, new Color(0.06f, 0.05f, 0.07f, 0.55f));
+            _tasksRoot = plate.gameObject;
+            var rect = plate.rectTransform;
+            rect.anchorMin = new Vector2(0f, 0.5f);
+            rect.anchorMax = new Vector2(0f, 0.5f);
+            rect.pivot = new Vector2(0f, 0.5f);
+            rect.anchoredPosition = new Vector2(16f, -20f);
+            rect.sizeDelta = new Vector2(280f, 240f);
+            plate.raycastTarget = false;
+            var group = plate.gameObject.AddComponent<CanvasGroup>();
+            group.alpha = 0.72f;
+            group.blocksRaycasts = false;
+            group.interactable = false;
+
+            _tasksBody = MakeText(plate.transform, "ЗАДАЧИ", 18, Paper, TextAnchor.UpperLeft);
+            var body = _tasksBody.rectTransform;
+            body.anchorMin = Vector2.zero;
+            body.anchorMax = Vector2.one;
+            body.offsetMin = new Vector2(16f, 14f);
+            body.offsetMax = new Vector2(-14f, -14f);
+            _tasksRoot.SetActive(false);
+        }
+
+        static Sprite MoodIcon(ShowMood mood)
+        {
+            switch (mood)
+            {
+                case ShowMood.Drama: return IllustratedArt.IconTear;
+                case ShowMood.Trash: return IllustratedArt.IconDevil;
+                default: return IllustratedArt.IconFamily;
+            }
+        }
+
+        void SetHubTab(int tab)
+        {
+            if (tab == _hubTab || _hubModel == null)
+                return;
+            _hubTab = tab;
+            ShowPrep(_hubModel);
+        }
+
+        GameObject BuildPrep(PrepModel model)
+        {
+            var panel = Panel("Prep", transform, new Color(0.05f, 0.045f, 0.06f, 0.97f)).gameObject;
+            Stretch(panel.GetComponent<RectTransform>());
+
+            var title = MakeText(panel.transform, "ХАБ  ·  СЕРИЯ " + model.episodeNumber + " / " + Progression.SeasonLength, 32, Paper, TextAnchor.MiddleLeft);
+            Place(title.rectTransform, new Vector2(0f, 1f), new Vector2(280f, -40f), new Vector2(520f, 48f));
+            var money = MakeText(panel.transform, model.money + " кр", 32, new Color(0.95f, 0.82f, 0.45f, 1f), TextAnchor.MiddleLeft);
+            Place(money.rectTransform, new Vector2(0f, 1f), new Vector2(720f, -40f), new Vector2(240f, 48f));
+
+            string[] tabs = { "В СЕРИЮ  " + model.picked + "/" + model.slots, "МАГАЗИН", "КОМАНДА" };
+            for (int i = 0; i < tabs.Length; i++)
+            {
+                int tab = i;
+                var color = _hubTab == i ? Accent : new Color(0.22f, 0.2f, 0.24f, 1f);
+                MakeButton(panel.transform, tabs[i], new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0.5f, 0.5f),
+                    new Vector2(-340f + i * 340f, -112f), new Vector2(320f, 48f), color, () => SetHubTab(tab));
+            }
+
+            if (_hubTab == 1)
+                AddPrepRow(panel.transform, "Купи карту — она появится во вкладке «В серию».", model.shop, -210f, true);
+            else if (_hubTab == 2)
+                BuildCrewTab(panel.transform, model);
+            else
+            {
+                var slots = MakeText(panel.transform, model.slotsLabel, 20, Paper, TextAnchor.MiddleCenter);
+                Place(slots.rectTransform, new Vector2(0.5f, 1f), new Vector2(0f, -175f), new Vector2(1200f, 32f));
+                AddPrepRow(panel.transform, "", model.deck, -220f, false);
+            }
+
+            string foot = model.reject;
+            if (string.IsNullOrEmpty(foot))
+            {
+                if (_hubTab == 1)
+                    foot = "Сыгранная карта сгорает до конца сезона. Несыгранная остаётся в колоде.";
+                else if (_hubTab == 2)
+                    foot = "Прокачка применяется к этой съёмке. Слоты карт — на вкладке «В серию».";
+                else if (model.available == 0)
+                    foot = "Колода пуста. Открой магазин.";
+                else if (!model.canStart)
+                    foot = "Возьми " + Mathf.Min(model.slots, model.available) + " несыгранных. Неиспользованные вернутся.";
+                else
+                    foot = "Набор собран. Неиспользованные карты вернутся в колоду.";
+            }
+
+            var hint = MakeText(panel.transform, foot, 18, Muted, TextAnchor.MiddleCenter);
+            Place(hint.rectTransform, new Vector2(0.5f, 0f), new Vector2(0f, 96f), new Vector2(1200f, 28f));
+            var startColor = model.canStart ? Accent : new Color(0.22f, 0.2f, 0.24f, 1f);
+            MakeButton(panel.transform, "НАЧАТЬ СЪЁМКУ", new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(0.5f, 0f),
+                new Vector2(0f, 36f), new Vector2(360f, 56f), startColor, () =>
+                {
+                    if (model.canStart)
+                        _onEmbark?.Invoke();
+                });
+            return panel;
+        }
+
+        void BuildCrewTab(Transform parent, PrepModel model)
+        {
+            for (int i = 0; i < model.crew.Length; i++)
+            {
+                int index = i;
+                var crew = model.crew[i];
+                float x = -460f + i * 460f;
+                var card = Panel("crew" + i, parent, PanelColor);
+                var rect = card.rectTransform;
+                rect.anchorMin = new Vector2(0.5f, 1f);
+                rect.anchorMax = new Vector2(0.5f, 1f);
+                rect.pivot = new Vector2(0.5f, 1f);
+                rect.anchoredPosition = new Vector2(x, -210f);
+                rect.sizeDelta = new Vector2(420f, 360f);
+
+                var head = MakeText(card.transform, crew.title, 28, Accent, TextAnchor.UpperLeft);
+                var headRect = head.rectTransform;
+                headRect.anchorMin = new Vector2(0f, 1f);
+                headRect.anchorMax = new Vector2(1f, 1f);
+                headRect.pivot = new Vector2(0f, 1f);
+                headRect.anchoredPosition = new Vector2(24f, -28f);
+                headRect.sizeDelta = new Vector2(-48f, 40f);
+
+                var detail = MakeText(card.transform, crew.detail, 22, Paper, TextAnchor.UpperLeft);
+                var detailRect = detail.rectTransform;
+                detailRect.anchorMin = new Vector2(0f, 1f);
+                detailRect.anchorMax = new Vector2(1f, 1f);
+                detailRect.pivot = new Vector2(0f, 1f);
+                detailRect.anchoredPosition = new Vector2(24f, -88f);
+                detailRect.sizeDelta = new Vector2(-48f, 160f);
+
+                var costColor = crew.maxed ? Muted : crew.affordable ? Good : new Color(0.45f, 0.28f, 0.26f, 1f);
+                MakeButton(card.transform, crew.costLabel, new Vector2(0f, 0f), new Vector2(0f, 0f), new Vector2(0f, 0f),
+                    new Vector2(24f, 28f), new Vector2(240f, 52f), costColor, () =>
+                    {
+                        if (!crew.maxed)
+                            _onUpgrade?.Invoke(index);
+                    });
+            }
+        }
+
+        void AddPrepRow(Transform parent, string title, PrepCard[] cards, float y, bool shop)
+        {
+            if (!string.IsNullOrEmpty(title))
+            {
+                var label = MakeText(parent, title, 20, Muted, TextAnchor.MiddleCenter);
+                Place(label.rectTransform, new Vector2(0.5f, 1f), new Vector2(0f, y), new Vector2(1200f, 32f));
+            }
+            if (cards == null || cards.Length == 0)
+            {
+                var empty = MakeText(parent, shop ? "всё куплено" : "нечего брать", 18, Muted, TextAnchor.MiddleLeft);
+                Place(empty.rectTransform, new Vector2(0.5f, 1f), new Vector2(-200f, y - 70f), new Vector2(400f, 30f));
+                return;
+            }
+
+            float width = 168f;
+            float gap = 12f;
+            float total = cards.Length * width + (cards.Length - 1) * gap;
+            float origin = -total * 0.5f + width * 0.5f;
+            for (int i = 0; i < cards.Length; i++)
+            {
+                var card = cards[i];
+                float x = origin + i * (width + gap);
+                var frame = Panel(card.id, parent, card.picked ? new Color(0.95f, 0.78f, 0.32f, 1f) : card.color);
+                var rect = frame.rectTransform;
+                rect.anchorMin = new Vector2(0.5f, 1f);
+                rect.anchorMax = new Vector2(0.5f, 1f);
+                rect.pivot = new Vector2(0.5f, 1f);
+                rect.anchoredPosition = new Vector2(x, y - 28f);
+                rect.sizeDelta = new Vector2(width, 196f);
+                var button = frame.gameObject.AddComponent<Button>();
+                button.targetGraphic = frame;
+                var nav = button.navigation;
+                nav.mode = Navigation.Mode.None;
+                button.navigation = nav;
+                string id = card.id;
+                if (shop)
+                    button.onClick.AddListener(() =>
+                    {
+                        Sfx.Play(Cue.Click, 0.3f);
+                        _onBuy?.Invoke(id);
+                    });
+                else
+                    button.onClick.AddListener(() =>
+                    {
+                        Sfx.Play(Cue.Click, 0.3f);
+                        _onToggle?.Invoke(id);
+                    });
+
+                Color ink = card.picked ? Ink : Paper;
+                var name = MakeText(frame.transform, card.title, 16, ink, TextAnchor.UpperCenter);
+                var nameRect = name.rectTransform;
+                nameRect.anchorMin = new Vector2(0f, 1f);
+                nameRect.anchorMax = new Vector2(1f, 1f);
+                nameRect.pivot = new Vector2(0.5f, 1f);
+                nameRect.anchoredPosition = new Vector2(0f, -8f);
+                nameRect.sizeDelta = new Vector2(-12f, 36f);
+
+                if (card.art != null)
+                {
+                    var art = Panel("art", frame.transform, Color.white);
+                    var artRect = art.rectTransform;
+                    artRect.anchorMin = new Vector2(0.5f, 1f);
+                    artRect.anchorMax = new Vector2(0.5f, 1f);
+                    artRect.pivot = new Vector2(0.5f, 1f);
+                    artRect.anchoredPosition = new Vector2(0f, -46f);
+                    artRect.sizeDelta = new Vector2(72f, 72f);
+                    art.sprite = card.art;
+                    art.preserveAspect = true;
+                    art.raycastTarget = false;
+                }
+
+                string status = shop ? card.price + " кр" : card.picked ? "В СЕРИИ" : card.hint;
+                var body = MakeText(frame.transform, status, 14, ink, TextAnchor.LowerCenter);
+                var bodyRect = body.rectTransform;
+                bodyRect.anchorMin = new Vector2(0f, 0f);
+                bodyRect.anchorMax = new Vector2(1f, 0f);
+                bodyRect.pivot = new Vector2(0.5f, 0f);
+                bodyRect.anchoredPosition = new Vector2(0f, 8f);
+                bodyRect.sizeDelta = new Vector2(-10f, 48f);
+
+                if (card.moods == null)
+                    continue;
+                int n = card.moods.Length > 2 ? 2 : card.moods.Length;
+                for (int m = 0; m < n; m++)
+                {
+                    var stamp = Panel("mood", frame.transform, Color.white);
+                    var stampRect = stamp.rectTransform;
+                    stampRect.anchorMin = new Vector2(1f, 1f);
+                    stampRect.anchorMax = new Vector2(1f, 1f);
+                    stampRect.pivot = new Vector2(1f, 1f);
+                    stampRect.sizeDelta = new Vector2(22f, 22f);
+                    stampRect.anchoredPosition = new Vector2(-6f - (n - 1 - m) * 24f, -6f);
+                    stamp.sprite = MoodIcon(card.moods[m]);
+                    stamp.preserveAspect = true;
+                    stamp.raycastTarget = false;
+                }
+            }
+        }
+
+        GameObject BuildSeasonEnd(string body, Action onRestart)
+        {
+            var panel = Panel("SeasonEnd", transform, Ink).gameObject;
+            Stretch(panel.GetComponent<RectTransform>());
+            var title = MakeText(panel.transform, "СЕЗОН СНЯТ", 56, Paper, TextAnchor.MiddleCenter);
+            Place(title.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0f, 120f), new Vector2(1000f, 80f));
+            var text = MakeText(panel.transform, body, 26, Muted, TextAnchor.MiddleCenter);
+            Place(text.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0f, 10f), new Vector2(1100f, 140f));
+            MakeButton(panel.transform, "СНАЧАЛА", new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f),
+                new Vector2(0f, -140f), new Vector2(280f, 58f), Accent, () => onRestart?.Invoke());
+            return panel;
+        }
+
         GameObject BuildIntro()
         {
             var panel = Panel("Intro", transform, Ink).gameObject;
@@ -477,7 +1066,7 @@ namespace RealityDirector.UI
             var sub = MakeText(panel.transform, "Создай драму. Сними хайлайт.", 36, Accent, TextAnchor.MiddleCenter);
             Place(sub.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0f, 10f), new Vector2(1200f, 60f));
             var help = MakeText(panel.transform,
-                "1 Разозлить   ·   2 Поджог   ·   4 Ванная   ·   C камера   ·   Space кадр",
+                "хаб: карты в серию, магазин, команда  ·  съёмка  ·  фидбек  ·  6 серий",
                 22, Muted, TextAnchor.MiddleCenter);
             Place(help.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0f, -70f), new Vector2(1400f, 40f));
             MakeButton(panel.transform, "НАЧАТЬ", new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f),
@@ -510,6 +1099,12 @@ namespace RealityDirector.UI
                 authorRect.anchoredPosition = new Vector2(22f, -12f);
                 authorRect.sizeDelta = new Vector2(400f, 32f);
 
+                var star = MakeButton(row.transform, "☆ взять", new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(0f, 1f),
+                    new Vector2(520f, -10f), new Vector2(168f, 34f), new Color(0.22f, 0.2f, 0.24f, 1f), ToggleTask);
+                star.gameObject.SetActive(false);
+                _stars[i] = star;
+                _starLabels[i] = star.GetComponentInChildren<Text>();
+
                 _reviewScores[i] = MakeText(row.transform, "", 22, Good, TextAnchor.UpperRight);
                 var scoreRect = _reviewScores[i].rectTransform;
                 scoreRect.anchorMin = new Vector2(1f, 1f);
@@ -532,9 +1127,11 @@ namespace RealityDirector.UI
             Place(scoreCaption.rectTransform, new Vector2(0.5f, 0f), new Vector2(-160f, 108f), new Vector2(320f, 28f));
 
             _wishText = MakeText(panel.transform, "", 20, Muted, TextAnchor.MiddleLeft);
-            Place(_wishText.rectTransform, new Vector2(0.5f, 0f), new Vector2(180f, 140f), new Vector2(560f, 70f));
+            Place(_wishText.rectTransform, new Vector2(0.5f, 0f), new Vector2(180f, 168f), new Vector2(640f, 70f));
+            _payText = MakeText(panel.transform, "", 22, new Color(0.95f, 0.82f, 0.45f, 1f), TextAnchor.MiddleLeft);
+            Place(_payText.rectTransform, new Vector2(0.5f, 0f), new Vector2(180f, 108f), new Vector2(640f, 36f));
 
-            MakeButton(panel.transform, "КУДА РАСТЁМ", new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(0.5f, 0f),
+            MakeButton(panel.transform, "ДАЛЬШЕ", new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(0.5f, 0f),
                 new Vector2(0f, 42f), new Vector2(320f, 58f), Accent, () => _feedbackNext?.Invoke());
             return panel;
         }
@@ -661,6 +1258,15 @@ namespace RealityDirector.UI
         {
             if (_toast.gameObject.activeSelf && Time.unscaledTime > _toastUntil)
                 _toast.gameObject.SetActive(false);
+
+            for (int i = 0; i < _toneRows.Length; i++)
+            {
+                var row = _toneRows[i];
+                if (row == null || !row.Delta.gameObject.activeSelf)
+                    continue;
+                if (Time.unscaledTime > row.DeltaUntil)
+                    row.Delta.gameObject.SetActive(false);
+            }
 
             if (!_tagsRoot.activeSelf || Camera.main == null)
                 return;
@@ -839,7 +1445,11 @@ namespace RealityDirector.UI
             var nav = button.navigation;
             nav.mode = Navigation.Mode.None;
             button.navigation = nav;
-            button.onClick.AddListener(() => onClick());
+            button.onClick.AddListener(() =>
+            {
+                Sfx.Play(Cue.Click, 0.35f);
+                onClick();
+            });
             var text = MakeText(image.transform, label, 20, Paper, TextAnchor.MiddleCenter);
             Stretch(text.rectTransform);
             return button;

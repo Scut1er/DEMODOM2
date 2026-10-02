@@ -31,34 +31,48 @@ namespace RealityDirector.Util
         static Sprite _iconCast;
         static Sprite _iconCam;
         static Sprite _iconPen;
+        static Sprite _iconTear;
+        static Sprite _iconDevil;
+        static Sprite _iconFamily;
 
-        public static Sprite Wood => _wood ??= Floor(false, false);
-        public static Sprite Tile => _tile ??= Floor(true, false);
-        public static Sprite BathTile => _bath ??= Floor(true, true);
-        public static Sprite Wall => _wall ??= PaintWall();
-        public static Sprite Sofa => _sofa ??= PaintSofa();
-        public static Sprite Bed => _bed ??= PaintBed();
-        public static Sprite Table => _table ??= PaintTable();
-        public static Sprite Stove => _stove ??= PaintStove();
-        public static Sprite Fridge => _fridge ??= PaintFridge();
-        public static Sprite Shower => _shower ??= PaintShower();
-        public static Sprite Toilet => _toilet ??= PaintToilet();
-        public static Sprite Sink => _sink ??= PaintSink();
-        public static Sprite Plant => _plant ??= PaintPlant();
-        public static Sprite Window => _window ??= PaintWindow();
-        public static Sprite Boards => _boards ??= PaintBoards();
-        public static Sprite Rug => _rug ??= PaintRug();
-        public static Sprite Flame => _flame ??= PaintFlame();
-        public static Sprite Glow => _glow ??= PaintGlow();
-        public static Sprite PersonAngry => _angry ??= PaintPerson(true);
-        public static Sprite PersonKind => _kind ??= PaintPerson(false);
-        public static Sprite IconAnger => _iconAnger ??= PaintIconAnger();
-        public static Sprite IconFire => _iconFire ??= PaintIconFire();
-        public static Sprite IconWater => _iconWater ??= PaintIconWater();
-        public static Sprite IconDoor => _iconDoor ??= PaintIconDoor();
-        public static Sprite IconCast => _iconCast ??= PaintIconCast();
-        public static Sprite IconCamera => _iconCam ??= PaintIconCamera();
-        public static Sprite IconPen => _iconPen ??= PaintIconPen();
+        public static Sprite Wood => Live(ref _wood, () => Floor(false, false));
+        public static Sprite Tile => Live(ref _tile, () => Floor(true, false));
+        public static Sprite BathTile => Live(ref _bath, () => Floor(true, true));
+        public static Sprite Wall => Live(ref _wall, PaintWall);
+        public static Sprite Sofa => Live(ref _sofa, PaintSofa);
+        public static Sprite Bed => Live(ref _bed, PaintBed);
+        public static Sprite Table => Live(ref _table, PaintTable);
+        public static Sprite Stove => Live(ref _stove, PaintStove);
+        public static Sprite Fridge => Live(ref _fridge, PaintFridge);
+        public static Sprite Shower => Live(ref _shower, PaintShower);
+        public static Sprite Toilet => Live(ref _toilet, PaintToilet);
+        public static Sprite Sink => Live(ref _sink, PaintSink);
+        public static Sprite Plant => Live(ref _plant, PaintPlant);
+        public static Sprite Window => Live(ref _window, PaintWindow);
+        public static Sprite Boards => Live(ref _boards, PaintBoards);
+        public static Sprite Rug => Live(ref _rug, PaintRug);
+        public static Sprite Flame => Live(ref _flame, PaintFlame);
+        public static Sprite Glow => Live(ref _glow, PaintGlow);
+        public static Sprite PersonAngry => Live(ref _angry, () => PaintPerson(true));
+        public static Sprite PersonKind => Live(ref _kind, () => PaintPerson(false));
+        public static Sprite IconAnger => Live(ref _iconAnger, PaintIconAnger);
+        public static Sprite IconFire => Live(ref _iconFire, PaintIconFire);
+        public static Sprite IconWater => Live(ref _iconWater, PaintIconWater);
+        public static Sprite IconDoor => Live(ref _iconDoor, PaintIconDoor);
+        public static Sprite IconCast => Live(ref _iconCast, PaintIconCast);
+        public static Sprite IconCamera => Live(ref _iconCam, PaintIconCamera);
+        public static Sprite IconPen => Live(ref _iconPen, PaintIconPen);
+        public static Sprite IconTear => Live(ref _iconTear, PaintIconTear);
+        public static Sprite IconDevil => Live(ref _iconDevil, PaintIconDevil);
+        public static Sprite IconFamily => Live(ref _iconFamily, PaintIconFamily);
+
+        // ??= сравнивает ссылку и не видит уничтоженный Unity-объект после выхода из Play Mode.
+        static Sprite Live(ref Sprite slot, System.Func<Sprite> paint)
+        {
+            if (slot == null)
+                slot = paint();
+            return slot;
+        }
 
         static Sprite Floor(bool tile, bool cool)
         {
@@ -421,6 +435,55 @@ namespace RealityDirector.Util
             return p.Bake();
         }
 
+        static Sprite PaintIconTear()
+        {
+            var p = new Pix(64, 64, true);
+            var blue = new Color(0.22f, 0.48f, 0.82f, 1f);
+            var drop = new Color(0.82f, 0.94f, 1f, 1f);
+            p.Ellipse(32, 32, 30, 30, blue);
+            p.Ellipse(32, 24, 11, 12, drop);
+            p.Ellipse(32, 34, 8, 8, drop);
+            p.Ellipse(32, 42, 4, 6, drop);
+            p.Ellipse(28, 28, 3, 2, new Color(1f, 1f, 1f, 0.85f));
+            return p.Bake();
+        }
+
+        static Sprite PaintIconDevil()
+        {
+            var p = new Pix(64, 64, true);
+            var red = new Color(0.72f, 0.14f, 0.13f, 1f);
+            var face = new Color(0.93f, 0.28f, 0.22f, 1f);
+            var ink = new Color(0.28f, 0.04f, 0.05f, 1f);
+            p.Ellipse(32, 32, 30, 30, red);
+            p.Ellipse(20, 50, 6, 5, ink);
+            p.Ellipse(44, 50, 6, 5, ink);
+            p.Line(16, 40, 22, 52, ink, 3);
+            p.Line(48, 40, 42, 52, ink, 3);
+            p.Ellipse(32, 28, 16, 14, face);
+            p.Ellipse(26, 30, 2, 3, ink);
+            p.Ellipse(38, 30, 2, 3, ink);
+            p.Line(24, 20, 32, 16, ink, 2);
+            p.Line(32, 16, 40, 20, ink, 2);
+            return p.Bake();
+        }
+
+        static Sprite PaintIconFamily()
+        {
+            var p = new Pix(64, 64, true);
+            var green = new Color(0.2f, 0.55f, 0.32f, 1f);
+            var shirt = new Color(0.78f, 0.93f, 0.78f, 1f);
+            var skin = new Color(0.93f, 0.76f, 0.63f, 1f);
+            p.Ellipse(32, 32, 30, 30, green);
+            p.Round(12, 16, 16, 16, shirt);
+            p.Round(36, 16, 16, 16, shirt);
+            p.Round(24, 18, 16, 14, new Color(0.55f, 0.78f, 0.58f, 1f));
+            p.Ellipse(20, 36, 8, 8, skin);
+            p.Ellipse(44, 36, 8, 8, skin);
+            p.Ellipse(32, 34, 6, 6, skin);
+            p.Line(16, 30, 48, 30, skin, 3);
+            return p.Bake();
+        }
+
         static Color Dark(Color c, float k)
         {
             return new Color(c.r * k, c.g * k, c.b * k, c.a);
@@ -570,7 +633,10 @@ namespace RealityDirector.Util
                 tex.filterMode = FilterMode.Bilinear;
                 tex.wrapMode = TextureWrapMode.Clamp;
                 tex.Apply();
-                return Sprite.Create(tex, new Rect(0f, 0f, _w, _h), new Vector2(0.5f, 0.5f), 100f);
+                tex.hideFlags = HideFlags.HideAndDontSave;
+                var sprite = Sprite.Create(tex, new Rect(0f, 0f, _w, _h), new Vector2(0.5f, 0.5f), 100f);
+                sprite.hideFlags = HideFlags.HideAndDontSave;
+                return sprite;
             }
         }
     }

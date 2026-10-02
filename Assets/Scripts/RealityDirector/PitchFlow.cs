@@ -40,6 +40,12 @@ namespace RealityDirector
         bool _inputLock;
         bool _suppressHoldCam;
         float _rumble;
+        readonly SeasonTone _tone = new SeasonTone();
+        readonly SeasonState _state = new SeasonState();
+        EventDefinition[] _hand = new EventDefinition[0];
+        string _prepReject;
+        ViewerWishId _offerId;
+        string _offerLabel;
 
         void Awake()
         {
@@ -50,16 +56,22 @@ namespace RealityDirector
             SetupCamera();
             SetupInput();
             _ui = PitchUi.Build();
-            _ui.BindFlow(BeginPlay, EndEpisode, ToggleCamera, ResetDemo);
-            _ui.BindCards(_content.Hand, Arm);
+            _state.Reset(_content.StarterIds());
+            _ui.BindFlow(OpenPrep, EndEpisode, ToggleCamera, ResetSeason);
+            _ui.BindMeta(UpgradeCrew, TogglePick, BuyCard, Embark);
             BuildApartment();
             WireTags();
             _executor = gameObject.AddComponent<EventExecutor>();
             _capture = gameObject.AddComponent<CaptureSystem>();
             _capture.Init(_context, _cast, () => _fridge != null && _fridge.IsOnFire);
             _capture.Captured += OnCaptured;
-            _capture.Missed += () => _ui.Toast("В рамке никого.");
+            _capture.Missed += () =>
+            {
+                _ui.Toast("В рамке никого.");
+                Sfx.Play(Cue.Miss, 0.45f);
+            };
             _ui.ShowIntro();
+            Sfx.Bind(gameObject);
 
             NPCController.FightStarted -= OnFight;
             NPCController.FightStarted += OnFight;
@@ -83,7 +95,13 @@ namespace RealityDirector
                 if (_rumble <= 0f)
                 {
                     _shake.Punch(0.045f, 0.1f);
-                    _rumble = 0.16f;
+                    _rumble = 0.18f;
+                    if (_zloi != null && _dobryak != null)
+                    {
+                        Vector3 mid = (_zloi.transform.position + _dobryak.transform.position) * 0.5f;
+                        FadeBit.Burst(mid, 3, new Color(1f, 0.82f, 0.55f, 1f));
+                        Sfx.Play(Cue.Slap, 0.28f, Random.Range(0.86f, 1.2f));
+                    }
                 }
             }
 
@@ -96,7 +114,7 @@ namespace RealityDirector
             {
                 var keyboard = Keyboard.current;
                 if (keyboard != null && (keyboard.spaceKey.wasPressedThisFrame || keyboard.enterKey.wasPressedThisFrame))
-                    BeginPlay();
+                    OpenPrep();
                 return;
             }
 
@@ -104,7 +122,7 @@ namespace RealityDirector
             {
                 var keyboard = Keyboard.current;
                 if (keyboard != null && (keyboard.spaceKey.wasPressedThisFrame || keyboard.enterKey.wasPressedThisFrame))
-                    ShowVision();
+                    ContinueAfterFeedback();
                 return;
             }
 
@@ -335,13 +353,61 @@ namespace RealityDirector
             _ui.AddTag(anchor, () => text, muted, Vector2.zero, 16, false);
         }
 
-        void BeginPlay()
+        void OpenPrep()
         {
-            if (_phase != PitchPhase.Intro)
+            if (_phase != PitchPhase.Intro && _phase != PitchPhase.Feedback && _phase != PitchPhase.Prep)
                 return;
+            TrimPicked();
+            _phase = PitchPhase.Prep;
+            _ui.ShowPrep(BuildPrep());
+            _ui.RefreshTone(_tone);
+            RefreshTasks(true);
+        }
+
+        void Embark()
+        {
+            var model = BuildPrep();
+            if (!model.canStart || _phase != PitchPhase.Prep)
+            {
+                Sfx.Play(Cue.Miss, 0.4f);
+                return;
+            }
+
+            Sfx.Play(Cue.Card, 0.45f, 0.8f);
+            ResetSet();
+            _hand = SelectedHand();
+            _state.picked.Clear();
+            _prepReject = null;
+            _ui.ClearHand();
+            _ui.BindCards(_hand, Arm);
+            _ui.ClearUsed();
+            _ui.SetArmed(null);
+            _capture.Capacity = Progression.CaptureSlots(_state.operatorLevel);
+            _ui.SetCaptureCapacity(_capture.Capacity);
+            _ui.SetEpisodeTitle("СЕРИЯ " + (_state.episodeIndex + 1) + " / " + Progression.SeasonLength + "\nты режиссёр, не участник");
             _phase = PitchPhase.Play;
             _ui.ShowPlay();
+            _ui.RefreshTone(_tone);
             _ui.SetSlots(_capture.Moments, _capture.Capacity);
+            RefreshTasks(true);
+        }
+
+        void ContinueAfterFeedback()
+        {
+            if (_phase != PitchPhase.Feedback)
+                return;
+            if (_ui.TaskTaken)
+                _state.Accept(_offerId, _offerLabel);
+            _state.episodeIndex++;
+            if (_state.episodeIndex >= Progression.SeasonLength)
+            {
+                _phase = PitchPhase.SeasonEnd;
+                _ui.ShowSeasonEnd(SeasonEndText(), ResetSeason);
+                _ui.RefreshTone(_tone);
+                return;
+            }
+
+            OpenPrep();
         }
 
         void ShowVision()
@@ -364,11 +430,20 @@ namespace RealityDirector
             _capture.SetHold(false);
             _ui.SetArmed(null);
             _ui.SetCaptureMode(false);
-            var result = FeedbackGenerator.Build(_context, _capture.Moments, _cast);
-            _ui.ShowFeedback(result, ShowVision);
+            var result = FeedbackGenerator.Build(_context, _capture.Moments, _cast, _tone);
+            bool hadTasks = _state.tasks.Count > 0;
+            bool wishDone = _state.Resolve(_capture.Moments, _tone);
+            int pay = Progression.Payout(result.score, _state.castLevel, wishDone);
+            _state.money += pay;
+            result.payLine = PayLine(pay, hadTasks, wishDone);
+            Sfx.Play(Cue.Coin, wishDone ? 0.7f : 0.5f, wishDone ? 1.12f : 1f);
+            _offerId = result.nextWish;
+            _offerLabel = result.wish;
+            _ui.ShowFeedback(result, ContinueAfterFeedback);
+            RefreshTasks(true);
         }
 
-        void ResetDemo()
+        void ResetSeason()
         {
             StopAllCoroutines();
             Time.timeScale = 1f;
@@ -377,16 +452,248 @@ namespace RealityDirector
             _inputLock = false;
             _suppressHoldCam = false;
             _armed = null;
+            _prepReject = null;
+            _hand = new EventDefinition[0];
+            _tone.Reset();
+            _state.Reset(_content.StarterIds());
+            _ui.RefreshTone(_tone);
+            _ui.ClearHand();
+            ResetSet();
+            _ui.ShowIntro();
+        }
+
+        void ResetSet()
+        {
+            _endQueued = false;
+            _inputLock = false;
+            _armed = null;
             _context.Reset();
-            _fridge.Extinguish();
+            if (_fridge != null)
+                _fridge.Extinguish();
             CloseBathroom();
-            _zloi.ResetState();
-            _dobryak.ResetState();
+            if (_zloi != null)
+                _zloi.ResetState();
+            if (_dobryak != null)
+                _dobryak.ResetState();
             _capture.ResetCapture();
             _ui.ClearUsed();
             _ui.SetArmed(null);
-            _ui.SetSlots(_capture.Moments, _capture.Capacity);
-            _ui.ShowIntro();
+            _ui.ClearSlots();
+        }
+
+        void ArmAt(int index)
+        {
+            if (_hand == null || index < 0 || index >= _hand.Length)
+                return;
+            Arm(_hand[index]);
+        }
+
+        int SlotsNow()
+        {
+            return Progression.EventSlots(_state.writerLevel, _state.episodeIndex);
+        }
+
+        void TrimPicked()
+        {
+            int slots = SlotsNow();
+            for (int i = _state.picked.Count - 1; i >= 0; i--)
+            {
+                if (!_state.Owns(_state.picked[i]) || _state.IsPlayed(_state.picked[i]))
+                    _state.picked.RemoveAt(i);
+            }
+
+            while (_state.picked.Count > slots)
+                _state.picked.RemoveAt(_state.picked.Count - 1);
+        }
+
+        EventDefinition[] SelectedHand()
+        {
+            var list = new List<EventDefinition>();
+            for (int i = 0; i < _state.picked.Count; i++)
+            {
+                var def = _content.Find(_state.picked[i]);
+                if (def != null)
+                    list.Add(def);
+            }
+
+            return list.ToArray();
+        }
+
+        PrepModel BuildPrep()
+        {
+            int slots = SlotsNow();
+            int available = _state.UnplayedCount();
+            int need = Mathf.Min(slots, available);
+            int later = Progression.EventSlots(_state.writerLevel, 1);
+            string writers = _state.episodeIndex <= 0
+                ? "ур. " + _state.writerLevel + "\nсейчас 1 карта\nдальше " + later
+                : "ур. " + _state.writerLevel + "\nкарт в серию: " + later;
+            int hype = Mathf.RoundToInt(Progression.HypeBonus(_state.castLevel) * 100f);
+
+            return new PrepModel
+            {
+                episodeNumber = _state.episodeIndex + 1,
+                money = _state.money,
+                slots = slots,
+                picked = _state.picked.Count,
+                available = available,
+                canStart = need > 0 && _state.picked.Count == need,
+                reject = _prepReject,
+                slotsLabel = _state.episodeIndex <= 0
+                    ? "Обучение: в серию берётся 1 карта. Со следующей серии слоты от сценаристов, минимум 2."
+                    : "Карт в серию: " + slots + "  ·  несыгранных в колоде: " + available,
+                crew = new[]
+                {
+                    CrewButtonOf("УЧАСТНИКИ", true, _state.castLevel, "ур. " + _state.castLevel + "\nчек +" + hype + "%\nв кадре пока 2"),
+                    CrewButtonOf("ОПЕРАТОРЫ", false, _state.operatorLevel, "ур. " + _state.operatorLevel + "\nкадров: " + Progression.CaptureSlots(_state.operatorLevel)),
+                    CrewButtonOf("СЦЕНАРИСТЫ", false, _state.writerLevel, writers)
+                },
+                deck = CollectCards(false),
+                shop = CollectCards(true)
+            };
+        }
+
+        CrewButton CrewButtonOf(string title, bool cast, int level, string detail)
+        {
+            bool maxed = level >= Progression.MaxLevel;
+            int cost = Progression.UpgradeCost(cast, level);
+            return new CrewButton
+            {
+                title = title,
+                detail = detail,
+                maxed = maxed,
+                affordable = !maxed && _state.money >= cost,
+                costLabel = maxed ? "МАКС" : "апгрейд " + cost + " кр"
+            };
+        }
+
+        PrepCard[] CollectCards(bool shop)
+        {
+            var list = new List<PrepCard>();
+            var all = _content.All;
+            for (int i = 0; i < all.Length; i++)
+            {
+                var def = all[i];
+                bool owned = _state.Owns(def.id);
+                if (shop)
+                {
+                    if (owned || def.price <= 0)
+                        continue;
+                }
+                else if (!owned || _state.IsPlayed(def.id))
+                {
+                    continue;
+                }
+
+                var moods = new ShowMood[def.moods != null ? def.moods.Count : 0];
+                for (int m = 0; m < moods.Length; m++)
+                    moods[m] = def.moods[m];
+                list.Add(new PrepCard
+                {
+                    id = def.id,
+                    title = def.displayName,
+                    hint = def.hint,
+                    price = def.price,
+                    picked = _state.picked.Contains(def.id),
+                    color = def.cardColor,
+                    art = def.cardArt,
+                    moods = moods
+                });
+            }
+
+            return list.ToArray();
+        }
+
+        void UpgradeCrew(int index)
+        {
+            if (_phase != PitchPhase.Prep)
+                return;
+            bool cast = index == 0;
+            int level = index == 0 ? _state.castLevel : index == 1 ? _state.operatorLevel : _state.writerLevel;
+            int cost = Progression.UpgradeCost(cast, level);
+            if (level >= Progression.MaxLevel || cost <= 0 || _state.money < cost)
+            {
+                Sfx.Play(Cue.Miss, 0.45f);
+                return;
+            }
+            Sfx.Play(Cue.Coin, 0.45f, 0.9f);
+            _state.money -= cost;
+            if (index == 0)
+                _state.castLevel++;
+            else if (index == 1)
+                _state.operatorLevel++;
+            else
+                _state.writerLevel++;
+            _prepReject = null;
+            OpenPrep();
+        }
+
+        void TogglePick(string id)
+        {
+            if (_phase != PitchPhase.Prep || _state.IsPlayed(id) || !_state.Owns(id))
+                return;
+            if (_state.picked.Contains(id))
+            {
+                _state.picked.Remove(id);
+                _prepReject = null;
+            }
+            else if (_state.picked.Count >= SlotsNow())
+            {
+                _prepReject = "Слоты заняты — сними одну карту.";
+                Sfx.Play(Cue.Miss, 0.4f);
+            }
+            else
+            {
+                _state.picked.Add(id);
+                _prepReject = null;
+            }
+
+            OpenPrep();
+        }
+
+        void BuyCard(string id)
+        {
+            if (_phase != PitchPhase.Prep || _state.Owns(id))
+                return;
+            var def = _content.Find(id);
+            if (def == null || def.price <= 0 || _state.money < def.price)
+            {
+                _prepReject = "Не хватает бюджета.";
+                Sfx.Play(Cue.Miss, 0.5f);
+                OpenPrep();
+                return;
+            }
+
+            Sfx.Play(Cue.Coin, 0.5f);
+            _state.money -= def.price;
+            _state.owned.Add(id);
+            _prepReject = null;
+            OpenPrep();
+        }
+
+        void RefreshTasks(bool visible)
+        {
+            var lines = new List<string>(_state.tasks.Count);
+            for (int i = 0; i < _state.tasks.Count; i++)
+                lines.Add(_state.tasks[i].label);
+            _ui.SetTasks(lines, visible);
+        }
+
+        string PayLine(int pay, bool hadTasks, bool wishDone)
+        {
+            if (!hadTasks)
+                return "+" + pay + " кр   ·   задач не было";
+            if (wishDone)
+                return "+" + pay + " кр   ·   задача закрыта ×1.3";
+            return "+" + pay + " кр   ·   задачи открыты, мимо";
+        }
+
+        string SeasonEndText()
+        {
+            string tone = _tone.TryLead(out ShowMood lead)
+                ? MoodStyle.Paint(MoodStyle.Full(lead), lead)
+                : "ничья — концовку не выбрать";
+            return "Тон сезона: " + tone + "\nБюджет: " + _state.money + " кр\nСами концовки напишем следом.";
         }
 
         void ToggleCamera()
@@ -402,6 +709,11 @@ namespace RealityDirector
         {
             if (_phase != PitchPhase.Play || def == null)
                 return;
+            if (_state.played.Contains(def.id))
+            {
+                _ui.Toast("Уже сыграно.");
+                return;
+            }
 
             _capture.SetSticky(false);
             if (def.id == "open_bathroom" && _bathOpen)
@@ -409,6 +721,7 @@ namespace RealityDirector
                 _armed = null;
                 _ui.SetArmed(null);
                 _ui.MarkUsed(def.id);
+                _state.played.Add(def.id);
                 _ui.Toast("Ванная уже открыта.");
                 return;
             }
@@ -419,7 +732,8 @@ namespace RealityDirector
                 _ui.SetArmed(null);
                 _executor.Play(def, null, null);
                 _ui.MarkUsed(def.id);
-                _ui.Toast("Горячая вода отключена.");
+                NoteCard(def);
+                _ui.Toast(def.displayName);
                 return;
             }
 
@@ -435,13 +749,15 @@ namespace RealityDirector
                 return;
 
             if (keyboard.digit1Key.wasPressedThisFrame)
-                Arm(_content.Provoke);
+                ArmAt(0);
             else if (keyboard.digit2Key.wasPressedThisFrame)
-                Arm(_content.FridgeFire);
+                ArmAt(1);
             else if (keyboard.digit3Key.wasPressedThisFrame)
-                Arm(_content.NoHotWater);
+                ArmAt(2);
             else if (keyboard.digit4Key.wasPressedThisFrame)
-                Arm(_content.OpenBathroom);
+                ArmAt(3);
+            else if (keyboard.digit5Key.wasPressedThisFrame)
+                ArmAt(4);
 
             if (keyboard.cKey.wasPressedThisFrame)
                 ToggleCamera();
@@ -500,17 +816,21 @@ namespace RealityDirector
                 if (npc == null)
                 {
                     _ui.Toast("Кликни по человеку.");
+                    Sfx.Play(Cue.Miss, 0.4f);
                     return;
                 }
 
-                if (_armed.id == "provoke" && npc.Trait.traitId != TraitId.Aggressive)
+                if (_armed.limitTrait && (npc.Trait == null || npc.Trait.traitId != _armed.targetTrait))
                 {
-                    _ui.Toast("Это " + npc.DisplayName + ". Разозли Злого — он красный.");
+                    _ui.Toast("Это " + npc.DisplayName + ". " + _armed.hint);
+                    Sfx.Play(Cue.Miss, 0.4f);
                     return;
                 }
 
+                JuiceCard(_armed, npc.transform.position);
                 _executor.Play(_armed, null, npc);
                 _ui.MarkUsed(_armed.id);
+                NoteCard(_armed);
                 _armed = null;
                 _ui.SetArmed(null);
                 return;
@@ -527,12 +847,16 @@ namespace RealityDirector
             if (obj == null || (!string.IsNullOrEmpty(_armed.requiredObjectId) && obj.Id != _armed.requiredObjectId))
             {
                 _ui.Toast(_armed.hint);
+                Sfx.Play(Cue.Miss, 0.4f);
                 return;
             }
 
             bool openBath = _armed.id == "open_bathroom";
-            _executor.Play(_armed, obj, null);
-            _ui.MarkUsed(_armed.id);
+            EventDefinition played = _armed;
+            JuiceCard(played, obj.transform.position);
+            _executor.Play(played, obj, null);
+            _ui.MarkUsed(played.id);
+            NoteCard(played);
             _armed = null;
             _ui.SetArmed(null);
             if (openBath)
@@ -556,6 +880,7 @@ namespace RealityDirector
             }
 
             _shake.Punch(0.1f, 0.25f);
+            Sfx.Play(Cue.Splash, 0.7f);
             FadeBit.Burst(new Vector3(0.05f, 5.15f, 0f), 12, new Color(0.55f, 0.36f, 0.18f, 1f));
             _ui.Toast("Дверь в ванную открыта.");
             float t = 0f;
@@ -598,8 +923,10 @@ namespace RealityDirector
                 return;
             bool actors = _phase == PitchPhase.Play && _armed != null && _armed.targetType == TargetType.Actor;
             bool objects = _phase == PitchPhase.Play && _armed != null && _armed.targetType == TargetType.Object;
-            _zloi.SetTargeted(actors);
-            _dobryak.SetTargeted(false);
+            bool zloi = actors && (!_armed.limitTrait || _armed.targetTrait == TraitId.Aggressive);
+            bool dobryak = actors && (!_armed.limitTrait || _armed.targetTrait == TraitId.Sentimental);
+            _zloi.SetTargeted(zloi);
+            _dobryak.SetTargeted(dobryak);
             _fridge.SetTargeted(objects && _armed.requiredObjectId == _fridge.Id);
             if (_bathDoor != null)
                 _bathDoor.SetTargeted(objects && _armed.requiredObjectId == _bathDoor.Id);
@@ -608,9 +935,13 @@ namespace RealityDirector
         string Coach()
         {
             if (_capture.Mode)
-                return _capture.Moments.Count == 0
-                    ? "Наведи рамку на них и жми Space."
-                    : "Кадр есть. Сними второй или жми «Конец серии».";
+            {
+                if (_capture.Moments.Count == 0)
+                    return "Наведи рамку на них и жми Space.";
+                if (_capture.IsFull)
+                    return "Кадры сняты. Можно закрыть серию.";
+                return "Кадр есть. Сними ещё или жми «Конец серии».";
+            }
 
             if (_armed != null)
                 return "«" + _armed.displayName + "» — " + _armed.hint + ". ПКМ отмена.";
@@ -626,14 +957,54 @@ namespace RealityDirector
                 return "Добряк в панике. Разозли Злого — он догонит.";
             if (_capture.Moments.Count > 0)
                 return "Можно снять ещё или закрыть серию.";
-            return "Сначала «Разозлить» на Злого, потом «Поджог» на холодильник.";
+            return "Карты внизу. C — камера, Space — кадр.";
+        }
+
+        void JuiceCard(EventDefinition def, Vector3 at)
+        {
+            if (def == null)
+                return;
+            if (def.id == "meditation_bell")
+                Sfx.Play(Cue.Bell, 0.75f);
+            else if (!def.ignite)
+                Sfx.Play(Cue.Card, 0.6f);
+            var fx = def.cardColor;
+            fx.a = 1f;
+            FadeBit.Burst(at + Vector3.up * 0.4f, 8, fx);
+        }
+
+        void NoteCard(EventDefinition def)
+        {
+            if (def == null)
+                return;
+            _state.played.Add(def.id);
+            if (def.moods == null)
+                return;
+
+            int count = def.moods.Count > 2 ? 2 : def.moods.Count;
+            for (int i = 0; i < count; i++)
+            {
+                int gained = _tone.Add(def.moods[i], SeasonTone.CardGain);
+                if (gained > 0)
+                    _ui.FlashTone(def.moods[i], gained);
+            }
+
+            _ui.RefreshTone(_tone);
         }
 
         void OnCaptured(CapturedMoment moment)
         {
+            int gained = _tone.Add(moment.mood, SeasonTone.MomentGain);
+            _ui.RefreshTone(_tone);
+            if (gained > 0)
+                _ui.FlashTone(moment.mood, gained);
+
             int index = _capture.Moments.Count - 1;
-            _ui.FlyPhoto(moment.photo, index, moment.screenPoint, moment.Title);
+            string caption = "<color=" + MoodStyle.Hex(moment.mood) + ">" + moment.Title + "</color>";
+            _ui.FlyPhoto(moment.photo, index, moment.screenPoint, caption);
             _ui.Pulse(new Color(1f, 1f, 1f, 0.72f));
+            _shake.Punch(0.05f, 0.08f);
+            Sfx.Play(Cue.Shutter, 0.8f);
             StartCoroutine(HitStop());
             if (_capture.IsFull && !_endQueued)
                 StartCoroutine(AutoEnd());
@@ -643,6 +1014,8 @@ namespace RealityDirector
         {
             Vector3 mid = (a.transform.position + b.transform.position) * 0.5f;
             _shake.Punch(0.18f, 0.45f);
+            _rumble = 0.12f;
+            Sfx.Play(Cue.Slap, 0.85f, 0.8f);
             FadeBit.Burst(mid, 16, new Color(1f, 0.28f, 0.12f, 1f));
             _ui.Pulse(new Color(1f, 0.18f, 0.12f, 0.32f));
         }

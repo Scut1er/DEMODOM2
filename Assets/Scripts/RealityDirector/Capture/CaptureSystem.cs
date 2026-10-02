@@ -113,12 +113,17 @@ namespace RealityDirector.Capture
 
             var tags = _context != null ? _context.RecentTags(5f) : new List<string>();
             AddLiveTags(tags, inside);
+            bool onFire = _sceneOnFire != null && _sceneOnFire();
+            ShowMood mood = ResolveMood(inside, tags, onFire);
+            if (mood == ShowMood.Family)
+                Add(tags, MomentTags.Warmth);
             var moment = new CapturedMoment
             {
                 time = Time.time,
                 tags = tags,
                 photo = photo,
-                screenPoint = screen
+                screenPoint = screen,
+                mood = mood
             };
             for (int i = 0; i < inside.Count; i++)
                 moment.actorNames.Add(inside[i].DisplayName);
@@ -182,6 +187,9 @@ namespace RealityDirector.Capture
                     Add(tags, MomentTags.Conflict);
                 }
 
+                if (inside[i].IsCrying)
+                    Add(tags, MomentTags.Crying);
+
                 if (inside[i].HasRage)
                     Add(tags, MomentTags.Conflict);
             }
@@ -191,6 +199,37 @@ namespace RealityDirector.Capture
                 Add(tags, MomentTags.Fire);
                 Add(tags, MomentTags.Chaos);
             }
+        }
+
+        static ShowMood ResolveMood(List<NPCController> inside, List<string> tags, bool sceneOnFire)
+        {
+            bool fight = false;
+            bool cry = false;
+            bool rage = false;
+            bool emoting = false;
+            for (int i = 0; i < inside.Count; i++)
+            {
+                if (inside[i].IsFighting)
+                    fight = true;
+                if (inside[i].IsCrying)
+                    cry = true;
+                if (inside[i].HasRage)
+                    rage = true;
+                if (inside[i].Action == NpcActionId.Emote)
+                    emoting = true;
+            }
+
+            if (fight)
+                return ShowMood.Trash;
+            if (cry)
+                return ShowMood.Drama;
+            if (rage || sceneOnFire)
+                return ShowMood.Trash;
+            if (emoting && tags.Contains(MomentTags.Misery))
+                return ShowMood.Drama;
+            if (emoting && tags.Contains(MomentTags.Conflict))
+                return ShowMood.Trash;
+            return ShowMood.Family;
         }
 
         static void Add(List<string> tags, string tag)

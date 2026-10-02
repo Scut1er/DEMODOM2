@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using RealityDirector.Core;
+using RealityDirector.Util;
 using RealityDirector.Events;
 using UnityEngine;
 
@@ -22,6 +23,7 @@ namespace RealityDirector.NPC
 
         public bool HasRage => Time.time < _rageUntil;
         public bool IsFighting => _action == NpcActionId.Fight;
+        public bool IsCrying => _action == NpcActionId.Panic && Trait != null && Trait.traitId == TraitId.Sentimental;
         public NpcActionId Action => _action;
         public string Emote => _emote;
 
@@ -72,6 +74,8 @@ namespace RealityDirector.NPC
         {
             _rageUntil = Mathf.Max(_rageUntil, Time.time + seconds);
             Say("злость", 90f);
+            Sfx.Play(Cue.Blip, 0.4f, 0.62f);
+            FadeBit.Burst(transform.position + Vector3.up * 0.85f, 6, new Color(1f, 0.28f, 0.12f, 1f));
             if (Interactable.AnyOnFire && !IsFighting && _action != NpcActionId.SeekFight)
                 Run(NpcActionId.SeekFight, "!!!");
         }
@@ -144,8 +148,15 @@ namespace RealityDirector.NPC
             switch (action)
             {
                 case NpcActionId.Panic:
+                    bool fresh = _action != NpcActionId.Panic;
                     _action = NpcActionId.Panic;
                     Say(string.IsNullOrEmpty(emote) ? "!" : emote, 99f);
+                    if (fresh && IsCrying)
+                    {
+                        Sfx.Play(Cue.Cry, 0.65f);
+                        FadeBit.Burst(transform.position + Vector3.up * 0.9f, 7, new Color(0.45f, 0.75f, 1f, 1f));
+                    }
+
                     break;
                 case NpcActionId.SeekFight:
                     if (Rival == null)

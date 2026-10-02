@@ -9,5 +9,6 @@ namespace RealityDirector.Core
         public const string Fight = "Fight";
         public const string Slap = "Slap";
         public const string Crying = "Crying";
+        public const string Warmth = "Warmth";
     }
 }

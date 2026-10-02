@@ -55,6 +55,9 @@ namespace RealityDirector.Util
 
         public static void Fit(SpriteRenderer renderer, Vector2 worldSize)
         {
+            if (renderer == null || renderer.sprite == null)
+                return;
+
             Vector2 size = renderer.sprite.bounds.size;
             float x = size.x < 0.0001f ? 1f : worldSize.x / size.x;
             float y = size.y < 0.0001f ? 1f : worldSize.y / size.y;

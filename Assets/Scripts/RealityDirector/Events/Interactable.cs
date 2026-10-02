@@ -1,3 +1,4 @@
+using RealityDirector.Util;
 using UnityEngine;
 
 namespace RealityDirector.Events
@@ -16,6 +17,7 @@ namespace RealityDirector.Events
         public bool IsOnFire { get; private set; }
 
         Transform[] _flames;
+        float _ember;
         SpriteRenderer[] _flameRenderers;
         SpriteRenderer _glow;
         SpriteRenderer _ring;
@@ -57,6 +59,9 @@ namespace RealityDirector.Events
             if (_body != null)
                 _body.color = new Color(0.25f, 0.18f, 0.16f, 1f);
             SetFlamesActive(true);
+            Sfx.Play(Cue.Ignite, 0.85f);
+            Sfx.Crackle(true);
+            FadeBit.Burst(transform.position + Vector3.up * 0.35f, 14, new Color(1f, 0.42f, 0.08f, 1f));
         }
 
         public void Extinguish()
@@ -70,6 +75,7 @@ namespace RealityDirector.Events
             if (_body != null)
                 _body.color = _bodyColor;
             SetFlamesActive(false);
+            Sfx.Crackle(false);
         }
 
         void SetFlamesActive(bool on)
@@ -93,6 +99,18 @@ namespace RealityDirector.Events
                 }
 
                 return;
+            }
+
+            _ember -= Time.deltaTime;
+            if (_ember <= 0f)
+            {
+                _ember = 0.07f;
+                var tint = Random.value > 0.45f
+                    ? new Color(1f, 0.48f, 0.08f, 1f)
+                    : new Color(1f, 0.88f, 0.35f, 1f);
+                Vector3 origin = transform.position + new Vector3(Random.Range(-0.28f, 0.28f), 0.35f, 0f);
+                FadeBit.Spawn(origin, new Vector3(Random.Range(-0.35f, 0.35f), Random.Range(1.4f, 2.6f), 0f),
+                    tint, Random.Range(0.28f, 0.5f), Random.Range(0.05f, 0.12f));
             }
 
             for (int i = 0; i < _flames.Length; i++)

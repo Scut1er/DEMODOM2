@@ -1,4 +1,6 @@
 using System.Collections.Generic;
+using RealityDirector.Core;
+using RealityDirector.NPC;
 using UnityEngine;
 
 namespace RealityDirector.Events
@@ -21,8 +23,13 @@ namespace RealityDirector.Events
         public Color cardColor = Color.white;
         public Sprite cardArt;
         public List<string> tags = new List<string>();
+        public List<ShowMood> moods = new List<ShowMood>();
         public float rageSeconds;
         public bool ignite;
+        public int price;
+        public bool starter;
+        public bool limitTrait;
+        public TraitId targetTrait;
         [TextArea] public string jamNote;
     }
 }
