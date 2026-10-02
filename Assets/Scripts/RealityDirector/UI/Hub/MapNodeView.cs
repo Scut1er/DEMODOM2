@@ -1,4 +1,5 @@
 using System;
+using RealityDirector.Core;
 using RealityDirector.Meta;
 using RealityDirector.Util;
 using UnityEngine;
@@ -38,7 +39,12 @@ namespace RealityDirector.UI.Hub
             if (title != null)
                 title.text = node.title;
             if (subtitle != null)
-                subtitle.text = node.subtitle;
+            {
+                string line = node.subtitle ?? "";
+                if (node.toneGain > 0)
+                    line += "  ·  " + MoodStyle.Paint(MoodStyle.Short(node.mood) + " +" + node.toneGain, node.mood);
+                subtitle.text = line;
+            }
             if (frame != null)
                 frame.color = state == MapNodeState.Locked ? lockedColor : node.color;
             if (art != null)

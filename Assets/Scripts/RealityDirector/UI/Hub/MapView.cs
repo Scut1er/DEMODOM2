@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using RealityDirector.Core;
 using RealityDirector.Meta;
 using UnityEngine;
 using UnityEngine.UI;
@@ -64,7 +65,7 @@ namespace RealityDirector.UI.Hub
         public void Show(MapService map, MapNode selected, StatsModel statsModel, int episodeNumber, int seasonLength, IList<string> tasks)
         {
             if (subtitle != null)
-                subtitle.text = "Выпуск " + episodeNumber + " из " + seasonLength + "  ·  комната " + Mathf.Min(map.Step + 1, map.Map.Layers)
+                subtitle.text = "Выпуск " + episodeNumber + " из " + seasonLength + "  ·  сцена " + Mathf.Min(map.Step + 1, map.Map.Layers)
                                 + " из " + map.Map.Layers + "  ·  в конце — монтаж";
             Layout(map.Map);
             if (stats != null)
@@ -195,7 +196,11 @@ namespace RealityDirector.UI.Hub
                 if (infoTitle != null)
                     infoTitle.text = "Выберите следующую комнату";
                 if (infoBody != null)
-                    infoBody.text = "Съёмки дают материал, события и маркетинг — последствия. Пройденный путь не переснять, в конце — монтаж.";
+                    infoBody.text = "Сцена двигает "
+                        + MoodStyle.Paint("драму", ShowMood.Drama) + ", "
+                        + MoodStyle.Paint("трэш", ShowMood.Trash) + " или "
+                        + MoodStyle.Paint("семью", ShowMood.Family)
+                        + ". Пройденный путь не переснять, в конце — монтаж.";
             }
             else
             {

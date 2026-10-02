@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using RealityDirector.Core;
 using UnityEngine;
 
 namespace RealityDirector.Meta
@@ -45,6 +46,23 @@ namespace RealityDirector.Meta
         public MapNodeKind kind => room != null ? room.icon : MapNodeKind.Scene;
         public Color color => room != null ? room.color : new Color(0.3f, 0.28f, 0.34f, 1f);
         public Sprite art => room != null ? room.art : null;
+
+        // Тон, который даёт вход в комнату (первый эффект «Тон» в onEnter) — для подписи на карте.
+        public int toneGain => ToneEffect()?.value ?? 0;
+        public ShowMood mood => ToneEffect()?.mood ?? ShowMood.Drama;
+
+        Effect ToneEffect()
+        {
+            if (room == null || room.onEnter == null)
+                return null;
+            for (int i = 0; i < room.onEnter.Count; i++)
+            {
+                if (room.onEnter[i] != null && room.onEnter[i].type == EffectType.Tone && room.onEnter[i].value > 0)
+                    return room.onEnter[i];
+            }
+
+            return null;
+        }
     }
 
     // Карта выпуска: ряды (layer) слева направо, в последнем — монтаж.

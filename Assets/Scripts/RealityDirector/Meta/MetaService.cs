@@ -262,7 +262,10 @@ namespace RealityDirector.Meta
                 episode = (_state.episodeIndex + 1).ToString(),
                 drama = _tone != null ? _tone.Drama / (float)SeasonTone.Cap : 0f,
                 trash = _tone != null ? _tone.Trash / (float)SeasonTone.Cap : 0f,
-                family = _tone != null ? _tone.Family / (float)SeasonTone.Cap : 0f
+                family = _tone != null ? _tone.Family / (float)SeasonTone.Cap : 0f,
+                dramaValue = _tone != null ? _tone.Drama : 0,
+                trashValue = _tone != null ? _tone.Trash : 0,
+                familyValue = _tone != null ? _tone.Family : 0
             };
         }
 
