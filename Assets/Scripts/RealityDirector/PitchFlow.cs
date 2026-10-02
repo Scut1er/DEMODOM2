@@ -968,6 +968,8 @@ namespace RealityDirector
                 Sfx.Play(Cue.Bell, 0.75f);
             else if (!def.ignite)
                 Sfx.Play(Cue.Card, 0.6f);
+            if (_shake != null)
+                _shake.Punch(def.ignite ? 0.16f : 0.1f, def.ignite ? 0.18f : 0.13f);
             var fx = def.cardColor;
             fx.a = 1f;
             FadeBit.Burst(at + Vector3.up * 0.4f, 8, fx);

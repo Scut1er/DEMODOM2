@@ -1,5 +1,9 @@
 using UnityEngine;
 
+// CC0 recordings in Assets/Resources/Sfx.
+// Shutter, coins, water: OwlishMedia. Fire: AntumDeluge.
+// Clicks, swipes, bell, punches: Kenney.nl. Cry stays synthesized.
+
 namespace RealityDirector.Util
 {
     public enum Cue
@@ -27,6 +31,7 @@ namespace RealityDirector.Util
         static int _voice;
         static AudioSource _loop;
         static AudioClip[] _clips;
+        static AudioClip[] _slaps;
 
         public static void Bind(GameObject host)
         {
@@ -47,7 +52,7 @@ namespace RealityDirector.Util
             _loop.playOnAwake = false;
             _loop.spatialBlend = 0f;
             _loop.loop = true;
-            _loop.volume = 0.22f;
+            _loop.volume = 0.34f;
             _loop.ignoreListenerPause = true;
 
             _clips = new AudioClip[13];
@@ -64,13 +69,56 @@ namespace RealityDirector.Util
             _clips[(int)Cue.Tick] = Tone("tick", 0.06f, 1400f, 1);
             _clips[(int)Cue.Blip] = Tone("blip", 0.09f, 520f, 3);
             _clips[(int)Cue.Crackle] = Noise("crackle", 1.1f, 23u, 0.15f);
+            UseRecorded();
+        }
+
+        static void UseRecorded()
+        {
+            Take(Cue.Click, "click");
+            Take(Cue.Shutter, "shutter");
+            Take(Cue.Card, "card");
+            Take(Cue.Ignite, "ignite");
+            Take(Cue.Coin, "coin");
+            Take(Cue.Miss, "miss");
+            Take(Cue.Splash, "splash");
+            Take(Cue.Bell, "bell");
+            Take(Cue.Tick, "tick");
+            Take(Cue.Blip, "blip");
+            Take(Cue.Crackle, "crackle");
+
+            var found = new AudioClip[5];
+            int count = 0;
+            for (int i = 0; i < found.Length; i++)
+            {
+                var clip = Resources.Load<AudioClip>("Sfx/slap" + i);
+                if (clip == null)
+                    continue;
+                found[count++] = clip;
+            }
+
+            if (count == 0)
+                return;
+            _slaps = new AudioClip[count];
+            for (int i = 0; i < count; i++)
+                _slaps[i] = found[i];
+        }
+
+        static void Take(Cue cue, string name)
+        {
+            var clip = Resources.Load<AudioClip>("Sfx/" + name);
+            if (clip != null)
+                _clips[(int)cue] = clip;
         }
 
         public static void Play(Cue cue, float volume = 1f, float pitch = 1f)
         {
             if (_voices == null || _clips == null)
                 return;
-            var clip = _clips[(int)cue];
+            AudioClip clip = null;
+            if (cue == Cue.Slap && _slaps != null && _slaps.Length > 0)
+                clip = _slaps[Random.Range(0, _slaps.Length)];
+            else
+                clip = _clips[(int)cue];
             if (clip == null)
                 return;
             var src = _voices[_voice];
