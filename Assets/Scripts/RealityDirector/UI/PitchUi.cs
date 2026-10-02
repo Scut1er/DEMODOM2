@@ -55,8 +55,6 @@ namespace RealityDirector.UI
 
         public bool TaskTaken => _taskTaken;
         Text _episodeTitle;
-        GameObject _prep;
-        GameObject _seasonEnd;
         Coroutine _flashRoutine;
         GameObject _toneRoot;
         Text _toneLead;
@@ -458,15 +456,10 @@ namespace RealityDirector.UI
             _feedback.SetActive(false);
             _vision.SetActive(false);
             _hud.SetActive(false);
-            if (_prep != null)
-                _prep.SetActive(false);
-            if (_seasonEnd != null)
-                _seasonEnd.SetActive(false);
             if (_toneRoot != null)
                 _toneRoot.SetActive(false);
             SetTagsVisible(false);
             SetCaptureMode(false);
-            _hubTab = 0;
             if (_tasksRoot != null)
                 _tasksRoot.SetActive(false);
         }
@@ -477,11 +470,6 @@ namespace RealityDirector.UI
             _feedback.SetActive(false);
             _vision.SetActive(false);
             _hud.SetActive(true);
-            _hubTab = 0;
-            if (_prep != null)
-                _prep.SetActive(false);
-            if (_seasonEnd != null)
-                _seasonEnd.SetActive(false);
             SetTagsVisible(true);
             _toneRoot.SetActive(true);
             _toneRoot.transform.SetAsLastSibling();
@@ -490,8 +478,6 @@ namespace RealityDirector.UI
         public void ShowFeedback(FeedbackResult result, Action onNext)
         {
             _hud.SetActive(false);
-            if (_prep != null)
-                _prep.SetActive(false);
             SetTagsVisible(false);
             _feedback.SetActive(true);
             _toneRoot.SetActive(true);
@@ -550,8 +536,6 @@ namespace RealityDirector.UI
         public void ShowVision()
         {
             _feedback.SetActive(false);
-            if (_prep != null)
-                _prep.SetActive(false);
             _vision.SetActive(true);
             _toneRoot.SetActive(false);
         }
@@ -575,61 +559,6 @@ namespace RealityDirector.UI
             _onEnd = onEnd;
             _onCamera = onCamera;
             _onReplay = onReplay;
-        }
-
-        Action<int> _onUpgrade;
-        Action<string> _onToggle;
-        Action<string> _onBuy;
-        Action _onEmbark;
-        PrepModel _hubModel;
-        int _hubTab;
-
-        public void BindMeta(Action<int> onUpgrade, Action<string> onToggle, Action<string> onBuy, Action onEmbark)
-        {
-            _onUpgrade = onUpgrade;
-            _onToggle = onToggle;
-            _onBuy = onBuy;
-            _onEmbark = onEmbark;
-        }
-
-        public void ShowPrep(PrepModel model)
-        {
-            _intro.SetActive(false);
-            _hud.SetActive(false);
-            _feedback.SetActive(false);
-            _vision.SetActive(false);
-            if (_seasonEnd != null)
-                _seasonEnd.SetActive(false);
-            SetTagsVisible(false);
-            SetCaptureMode(false);
-            _hubModel = model;
-            if (_prep != null)
-            {
-                _prep.SetActive(false);
-                Destroy(_prep);
-            }
-
-            _prep = BuildPrep(model);
-            _toneRoot.SetActive(true);
-            _toneRoot.transform.SetAsLastSibling();
-        }
-
-        public void ShowSeasonEnd(string body, Action onRestart)
-        {
-            _intro.SetActive(false);
-            _hud.SetActive(false);
-            _feedback.SetActive(false);
-            _vision.SetActive(false);
-            if (_prep != null)
-                _prep.SetActive(false);
-            SetTagsVisible(false);
-            if (_tasksRoot != null)
-                _tasksRoot.SetActive(false);
-            if (_seasonEnd != null)
-                Destroy(_seasonEnd);
-            _seasonEnd = BuildSeasonEnd(body, onRestart);
-            _toneRoot.SetActive(true);
-            _toneRoot.transform.SetAsLastSibling();
         }
 
         void Construct()
@@ -1014,224 +943,6 @@ namespace RealityDirector.UI
                 case ShowMood.Trash: return IllustratedArt.IconDevil;
                 default: return IllustratedArt.IconFamily;
             }
-        }
-
-        void SetHubTab(int tab)
-        {
-            if (tab == _hubTab || _hubModel == null)
-                return;
-            _hubTab = tab;
-            ShowPrep(_hubModel);
-        }
-
-        GameObject BuildPrep(PrepModel model)
-        {
-            var panel = Panel("Prep", transform, new Color(0.05f, 0.045f, 0.06f, 0.97f)).gameObject;
-            Stretch(panel.GetComponent<RectTransform>());
-
-            var title = MakeText(panel.transform, "ХАБ  ·  СЕРИЯ " + model.episodeNumber + " / " + Progression.SeasonLength, 32, Paper, TextAnchor.MiddleLeft);
-            Place(title.rectTransform, new Vector2(0f, 1f), new Vector2(280f, -40f), new Vector2(520f, 48f));
-            var money = MakeText(panel.transform, model.money + " кр", 32, new Color(0.95f, 0.82f, 0.45f, 1f), TextAnchor.MiddleLeft);
-            Place(money.rectTransform, new Vector2(0f, 1f), new Vector2(720f, -40f), new Vector2(240f, 48f));
-
-            string[] tabs = { "В СЕРИЮ  " + model.picked + "/" + model.slots, "МАГАЗИН", "КОМАНДА" };
-            for (int i = 0; i < tabs.Length; i++)
-            {
-                int tab = i;
-                var color = _hubTab == i ? Accent : new Color(0.22f, 0.2f, 0.24f, 1f);
-                MakeButton(panel.transform, tabs[i], new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0.5f, 0.5f),
-                    new Vector2(-340f + i * 340f, -112f), new Vector2(320f, 48f), color, () => SetHubTab(tab));
-            }
-
-            if (_hubTab == 1)
-                AddPrepRow(panel.transform, "Купи карту — она появится во вкладке «В серию».", model.shop, -210f, true);
-            else if (_hubTab == 2)
-                BuildCrewTab(panel.transform, model);
-            else
-            {
-                var slots = MakeText(panel.transform, model.slotsLabel, 20, Paper, TextAnchor.MiddleCenter);
-                Place(slots.rectTransform, new Vector2(0.5f, 1f), new Vector2(0f, -175f), new Vector2(1200f, 32f));
-                AddPrepRow(panel.transform, "", model.deck, -220f, false);
-            }
-
-            string foot = model.reject;
-            if (string.IsNullOrEmpty(foot))
-            {
-                if (_hubTab == 1)
-                    foot = "Сыгранная карта сгорает до конца сезона. Несыгранная остаётся в колоде.";
-                else if (_hubTab == 2)
-                    foot = "Прокачка применяется к этой съёмке. Слоты карт — на вкладке «В серию».";
-                else if (model.available == 0)
-                    foot = "Колода пуста. Открой магазин.";
-                else if (!model.canStart)
-                    foot = "Возьми " + Mathf.Min(model.slots, model.available) + " несыгранных. Неиспользованные вернутся.";
-                else
-                    foot = "Набор собран. Неиспользованные карты вернутся в колоду.";
-            }
-
-            var hint = MakeText(panel.transform, foot, 18, Muted, TextAnchor.MiddleCenter);
-            Place(hint.rectTransform, new Vector2(0.5f, 0f), new Vector2(0f, 96f), new Vector2(1200f, 28f));
-            var startColor = model.canStart ? Accent : new Color(0.22f, 0.2f, 0.24f, 1f);
-            MakeButton(panel.transform, "НАЧАТЬ СЪЁМКУ", new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(0.5f, 0f),
-                new Vector2(0f, 36f), new Vector2(360f, 56f), startColor, () =>
-                {
-                    if (model.canStart)
-                        _onEmbark?.Invoke();
-                });
-            return panel;
-        }
-
-        void BuildCrewTab(Transform parent, PrepModel model)
-        {
-            for (int i = 0; i < model.crew.Length; i++)
-            {
-                int index = i;
-                var crew = model.crew[i];
-                float x = -460f + i * 460f;
-                var card = Panel("crew" + i, parent, PanelColor);
-                var rect = card.rectTransform;
-                rect.anchorMin = new Vector2(0.5f, 1f);
-                rect.anchorMax = new Vector2(0.5f, 1f);
-                rect.pivot = new Vector2(0.5f, 1f);
-                rect.anchoredPosition = new Vector2(x, -210f);
-                rect.sizeDelta = new Vector2(420f, 360f);
-
-                var head = MakeText(card.transform, crew.title, 28, Accent, TextAnchor.UpperLeft);
-                var headRect = head.rectTransform;
-                headRect.anchorMin = new Vector2(0f, 1f);
-                headRect.anchorMax = new Vector2(1f, 1f);
-                headRect.pivot = new Vector2(0f, 1f);
-                headRect.anchoredPosition = new Vector2(24f, -28f);
-                headRect.sizeDelta = new Vector2(-48f, 40f);
-
-                var detail = MakeText(card.transform, crew.detail, 22, Paper, TextAnchor.UpperLeft);
-                var detailRect = detail.rectTransform;
-                detailRect.anchorMin = new Vector2(0f, 1f);
-                detailRect.anchorMax = new Vector2(1f, 1f);
-                detailRect.pivot = new Vector2(0f, 1f);
-                detailRect.anchoredPosition = new Vector2(24f, -88f);
-                detailRect.sizeDelta = new Vector2(-48f, 160f);
-
-                var costColor = crew.maxed ? Muted : crew.affordable ? Good : new Color(0.45f, 0.28f, 0.26f, 1f);
-                MakeButton(card.transform, crew.costLabel, new Vector2(0f, 0f), new Vector2(0f, 0f), new Vector2(0f, 0f),
-                    new Vector2(24f, 28f), new Vector2(240f, 52f), costColor, () =>
-                    {
-                        if (!crew.maxed)
-                            _onUpgrade?.Invoke(index);
-                    });
-            }
-        }
-
-        void AddPrepRow(Transform parent, string title, PrepCard[] cards, float y, bool shop)
-        {
-            if (!string.IsNullOrEmpty(title))
-            {
-                var label = MakeText(parent, title, 20, Muted, TextAnchor.MiddleCenter);
-                Place(label.rectTransform, new Vector2(0.5f, 1f), new Vector2(0f, y), new Vector2(1200f, 32f));
-            }
-            if (cards == null || cards.Length == 0)
-            {
-                var empty = MakeText(parent, shop ? "всё куплено" : "нечего брать", 18, Muted, TextAnchor.MiddleLeft);
-                Place(empty.rectTransform, new Vector2(0.5f, 1f), new Vector2(-200f, y - 70f), new Vector2(400f, 30f));
-                return;
-            }
-
-            float width = 168f;
-            float gap = 12f;
-            float total = cards.Length * width + (cards.Length - 1) * gap;
-            float origin = -total * 0.5f + width * 0.5f;
-            for (int i = 0; i < cards.Length; i++)
-            {
-                var card = cards[i];
-                float x = origin + i * (width + gap);
-                var frame = Panel(card.id, parent, card.picked ? new Color(0.95f, 0.78f, 0.32f, 1f) : card.color);
-                var rect = frame.rectTransform;
-                rect.anchorMin = new Vector2(0.5f, 1f);
-                rect.anchorMax = new Vector2(0.5f, 1f);
-                rect.pivot = new Vector2(0.5f, 1f);
-                rect.anchoredPosition = new Vector2(x, y - 28f);
-                rect.sizeDelta = new Vector2(width, 196f);
-                var button = frame.gameObject.AddComponent<Button>();
-                button.targetGraphic = frame;
-                var nav = button.navigation;
-                nav.mode = Navigation.Mode.None;
-                button.navigation = nav;
-                string id = card.id;
-                if (shop)
-                    button.onClick.AddListener(() =>
-                    {
-                        Sfx.Play(Cue.Click, 0.3f);
-                        _onBuy?.Invoke(id);
-                    });
-                else
-                    button.onClick.AddListener(() =>
-                    {
-                        Sfx.Play(Cue.Click, 0.3f);
-                        _onToggle?.Invoke(id);
-                    });
-
-                Color ink = card.picked ? Ink : Paper;
-                var name = MakeText(frame.transform, card.title, 16, ink, TextAnchor.UpperCenter);
-                var nameRect = name.rectTransform;
-                nameRect.anchorMin = new Vector2(0f, 1f);
-                nameRect.anchorMax = new Vector2(1f, 1f);
-                nameRect.pivot = new Vector2(0.5f, 1f);
-                nameRect.anchoredPosition = new Vector2(0f, -8f);
-                nameRect.sizeDelta = new Vector2(-12f, 36f);
-
-                if (card.art != null)
-                {
-                    var art = Panel("art", frame.transform, Color.white);
-                    var artRect = art.rectTransform;
-                    artRect.anchorMin = new Vector2(0.5f, 1f);
-                    artRect.anchorMax = new Vector2(0.5f, 1f);
-                    artRect.pivot = new Vector2(0.5f, 1f);
-                    artRect.anchoredPosition = new Vector2(0f, -46f);
-                    artRect.sizeDelta = new Vector2(72f, 72f);
-                    art.sprite = card.art;
-                    art.preserveAspect = true;
-                    art.raycastTarget = false;
-                }
-
-                string status = shop ? card.price + " кр" : card.picked ? "В СЕРИИ" : card.hint;
-                var body = MakeText(frame.transform, status, 14, ink, TextAnchor.LowerCenter);
-                var bodyRect = body.rectTransform;
-                bodyRect.anchorMin = new Vector2(0f, 0f);
-                bodyRect.anchorMax = new Vector2(1f, 0f);
-                bodyRect.pivot = new Vector2(0.5f, 0f);
-                bodyRect.anchoredPosition = new Vector2(0f, 8f);
-                bodyRect.sizeDelta = new Vector2(-10f, 48f);
-
-                if (card.moods == null)
-                    continue;
-                int n = card.moods.Length > 2 ? 2 : card.moods.Length;
-                for (int m = 0; m < n; m++)
-                {
-                    var stamp = Panel("mood", frame.transform, Color.white);
-                    var stampRect = stamp.rectTransform;
-                    stampRect.anchorMin = new Vector2(1f, 1f);
-                    stampRect.anchorMax = new Vector2(1f, 1f);
-                    stampRect.pivot = new Vector2(1f, 1f);
-                    stampRect.sizeDelta = new Vector2(22f, 22f);
-                    stampRect.anchoredPosition = new Vector2(-6f - (n - 1 - m) * 24f, -6f);
-                    stamp.sprite = MoodIcon(card.moods[m]);
-                    stamp.preserveAspect = true;
-                    stamp.raycastTarget = false;
-                }
-            }
-        }
-
-        GameObject BuildSeasonEnd(string body, Action onRestart)
-        {
-            var panel = Panel("SeasonEnd", transform, Ink).gameObject;
-            Stretch(panel.GetComponent<RectTransform>());
-            var title = MakeText(panel.transform, "СЕЗОН СНЯТ", 56, Paper, TextAnchor.MiddleCenter);
-            Place(title.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0f, 120f), new Vector2(1000f, 80f));
-            var text = MakeText(panel.transform, body, 26, Muted, TextAnchor.MiddleCenter);
-            Place(text.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0f, 10f), new Vector2(1100f, 140f));
-            MakeButton(panel.transform, "СНАЧАЛА", new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f),
-                new Vector2(0f, -140f), new Vector2(280f, 58f), Accent, () => onRestart?.Invoke());
-            return panel;
         }
 
         GameObject BuildIntro()

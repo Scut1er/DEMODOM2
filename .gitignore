@@ -112,3 +112,9 @@ InitTestScene*.unity*
 
 # Auto-generated cache in Assets folder
 /[Aa]ssets/[Ss]ceneDependencyCache*
+
+# Claude Code local config (contains account info)
+/.claude.json
+
+# Plastic SCM / Unity Version Control: not used, GitHub only
+/.plastic/

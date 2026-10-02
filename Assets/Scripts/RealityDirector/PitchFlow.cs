@@ -22,7 +22,7 @@ namespace RealityDirector
         static readonly Vector2 ClosedFlee = new Vector2(-7.05f, 1.7f);
         const float BedroomGate = 2.55f;
 
-        PitchPhase _phase = PitchPhase.Intro;
+        PitchPhase _phase = PitchPhase.Prep;
         PitchContent _content;
         PitchUi _ui;
         EpisodeContext _context;
@@ -46,10 +46,9 @@ namespace RealityDirector
         bool _inputLock;
         bool _suppressHoldCam;
         float _rumble;
-        readonly SeasonTone _tone = new SeasonTone();
-        readonly SeasonState _state = new SeasonState();
+        SeasonTone _tone => GameSession.Tone;
+        SeasonState _state => GameSession.State;
         EventDefinition[] _hand = new EventDefinition[0];
-        string _prepReject;
         ViewerWishId _offerId;
         string _offerLabel;
 
@@ -62,9 +61,8 @@ namespace RealityDirector
             SetupCamera();
             SetupInput();
             _ui = PitchUi.Build();
-            _state.Reset(_content.StarterIds());
-            _ui.BindFlow(OpenPrep, EndEpisode, ToggleCamera, ResetSeason);
-            _ui.BindMeta(UpgradeCrew, TogglePick, BuyCard, Embark);
+            EnsureSession();
+            _ui.BindFlow(BackToHub, EndEpisode, ToggleCamera, BackToHub);
             BuildApartment();
             WireTags();
             _executor = gameObject.AddComponent<EventExecutor>();
@@ -76,11 +74,23 @@ namespace RealityDirector
                 _ui.Toast("Кадр не вышел.");
                 Sfx.Play(Cue.Miss, 0.45f);
             };
-            _ui.ShowIntro();
             Sfx.Bind(gameObject);
 
             NPCController.FightStarted -= OnFight;
             NPCController.FightStarted += OnFight;
+            StartEpisode();
+        }
+
+        // Квартиру можно открыть прямо из редактора: тогда продолжаем сейв или стартуем новый сезон.
+        void EnsureSession()
+        {
+            if (!GameSession.Active && !GameSession.Continue())
+                GameSession.NewSeason(_content.StarterIds());
+            if (GameSession.Hand.Count > 0)
+                return;
+            var meta = new MetaService(_state, _tone, _content.All);
+            meta.AutoPick();
+            meta.TryEmbark(GameSession.Hand);
         }
 
         void OnDestroy()
@@ -116,14 +126,6 @@ namespace RealityDirector
 
         void LateUpdate()
         {
-            if (_phase == PitchPhase.Intro)
-            {
-                var keyboard = Keyboard.current;
-                if (keyboard != null && (keyboard.spaceKey.wasPressedThisFrame || keyboard.enterKey.wasPressedThisFrame))
-                    OpenPrep();
-                return;
-            }
-
             if (_phase == PitchPhase.Feedback)
             {
                 var keyboard = Keyboard.current;
@@ -428,38 +430,22 @@ namespace RealityDirector
             _ui.AddTag(anchor, () => text, muted, Vector2.zero, 16, false);
         }
 
-        void OpenPrep()
+        void StartEpisode()
         {
-            if (_phase != PitchPhase.Intro && _phase != PitchPhase.Feedback && _phase != PitchPhase.Prep)
+            if (_phase != PitchPhase.Prep)
                 return;
-            TrimPicked();
-            _phase = PitchPhase.Prep;
-            _ui.ShowPrep(BuildPrep());
-            _ui.RefreshTone(_tone);
-            RefreshTasks(true);
-        }
-
-        void Embark()
-        {
-            var model = BuildPrep();
-            if (!model.canStart || _phase != PitchPhase.Prep)
-            {
-                Sfx.Play(Cue.Miss, 0.4f);
-                return;
-            }
 
             Sfx.Play(Cue.Card, 0.45f, 0.8f);
             ResetSet();
             _hand = SelectedHand();
-            _state.picked.Clear();
-            _prepReject = null;
             _ui.ClearHand();
             _ui.BindCards(_hand, Arm);
             _ui.ClearUsed();
             _ui.SetArmed(null);
             _capture.Capacity = Progression.CaptureSlots(_state.operatorLevel);
             _ui.SetCaptureCapacity(_capture.Capacity);
-            _ui.SetEpisodeTitle("СЕРИЯ " + (_state.episodeIndex + 1) + " / " + Progression.SeasonLength + "\nты режиссёр, не участник");
+            string scene = string.IsNullOrEmpty(GameSession.SceneTitle) ? "" : "  ·  " + GameSession.SceneTitle;
+            _ui.SetEpisodeTitle("СЕРИЯ " + (_state.episodeIndex + 1) + " / " + Progression.SeasonLength + scene + "\nты режиссёр, не участник");
             _phase = PitchPhase.Play;
             _ui.ShowPlay();
             _ui.RefreshTone(_tone);
@@ -474,15 +460,7 @@ namespace RealityDirector
             if (_ui.TaskTaken)
                 _state.Accept(_offerId, _offerLabel);
             _state.episodeIndex++;
-            if (_state.episodeIndex >= Progression.SeasonLength)
-            {
-                _phase = PitchPhase.SeasonEnd;
-                _ui.ShowSeasonEnd(SeasonEndText(), ResetSeason);
-                _ui.RefreshTone(_tone);
-                return;
-            }
-
-            OpenPrep();
+            BackToHub();
         }
 
         void ShowVision()
@@ -510,6 +488,8 @@ namespace RealityDirector
             bool wishDone = _state.Resolve(_capture.Moments, _tone);
             int pay = Progression.Payout(result.score, _state.castLevel, wishDone);
             _state.money += pay;
+            _state.ratingSum += result.score;
+            _state.rated++;
             result.payLine = PayLine(pay, hadTasks, wishDone);
             Sfx.Play(Cue.Coin, wishDone ? 0.7f : 0.5f, wishDone ? 1.12f : 1f);
             _offerId = result.nextWish;
@@ -518,24 +498,12 @@ namespace RealityDirector
             RefreshTasks(true);
         }
 
-        void ResetSeason()
+        void BackToHub()
         {
             StopAllCoroutines();
-            Time.timeScale = 1f;
-            _phase = PitchPhase.Intro;
-            _endQueued = false;
-            _inputLock = false;
-            _suppressHoldCam = false;
-            _armed = null;
-            _prepReject = null;
-            _hand = new EventDefinition[0];
-            _tone.Reset();
-            _state.Reset(_content.StarterIds());
-            CloseBedroom();
-            _ui.RefreshTone(_tone);
-            _ui.ClearHand();
-            ResetSet();
-            _ui.ShowIntro();
+            GameSession.Hand.Clear();
+            GameSession.Save();
+            SceneFlow.ToHub();
         }
 
         void ResetSet()
@@ -564,189 +532,18 @@ namespace RealityDirector
             Arm(_hand[index]);
         }
 
-        int SlotsNow()
-        {
-            return Progression.EventSlots(_state.writerLevel, _state.episodeIndex);
-        }
-
-        void TrimPicked()
-        {
-            int slots = SlotsNow();
-            for (int i = _state.picked.Count - 1; i >= 0; i--)
-            {
-                if (!_state.Owns(_state.picked[i]) || _state.IsPlayed(_state.picked[i]))
-                    _state.picked.RemoveAt(i);
-            }
-
-            while (_state.picked.Count > slots)
-                _state.picked.RemoveAt(_state.picked.Count - 1);
-        }
-
         EventDefinition[] SelectedHand()
         {
             var list = new List<EventDefinition>();
-            for (int i = 0; i < _state.picked.Count; i++)
+            for (int i = 0; i < GameSession.Hand.Count; i++)
             {
-                var def = _content.Find(_state.picked[i]);
+                var def = _content.Find(GameSession.Hand[i]);
                 if (def != null)
                     list.Add(def);
             }
 
             return list.ToArray();
         }
-
-        PrepModel BuildPrep()
-        {
-            int slots = SlotsNow();
-            int available = _state.UnplayedCount();
-            int need = Mathf.Min(slots, available);
-            int later = Progression.EventSlots(_state.writerLevel, 1);
-            string writers = _state.episodeIndex <= 0
-                ? "ур. " + _state.writerLevel + "\nсейчас 1 карта\nдальше " + later
-                : "ур. " + _state.writerLevel + "\nкарт в серию: " + later;
-            int hype = Mathf.RoundToInt(Progression.HypeBonus(_state.castLevel) * 100f);
-
-            return new PrepModel
-            {
-                episodeNumber = _state.episodeIndex + 1,
-                money = _state.money,
-                slots = slots,
-                picked = _state.picked.Count,
-                available = available,
-                canStart = need > 0 && _state.picked.Count == need,
-                reject = _prepReject,
-                slotsLabel = _state.episodeIndex <= 0
-                    ? "Обучение: в серию берётся 1 карта. Со следующей серии слоты от сценаристов, минимум 2."
-                    : "Карт в серию: " + slots + "  ·  несыгранных в колоде: " + available,
-                crew = new[]
-                {
-                    CrewButtonOf("УЧАСТНИКИ", true, _state.castLevel, "ур. " + _state.castLevel + "\nчек +" + hype + "%\nв кадре пока 2"),
-                    CrewButtonOf("ОПЕРАТОРЫ", false, _state.operatorLevel, "ур. " + _state.operatorLevel + "\nкадров: " + Progression.CaptureSlots(_state.operatorLevel)),
-                    CrewButtonOf("СЦЕНАРИСТЫ", false, _state.writerLevel, writers)
-                },
-                deck = CollectCards(false),
-                shop = CollectCards(true)
-            };
-        }
-
-        CrewButton CrewButtonOf(string title, bool cast, int level, string detail)
-        {
-            bool maxed = level >= Progression.MaxLevel;
-            int cost = Progression.UpgradeCost(cast, level);
-            return new CrewButton
-            {
-                title = title,
-                detail = detail,
-                maxed = maxed,
-                affordable = !maxed && _state.money >= cost,
-                costLabel = maxed ? "МАКС" : "апгрейд " + cost + " кр"
-            };
-        }
-
-        PrepCard[] CollectCards(bool shop)
-        {
-            var list = new List<PrepCard>();
-            var all = _content.All;
-            for (int i = 0; i < all.Length; i++)
-            {
-                var def = all[i];
-                bool owned = _state.Owns(def.id);
-                if (shop)
-                {
-                    if (owned || def.price <= 0)
-                        continue;
-                }
-                else if (!owned || _state.IsPlayed(def.id))
-                {
-                    continue;
-                }
-
-                var moods = new ShowMood[def.moods != null ? def.moods.Count : 0];
-                for (int m = 0; m < moods.Length; m++)
-                    moods[m] = def.moods[m];
-                list.Add(new PrepCard
-                {
-                    id = def.id,
-                    title = def.displayName,
-                    hint = def.hint,
-                    price = def.price,
-                    picked = _state.picked.Contains(def.id),
-                    color = def.cardColor,
-                    art = def.cardArt,
-                    moods = moods
-                });
-            }
-
-            return list.ToArray();
-        }
-
-        void UpgradeCrew(int index)
-        {
-            if (_phase != PitchPhase.Prep)
-                return;
-            bool cast = index == 0;
-            int level = index == 0 ? _state.castLevel : index == 1 ? _state.operatorLevel : _state.writerLevel;
-            int cost = Progression.UpgradeCost(cast, level);
-            if (level >= Progression.MaxLevel || cost <= 0 || _state.money < cost)
-            {
-                Sfx.Play(Cue.Miss, 0.45f);
-                return;
-            }
-            Sfx.Play(Cue.Coin, 0.45f, 0.9f);
-            _state.money -= cost;
-            if (index == 0)
-                _state.castLevel++;
-            else if (index == 1)
-                _state.operatorLevel++;
-            else
-                _state.writerLevel++;
-            _prepReject = null;
-            OpenPrep();
-        }
-
-        void TogglePick(string id)
-        {
-            if (_phase != PitchPhase.Prep || _state.IsPlayed(id) || !_state.Owns(id))
-                return;
-            if (_state.picked.Contains(id))
-            {
-                _state.picked.Remove(id);
-                _prepReject = null;
-            }
-            else if (_state.picked.Count >= SlotsNow())
-            {
-                _prepReject = "Слоты заняты — сними одну карту.";
-                Sfx.Play(Cue.Miss, 0.4f);
-            }
-            else
-            {
-                _state.picked.Add(id);
-                _prepReject = null;
-            }
-
-            OpenPrep();
-        }
-
-        void BuyCard(string id)
-        {
-            if (_phase != PitchPhase.Prep || _state.Owns(id))
-                return;
-            var def = _content.Find(id);
-            if (def == null || def.price <= 0 || _state.money < def.price)
-            {
-                _prepReject = "Не хватает бюджета.";
-                Sfx.Play(Cue.Miss, 0.5f);
-                OpenPrep();
-                return;
-            }
-
-            Sfx.Play(Cue.Coin, 0.5f);
-            _state.money -= def.price;
-            _state.owned.Add(id);
-            _prepReject = null;
-            OpenPrep();
-        }
-
         void RefreshTasks(bool visible)
         {
             var lines = new List<string>(_state.tasks.Count);
@@ -762,14 +559,6 @@ namespace RealityDirector
             if (wishDone)
                 return "+" + pay + " кр   ·   задача закрыта ×1.3";
             return "+" + pay + " кр   ·   задачи открыты, мимо";
-        }
-
-        string SeasonEndText()
-        {
-            string tone = _tone.TryLead(out ShowMood lead)
-                ? MoodStyle.Paint(MoodStyle.Full(lead), lead)
-                : "ничья — концовку не выбрать";
-            return "Тон сезона: " + tone + "\nБюджет: " + _state.money + " кр\nСами концовки напишем следом.";
         }
 
         void ToggleCamera()

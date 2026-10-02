@@ -21,6 +21,10 @@ namespace RealityDirector.Meta
         public readonly List<string> owned = new List<string>();
         public readonly HashSet<string> played = new HashSet<string>();
         public readonly List<string> picked = new List<string>();
+        // Путь по карте сезона: id узла на каждую серию.
+        public readonly List<string> route = new List<string>();
+        public int ratingSum;
+        public int rated;
 
         public void Reset(IList<string> starters)
         {
@@ -33,6 +37,9 @@ namespace RealityDirector.Meta
             owned.Clear();
             played.Clear();
             picked.Clear();
+            route.Clear();
+            ratingSum = 0;
+            rated = 0;
             if (starters == null)
                 return;
             for (int i = 0; i < starters.Count; i++)

@@ -11,6 +11,18 @@ namespace RealityDirector.Editor
         {
             EditorSceneManager.OpenScene("Assets/Scenes/Apartment_Pitch.unity");
         }
+
+        [MenuItem("RealityDirector/Open Hub Scene")]
+        public static void OpenHub()
+        {
+            EditorSceneManager.OpenScene("Assets/Scenes/Hub.unity");
+        }
+
+        [MenuItem("RealityDirector/Delete Season Save")]
+        public static void DeleteSave()
+        {
+            RealityDirector.Persistence.SaveSystem.Delete();
+        }
     }
 }
 #endif
