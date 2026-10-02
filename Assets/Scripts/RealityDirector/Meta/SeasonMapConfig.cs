@@ -51,7 +51,7 @@ namespace RealityDirector.Meta
                 "Первый выпуск: знакомим зрителя с домом и героями. Одна карта, без спешки.",
                 "Снять первый хайлайт и понять, кто здесь кто.", ShowMood.Drama, 0, 0);
             c.finale = Node(MapNodeType.Editing, "ФИНАЛ", "Монтаж сезона", MapNodeKind.Climax, new Color(0.92f, 0.72f, 0.28f, 1f),
-                "Собираем сезон из отснятого и выпускаем в эфир. Монтаж пока не реализован — шаг засчитается, и сезон завершится.",
+                "Собираем сезон из отснятого и выпускаем в эфир. Монтаж пока не реализован — сцена засчитается, и сезон завершится.",
                 "Собрать лучший сезон из отснятого.", ShowMood.Drama, 0, 0);
 
             c.filmingFlavors = new List<MapNode>
@@ -93,7 +93,7 @@ namespace RealityDirector.Meta
             c.shop = Node(MapNodeType.Shop, "МАГАЗИН", "Закупка ивентов", MapNodeKind.Shop, new Color(0.25f, 0.55f, 0.35f, 1f),
                 "Здесь можно купить новые карты ивентов за бюджет шоу.", "", ShowMood.Drama, 0, 0);
             c.randomEvent = Node(MapNodeType.RandomEvent, "СОБЫТИЕ", "Что-то случилось", MapNodeKind.Mystery, new Color(0.45f, 0.3f, 0.6f, 1f),
-                "Случайное событие за кадром. Пока не реализовано — шаг просто засчитается.", "", ShowMood.Drama, 0, 0);
+                "Случайное событие за кадром. Пока не реализовано — сцена просто засчитается.", "", ShowMood.Drama, 0, 0);
             return c;
         }
 

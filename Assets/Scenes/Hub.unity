@@ -4420,9 +4420,9 @@ MonoBehaviour:
     m_PersistentCalls:
       m_Calls: []
   m_FontData:
-    m_Font: {fileID: 10102, guid: 0000000000000000e000000000000000, type: 0}
+    m_Font: {fileID: 12800000, guid: 7f4c2a91e8b64d0c9a15b3e6d8f04721, type: 3}
     m_FontSize: 96
-    m_FontStyle: 1
+    m_FontStyle: 0
     m_BestFit: 0
     m_MinSize: 10
     m_MaxSize: 96
@@ -4432,7 +4432,7 @@ MonoBehaviour:
     m_HorizontalOverflow: 0
     m_VerticalOverflow: 1
     m_LineSpacing: 1
-  m_Text: "\u0412\u0418\u041B\u041B\u0410 \u0428\u041E\u0423"
+  m_Text: Only What Matters
 --- !u!222 &716015411
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -7542,7 +7542,7 @@ MonoBehaviour:
     m_HorizontalOverflow: 0
     m_VerticalOverflow: 1
     m_LineSpacing: 1
-  m_Text: "\u041A\u0410\u0420\u0422\u0410 \u0421\u0415\u0417\u041E\u041D\u0410"
+  m_Text: "\u0421\u0426\u0415\u041D\u0410\u0420\u0418\u0419"
 --- !u!222 &1087540546
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -11927,7 +11927,7 @@ RectTransform:
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 0, y: 1}
   m_AnchoredPosition: {x: 24, y: -14}
-  m_SizeDelta: {x: 400, y: 50}
+  m_SizeDelta: {x: 560, y: 50}
   m_Pivot: {x: 0, y: 1}
 --- !u!114 &2091261300
 MonoBehaviour:
@@ -11950,9 +11950,9 @@ MonoBehaviour:
     m_PersistentCalls:
       m_Calls: []
   m_FontData:
-    m_Font: {fileID: 10102, guid: 0000000000000000e000000000000000, type: 0}
+    m_Font: {fileID: 12800000, guid: 7f4c2a91e8b64d0c9a15b3e6d8f04721, type: 3}
     m_FontSize: 40
-    m_FontStyle: 1
+    m_FontStyle: 0
     m_BestFit: 0
     m_MinSize: 10
     m_MaxSize: 40
@@ -11962,7 +11962,7 @@ MonoBehaviour:
     m_HorizontalOverflow: 0
     m_VerticalOverflow: 1
     m_LineSpacing: 1
-  m_Text: "\u0412\u0418\u041B\u041B\u0410 \u0428\u041E\u0423"
+  m_Text: Only What Matters
 --- !u!222 &2091261301
 CanvasRenderer:
   m_ObjectHideFlags: 0

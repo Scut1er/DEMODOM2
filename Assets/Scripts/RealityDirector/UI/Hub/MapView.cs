@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using RealityDirector.Core;
 using RealityDirector.Meta;
 using UnityEngine;
 using UnityEngine.UI;
@@ -64,7 +65,7 @@ namespace RealityDirector.UI.Hub
         public void Show(MapService map, MapNode selected, StatsModel statsModel, int episodeNumber, IList<string> tasks)
         {
             if (subtitle != null)
-                subtitle.text = "Сезон 1  ·  шаг " + Mathf.Min(map.Step + 1, map.Map.Layers) + " из " + map.Map.Layers + "  ·  выпуск " + episodeNumber;
+                subtitle.text = "Выпуск " + episodeNumber + "  ·  сцена " + Mathf.Min(map.Step + 1, map.Map.Layers) + " из " + map.Map.Layers;
             Layout(map.Map);
             if (stats != null)
                 stats.Show(statsModel);
@@ -194,7 +195,11 @@ namespace RealityDirector.UI.Hub
                 if (infoTitle != null)
                     infoTitle.text = "Выберите следующую сцену";
                 if (infoBody != null)
-                    infoBody.text = "Каждая сцена влияет на тон сезона и бюджет. Пройденный путь не переснять.";
+                    infoBody.text = "Сцена двигает "
+                        + MoodStyle.Paint("драму", ShowMood.Drama) + ", "
+                        + MoodStyle.Paint("трэш", ShowMood.Trash) + " или "
+                        + MoodStyle.Paint("семью", ShowMood.Family)
+                        + ". Пройденный путь не переснять.";
             }
             else
             {

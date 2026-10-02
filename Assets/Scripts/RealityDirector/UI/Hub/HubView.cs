@@ -130,7 +130,7 @@ namespace RealityDirector.UI.Hub
             if (shopButton != null)
                 shopButton.gameObject.SetActive(false);
             if (startCaption != null)
-                startCaption.text = "Выпуск " + prep.episodeNumber + "  ·  дальше карта сезона: выбор сцены и карт";
+                startCaption.text = "Выпуск " + prep.episodeNumber + "  ·  дальше сценарий: выбор сцены и карт";
 
             if (deck != null && deck.IsOpen)
                 deck.Show(prep);

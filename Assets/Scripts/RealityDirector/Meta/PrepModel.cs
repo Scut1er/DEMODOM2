@@ -49,6 +49,9 @@ namespace RealityDirector.Meta
         public float drama;
         public float trash;
         public float family;
+        public int dramaValue;
+        public int trashValue;
+        public int familyValue;
     }
 
     public class PrepModel
