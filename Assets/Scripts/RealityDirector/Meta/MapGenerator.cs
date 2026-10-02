@@ -3,22 +3,23 @@ using UnityEngine;
 
 namespace RealityDirector.Meta
 {
-    // Генерация карты сезона в духе Slay the Spire:
+    // Генерация карты выпуска в духе Slay the Spire:
     // 1) прокладываем N путей по сетке (ряд → ряд, сдвиг на дорожку вверх/вниз/прямо, без пересечений);
-    // 2) все пути сходятся в финал;
-    // 3) раздаём типы узлов по весам и правилам, съёмкам — случайный «вкус».
-    // Один и тот же seed + конфиг = одна и та же карта.
+    // 2) все пути сходятся в монтаж;
+    // 3) раздаём типы комнат по весам и правилам, затем конкретные комнаты из пула по весу и условиям.
+    // Готовая карта сохраняется в EpisodeState, поэтому «Продолжить» не перегенерирует её.
     public static class MapGenerator
     {
-        public const string FinaleId = "finale";
+        public const string MontageId = "montage";
 
-        public static MapGraph Generate(SeasonMapConfig config, int seed)
+        public static MapGraph Generate(RoomCatalog catalog, int seed, RuleContext ctx)
         {
+            var config = catalog.Config;
             var rng = new System.Random(seed);
             int floors = Mathf.Max(2, config.floors);
             int lanes = Mathf.Max(1, config.lanes);
             int paths = Mathf.Max(1, config.paths);
-            int last = floors - 2; // последний обычный ряд; floors-1 — финал
+            int last = floors - 2; // последний обычный ряд; floors-1 — монтаж
 
             var used = new bool[floors - 1, lanes];
             var edges = new List<Vector3Int>(); // x = ряд, y = дорожка откуда, z = дорожка куда
@@ -70,20 +71,17 @@ namespace RealityDirector.Meta
                     from.next.Add(to);
             }
 
-            // Финал сезона — всегда монтаж.
-            var finale = config.finale != null ? config.finale.Clone() : new MapNode();
-            finale.type = MapNodeType.Editing;
-            finale.id = FinaleId;
-            finale.layer = floors - 1;
-            finale.row = 0f;
-            graph.nodes.Add(finale);
+            // Последний ряд — всегда монтаж.
+            var montage = new MapNode { id = MontageId, type = RoomType.Montage, layer = floors - 1, row = 0f };
+            SetRoom(montage, config.montage != null ? config.montage : First(catalog.Available(RoomType.Montage, ctx)) ?? catalog.Placeholder(RoomType.Montage));
+            graph.nodes.Add(montage);
             for (int l = 0; l < lanes; l++)
             {
                 if (used[last, l])
-                    byCell[last, l].next.Add(FinaleId);
+                    byCell[last, l].next.Add(MontageId);
             }
 
-            AssignTypes(config, rng, graph, byCell, floors, lanes);
+            AssignRooms(catalog, ctx, rng, graph, byCell, floors, lanes);
             return graph;
         }
 
@@ -141,9 +139,16 @@ namespace RealityDirector.Meta
             return (lane - half) / half;
         }
 
-        static void AssignTypes(SeasonMapConfig config, System.Random rng, MapGraph graph, MapNode[,] byCell, int floors, int lanes)
+        static void AssignRooms(RoomCatalog catalog, RuleContext ctx, System.Random rng, MapGraph graph, MapNode[,] byCell, int floors, int lanes)
         {
-            // родители узла — для правил «не повторять подряд» и разнообразия вкусов
+            var config = catalog.Config;
+            var pools = new Dictionary<RoomType, List<RoomDefinition>>
+            {
+                [RoomType.Situation] = catalog.Available(RoomType.Situation, ctx),
+                [RoomType.Event] = catalog.Available(RoomType.Event, ctx),
+                [RoomType.Marketing] = catalog.Available(RoomType.Marketing, ctx)
+            };
+
             var parents = new Dictionary<string, List<MapNode>>();
             for (int i = 0; i < graph.nodes.Count; i++)
             {
@@ -156,6 +161,8 @@ namespace RealityDirector.Meta
                 }
             }
 
+            // Комнаты, которые уже встречались на любом пути до узла, — для uniquePerEpisode.
+            var ancestors = new Dictionary<string, HashSet<string>>();
             int last = floors - 2;
             for (int f = 0; f <= last; f++)
             {
@@ -165,126 +172,125 @@ namespace RealityDirector.Meta
                     if (node == null)
                         continue;
                     parents.TryGetValue(node.id, out var from);
-                    MapNodeType type;
-                    if (f == 0)
-                        type = MapNodeType.Filming;
-                    else if (f == config.guaranteedShopFloor)
-                        type = MapNodeType.Shop;
-                    else if (f < config.minSpecialFloor || (config.filmingBeforeFinale && f == last))
-                        type = MapNodeType.Filming;
-                    else
-                        type = PickType(config, rng, from);
+                    var seen = new HashSet<string>();
+                    if (from != null)
+                    {
+                        for (int i = 0; i < from.Count; i++)
+                        {
+                            seen.Add(from[i].roomId);
+                            if (ancestors.TryGetValue(from[i].id, out var up))
+                                seen.UnionWith(up);
+                        }
+                    }
 
-                    MapNode template = f == 0 && config.opening != null
+                    ancestors[node.id] = seen;
+
+                    RoomType type;
+                    if (f == 0)
+                        type = RoomType.Situation;
+                    else if (f == config.guaranteedMarketingFloor && pools[RoomType.Marketing].Count > 0)
+                        type = RoomType.Marketing;
+                    else if (f < config.minSpecialFloor || (config.situationBeforeMontage && f == last))
+                        type = RoomType.Situation;
+                    else
+                        type = PickType(config, rng, from, pools);
+
+                    node.type = type;
+                    var room = f == 0 && config.opening != null
                         ? config.opening
-                        : TemplateFor(config, rng, type, from);
-                    Fill(node, template, type);
+                        : PickRoom(rng, pools[type], from, seen) ?? catalog.Placeholder(type);
+                    SetRoom(node, room);
                 }
             }
         }
 
-        static MapNodeType PickType(SeasonMapConfig config, System.Random rng, List<MapNode> parents)
+        static RoomType PickType(EpisodeMapConfig config, System.Random rng, List<MapNode> parents, Dictionary<RoomType, List<RoomDefinition>> pools)
         {
             for (int attempt = 0; attempt < 6; attempt++)
             {
-                var type = Weighted(rng, config);
-                if (type == MapNodeType.Filming || !config.noRepeatSpecial || parents == null)
+                var type = Weighted(rng, config, pools);
+                if (type == RoomType.Situation || !config.noRepeatSpecial || parents == null)
                     return type;
                 bool repeat = false;
                 for (int i = 0; i < parents.Count; i++)
-                {
-                    if (parents[i].type == type && type == MapNodeType.Shop)
-                        repeat = true;
-                }
-
+                    repeat |= parents[i].type == type;
                 if (!repeat)
                     return type;
             }
 
-            return MapNodeType.Filming;
+            return RoomType.Situation;
         }
 
-        static MapNodeType Weighted(System.Random rng, SeasonMapConfig c)
+        // Тип без единой подходящей комнаты не выпадает. Монтаж в средних рядах не бывает.
+        static RoomType Weighted(System.Random rng, EpisodeMapConfig c, Dictionary<RoomType, List<RoomDefinition>> pools)
         {
-            // Монтаж в случайных рядах не бывает — это всегда финал.
-            float total = Mathf.Max(0f, c.filmingWeight) + Mathf.Max(0f, c.randomEventWeight) + Mathf.Max(0f, c.shopWeight);
+            float s = Mathf.Max(0f, c.situationWeight);
+            float e = pools[RoomType.Event].Count > 0 ? Mathf.Max(0f, c.eventWeight) : 0f;
+            float m = pools[RoomType.Marketing].Count > 0 ? Mathf.Max(0f, c.marketingWeight) : 0f;
+            float total = s + e + m;
             if (total <= 0f)
-                return MapNodeType.Filming;
+                return RoomType.Situation;
             float r = (float)rng.NextDouble() * total;
-            if ((r -= Mathf.Max(0f, c.filmingWeight)) < 0f) return MapNodeType.Filming;
-            if ((r -= Mathf.Max(0f, c.randomEventWeight)) < 0f) return MapNodeType.RandomEvent;
-            return MapNodeType.Shop;
+            if ((r -= s) < 0f) return RoomType.Situation;
+            if ((r -= e) < 0f) return RoomType.Event;
+            return RoomType.Marketing;
         }
 
-        static MapNode TemplateFor(SeasonMapConfig config, System.Random rng, MapNodeType type, List<MapNode> parents)
+        // По весу; сначала без повтора на пути (unique) и без повтора родителя, потом правила ослабляются.
+        static RoomDefinition PickRoom(System.Random rng, List<RoomDefinition> pool, List<MapNode> parents, HashSet<string> seen)
         {
-            switch (type)
+            if (pool == null || pool.Count == 0)
+                return null;
+            var strict = new List<RoomDefinition>();
+            var loose = new List<RoomDefinition>();
+            for (int i = 0; i < pool.Count; i++)
             {
-                case MapNodeType.Shop: return config.shop;
-                case MapNodeType.RandomEvent: return config.randomEvent;
-                case MapNodeType.Editing: return config.finale;
-            }
-
-            var flavors = config.filmingFlavors;
-            if (flavors == null || flavors.Count == 0)
-                return config.opening;
-            // пробуем не повторять вкус родителя
-            MapNode pick = null;
-            for (int attempt = 0; attempt < 4; attempt++)
-            {
-                pick = WeightedFlavor(rng, flavors);
-                bool same = false;
+                var r = pool[i];
+                bool parentSame = false;
                 if (parents != null)
                 {
-                    for (int i = 0; i < parents.Count; i++)
-                        same |= parents[i].title == pick.title;
+                    for (int j = 0; j < parents.Count; j++)
+                        parentSame |= parents[j].roomId == r.Id;
                 }
 
-                if (!same)
-                    break;
+                if (parentSame)
+                    continue;
+                loose.Add(r);
+                if (!(r.uniquePerEpisode && seen.Contains(r.Id)))
+                    strict.Add(r);
             }
 
-            return pick;
+            var from = strict.Count > 0 ? strict : loose.Count > 0 ? loose : pool;
+            return WeightedRoom(rng, from);
         }
 
-        static MapNode WeightedFlavor(System.Random rng, List<MapNode> flavors)
+        static RoomDefinition WeightedRoom(System.Random rng, List<RoomDefinition> rooms)
         {
             float total = 0f;
-            for (int i = 0; i < flavors.Count; i++)
-                total += Mathf.Max(0f, flavors[i].weight);
+            for (int i = 0; i < rooms.Count; i++)
+                total += Mathf.Max(0f, rooms[i].weight);
             if (total <= 0f)
-                return flavors[rng.Next(flavors.Count)];
+                return rooms[rng.Next(rooms.Count)];
             float r = (float)rng.NextDouble() * total;
-            for (int i = 0; i < flavors.Count; i++)
+            for (int i = 0; i < rooms.Count; i++)
             {
-                r -= Mathf.Max(0f, flavors[i].weight);
+                r -= Mathf.Max(0f, rooms[i].weight);
                 if (r < 0f)
-                    return flavors[i];
+                    return rooms[i];
             }
 
-            return flavors[flavors.Count - 1];
+            return rooms[rooms.Count - 1];
         }
 
-        // Копирует содержимое шаблона в узел, сохраняя позицию и связи.
-        static void Fill(MapNode node, MapNode template, MapNodeType type)
+        static RoomDefinition First(List<RoomDefinition> rooms)
         {
-            if (template != null)
-            {
-                node.title = template.title;
-                node.subtitle = template.subtitle;
-                node.description = template.description;
-                node.goal = template.goal;
-                node.kind = template.kind;
-                node.color = template.color;
-                node.art = template.art;
-                node.lockTrack = template.lockTrack;
-                node.lockLevel = template.lockLevel;
-                node.budget = template.budget;
-                node.mood = template.mood;
-                node.toneGain = template.toneGain;
-            }
+            return rooms.Count > 0 ? rooms[0] : null;
+        }
 
-            node.type = type;
+        static void SetRoom(MapNode node, RoomDefinition room)
+        {
+            node.room = room;
+            node.roomId = room != null ? room.Id : "";
         }
     }
 }

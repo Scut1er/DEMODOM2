@@ -18,6 +18,12 @@ namespace RealityDirector.Core
             Load(Episode);
         }
 
+        // Сцена комнаты-съёмки (должна быть в Build Settings).
+        public static void ToScene(string scene)
+        {
+            Load(string.IsNullOrEmpty(scene) ? Episode : scene);
+        }
+
         static void Load(string scene)
         {
             Time.timeScale = 1f;

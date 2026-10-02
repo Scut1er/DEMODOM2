@@ -1,6 +1,4 @@
 using System.Collections.Generic;
-using RealityDirector.Core;
-using UnityEngine;
 
 namespace RealityDirector.Meta
 {
@@ -21,36 +19,37 @@ namespace RealityDirector.Meta
         Route
     }
 
-    // Правила карты сезона: что пройдено, куда можно пойти, что закрыто.
-    // Шаг (state.step) = номер текущего ряда. route[i] — узел, выбранный в ряду i.
+    // Правила карты выпуска: что пройдено, куда можно пойти, что закрыто.
+    // Шаг (episode.step) = номер текущего ряда. route[i] — узел, выбранный в ряду i.
     public class MapService
     {
-        readonly SeasonState _state;
-        readonly SeasonTone _tone;
+        readonly EpisodeState _episode;
+        readonly RuleContext _ctx;
         readonly MapGraph _map;
 
         public MapGraph Map => _map;
-        public int Step => _state.step;
+        public EpisodeState Episode => _episode;
+        public int Step => _episode.step;
 
-        public MapService(SeasonState state, SeasonTone tone, MapGraph map)
+        public MapService(RuleContext ctx, MapGraph map)
         {
-            _state = state;
-            _tone = tone;
+            _ctx = ctx;
+            _episode = ctx.episode;
             _map = map;
         }
 
         // Узел текущего ряда, уже выбранный, но ещё не пройденный (например, съёмка не досмотрена).
         public MapNode CurrentChoice =>
-            _state.route.Count > _state.step ? _map.Find(_state.route[_state.step]) : null;
+            _episode.route.Count > _episode.step ? _map.Find(_episode.route[_episode.step]) : null;
 
         public MapNodeState StateOf(MapNode node)
         {
-            int index = _state.route.IndexOf(node.id);
+            int index = _episode.route.IndexOf(node.id);
             if (index >= 0)
-                return index < _state.step ? MapNodeState.Done : MapNodeState.Current;
-            if (node.layer < _state.step)
+                return index < _episode.step ? MapNodeState.Done : MapNodeState.Current;
+            if (node.layer < _episode.step)
                 return MapNodeState.Skipped;
-            if (node.layer > _state.step)
+            if (node.layer > _episode.step)
                 return MapNodeState.Future;
             if (CurrentChoice != null || !Reachable(node))
                 return MapNodeState.Skipped;
@@ -59,22 +58,21 @@ namespace RealityDirector.Meta
             return MapNodeState.Locked;
         }
 
+        // Условия комнаты проверяются ещё раз на входе: флаги из прошлых комнат могут её закрыть.
         public string LockReason(MapNode node)
         {
-            if (node.lockLevel <= 0)
+            if (node.room == null)
                 return null;
-            if (Level(node.lockTrack) >= node.lockLevel)
-                return null;
-            return "Нужно: " + TrackName(node.lockTrack) + " ур. " + node.lockLevel;
+            return Rules.FailText(Rules.FirstFailed(node.room.conditions, _ctx));
         }
 
         public MapEdgeState EdgeState(MapNode from, MapNode to)
         {
-            int a = _state.route.IndexOf(from.id);
-            int b = _state.route.IndexOf(to.id);
+            int a = _episode.route.IndexOf(from.id);
+            int b = _episode.route.IndexOf(to.id);
             if (a >= 0 && b == a + 1)
                 return MapEdgeState.Route;
-            if (a >= 0 && a == _state.step - 1)
+            if (a >= 0 && a == _episode.step - 1)
             {
                 var s = StateOf(to);
                 if (s == MapNodeState.Available || s == MapNodeState.Current)
@@ -104,7 +102,7 @@ namespace RealityDirector.Meta
             return s == MapNodeState.Available || s == MapNodeState.Current;
         }
 
-        // Фиксирует выбор и применяет эффект узла. Повторный выбор того же узла эффект не дублирует.
+        // Фиксирует выбор, пишет историю и применяет эффекты входа. Повторный выбор того же узла их не дублирует.
         public bool Choose(MapNode node)
         {
             if (node == null)
@@ -115,41 +113,36 @@ namespace RealityDirector.Meta
             if (StateOf(node) != MapNodeState.Available)
                 return false;
 
-            while (_state.route.Count < _state.step)
-                _state.route.Add("");
-            _state.route.Add(node.id);
-            _state.money = Mathf.Max(0, _state.money + node.budget);
-            if (node.toneGain > 0 && _tone != null)
-                _tone.Add(node.mood, node.toneGain);
+            while (_episode.route.Count < _episode.step)
+                _episode.route.Add("");
+            _episode.route.Add(node.id);
+            _episode.history.Add(new RoomVisit { step = _episode.step, nodeId = node.id, roomId = node.roomId, type = node.type });
+            if (node.room != null)
+                Rules.Apply(node.room.onEnter, _ctx);
             return true;
         }
 
-        // Закрывает текущий шаг (магазин, событие, монтаж). Съёмку закрывает квартира после отзывов.
+        // Закрывает текущую комнату.
         public void CompleteStep()
         {
             if (CurrentChoice != null)
-                _state.step++;
+                _episode.step++;
         }
 
-        public bool SeasonDone => _state.step >= _map.Layers;
+        public bool EpisodeDone => _episode.Finished;
 
         public string EffectText(MapNode node)
         {
-            var parts = new List<string>();
-            if (node.budget != 0)
-                parts.Add("бюджет " + (node.budget > 0 ? "+" : "") + node.budget + " кр");
-            if (node.toneGain > 0)
-                parts.Add(MoodStyle.Paint(MoodStyle.Short(node.mood) + " +" + node.toneGain, node.mood));
-            return parts.Count == 0 ? "" : string.Join("   ·   ", parts);
+            return node.room != null ? Rules.Describe(node.room.onEnter) : "";
         }
 
         bool Reachable(MapNode node)
         {
-            if (_state.step <= 0)
+            if (_episode.step <= 0)
                 return node.layer == 0;
-            int prevIndex = _state.step - 1;
-            var prev = prevIndex < _state.route.Count ? _map.Find(_state.route[prevIndex]) : null;
-            // Нет записи о прошлом шаге (старый сейв / старт из квартиры) — открыт весь ряд.
+            int prevIndex = _episode.step - 1;
+            var prev = prevIndex < _episode.route.Count ? _map.Find(_episode.route[prevIndex]) : null;
+            // Нет записи о прошлом шаге — открыт весь ряд.
             return prev == null || prev.next.Contains(node.id);
         }
 
@@ -159,40 +152,20 @@ namespace RealityDirector.Meta
             for (int i = 0; i < _map.nodes.Count; i++)
             {
                 var n = _map.nodes[i];
-                if (n.layer == _state.step && Reachable(n) && LockReason(n) == null)
+                if (n.layer == _episode.step && Reachable(n) && LockReason(n) == null)
                     return false;
             }
 
             return true;
         }
 
-        int Level(CrewTrack track)
-        {
-            switch (track)
-            {
-                case CrewTrack.Cast: return _state.castLevel;
-                case CrewTrack.Operators: return _state.operatorLevel;
-                default: return _state.writerLevel;
-            }
-        }
-
-        public static string TrackName(CrewTrack track)
-        {
-            switch (track)
-            {
-                case CrewTrack.Cast: return "Кастинг";
-                case CrewTrack.Operators: return "Съёмочная";
-                default: return "Сценарная";
-            }
-        }
-
-        public static string TypeName(MapNodeType type)
+        public static string TypeName(RoomType type)
         {
             switch (type)
             {
-                case MapNodeType.Shop: return "магазин";
-                case MapNodeType.RandomEvent: return "случайное событие";
-                case MapNodeType.Editing: return "монтаж";
+                case RoomType.Marketing: return "маркетинг";
+                case RoomType.Event: return "событие";
+                case RoomType.Montage: return "монтаж";
                 default: return "съёмка";
             }
         }

@@ -14,10 +14,14 @@ namespace RealityDirector.Meta
         public static string SceneTitle;
         // Серию запустили с карты (рука могла быть и пустой). Нет — квартиру открыли напрямую из редактора.
         public static bool Embarked;
+        // Узел карты выпуска, ради которого загрузили сцену съёмки. Хаб закрывает его, когда сцена вернулась.
+        public static string RoomNodeId;
 
         public static bool Active => State != null;
-        // Сезон снят, когда пройдены все ряды карты (последний — финал).
-        public static bool SeasonOver => Active && State.mapFloors > 0 && State.step >= State.mapFloors;
+        public static bool InEpisode => Active && State.episode != null;
+        // Сезон снят, когда вышли все выпуски.
+        public static bool SeasonOver => Active && State.episode == null && State.seasonLength > 0
+                                         && State.episodeIndex >= State.seasonLength;
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
         static void Clear()
@@ -26,16 +30,22 @@ namespace RealityDirector.Meta
             Tone = null;
             SceneTitle = null;
             Embarked = false;
+            RoomNodeId = null;
             Hand.Clear();
         }
 
-        public static void NewSeason(IList<string> starters)
+        public static void NewSeason(IList<string> starters, SeasonConfig config = null)
         {
             State = new SeasonState();
             State.Reset(starters);
-            // Карту генерирует хаб по этому seed; 0 в конфиге — новая карта каждый сезон.
-            State.mapSeed = Random.Range(1, int.MaxValue);
+            if (config != null)
+            {
+                State.seasonLength = config.episodes;
+                State.money = config.startingBudget;
+            }
+
             Tone = new SeasonTone();
+            RoomNodeId = null;
             Hand.Clear();
             Save();
         }
@@ -48,6 +58,7 @@ namespace RealityDirector.Meta
                 return false;
             State = state;
             Tone = tone;
+            RoomNodeId = null;
             Hand.Clear();
             return true;
         }

@@ -1,20 +1,10 @@
 using System;
 using System.Collections.Generic;
-using RealityDirector.Core;
 using UnityEngine;
 
 namespace RealityDirector.Meta
 {
-    // Тип узла карты сезона.
-    public enum MapNodeType
-    {
-        Filming,
-        RandomEvent,
-        Shop,
-        Editing
-    }
-
-    // Вид узла — для иконки и внешнего вида. Новые значения — только в конец (сериализуются числом).
+    // Иконка узла (если у комнаты нет арта). Новые значения — только в конец (сериализуются числом).
     public enum MapNodeKind
     {
         Start,
@@ -33,51 +23,45 @@ namespace RealityDirector.Meta
         Mystery
     }
 
+    // Узел карты выпуска. Сохраняется в EpisodeState как есть: позиция, связи и id комнаты.
     [Serializable]
     public class MapNode
     {
-        [HideInInspector] public string id;
-        public MapNodeType type;
-        public string title;
-        public string subtitle;
-        [TextArea(2, 4)] public string description;
-        [TextArea(1, 3)] public string goal;
-        public MapNodeKind kind;
-        public Color color = new Color(0.3f, 0.28f, 0.34f, 1f);
-        public Sprite art;
-        [Tooltip("Вес при случайном выборе вкуса съёмки.")]
-        public float weight = 1f;
+        public string id;
+        public RoomType type;
+        public string roomId;
+        public int layer;
+        public float row;
+        public Vector2 offset;
+        public List<string> next = new List<string>();
 
-        [Header("Замок")]
-        public CrewTrack lockTrack;
-        [Tooltip("0 — без замка.")]
-        public int lockLevel;
+        // Подставляется при загрузке по roomId.
+        [NonSerialized] public RoomDefinition room;
 
-        [Header("Эффект при выборе")]
-        public int budget;
-        public ShowMood mood;
-        public int toneGain;
-
-        // Заполняет генератор.
-        [HideInInspector] public int layer;
-        [HideInInspector] public float row;
-        [HideInInspector] public Vector2 offset;
-        [HideInInspector] public List<string> next = new List<string>();
-
-        public MapNode Clone()
-        {
-            var copy = (MapNode)MemberwiseClone();
-            copy.next = new List<string>();
-            return copy;
-        }
+        public string title => room != null ? room.title : "";
+        public string subtitle => room != null ? room.subtitle : "";
+        public string description => room != null ? room.description : "";
+        public string goal => room != null ? room.goal : "";
+        public MapNodeKind kind => room != null ? room.icon : MapNodeKind.Scene;
+        public Color color => room != null ? room.color : new Color(0.3f, 0.28f, 0.34f, 1f);
+        public Sprite art => room != null ? room.art : null;
     }
 
-    // Сгенерированная карта сезона: ряды (layer) слева направо, в последнем — финал.
+    // Карта выпуска: ряды (layer) слева направо, в последнем — монтаж.
     public class MapGraph
     {
-        public readonly List<MapNode> nodes = new List<MapNode>();
+        public readonly List<MapNode> nodes;
         public int Layers;
         public int Lanes;
+
+        public MapGraph() : this(new List<MapNode>())
+        {
+        }
+
+        public MapGraph(List<MapNode> nodes)
+        {
+            this.nodes = nodes;
+        }
 
         public MapNode Find(string id)
         {

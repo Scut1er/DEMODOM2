@@ -6,7 +6,7 @@ using UnityEngine.UI;
 
 namespace RealityDirector.UI.Hub
 {
-    // Карта сезона: узлы-выпуски, связи, план съёмки и выбор следующей сцены.
+    // Карта выпуска: комнаты, связи, план съёмки и выбор следующей комнаты.
     public class MapView : MonoBehaviour
     {
         [Header("Шапка")]
@@ -61,10 +61,11 @@ namespace RealityDirector.UI.Hub
                 random.onClick.AddListener(() => Random?.Invoke());
         }
 
-        public void Show(MapService map, MapNode selected, StatsModel statsModel, int episodeNumber, IList<string> tasks)
+        public void Show(MapService map, MapNode selected, StatsModel statsModel, int episodeNumber, int seasonLength, IList<string> tasks)
         {
             if (subtitle != null)
-                subtitle.text = "Сезон 1  ·  шаг " + Mathf.Min(map.Step + 1, map.Map.Layers) + " из " + map.Map.Layers + "  ·  выпуск " + episodeNumber;
+                subtitle.text = "Выпуск " + episodeNumber + " из " + seasonLength + "  ·  комната " + Mathf.Min(map.Step + 1, map.Map.Layers)
+                                + " из " + map.Map.Layers + "  ·  в конце — монтаж";
             Layout(map.Map);
             if (stats != null)
                 stats.Show(statsModel);
@@ -73,7 +74,7 @@ namespace RealityDirector.UI.Hub
             if (goal != null)
                 goal.text = focus != null && !string.IsNullOrEmpty(focus.goal)
                     ? focus.goal
-                    : "Выбрать сцену выпуска и снять как можно больше хайлайтов.";
+                    : "Пройти выпуск до монтажа и набрать материала на сильный эфир.";
 
             DrawEdges(map);
             DrawNodes(map, selected);
@@ -123,7 +124,7 @@ namespace RealityDirector.UI.Hub
                 var view = Instantiate(nodePrefab, nodesRoot);
                 view.name = "Node_" + node.id;
                 ((RectTransform)view.transform).anchoredPosition = PositionOf(node);
-                float scale = _nodeScale * (node.kind == MapNodeKind.Climax ? 1.2f : 1f);
+                float scale = _nodeScale * (node.type == RoomType.Montage ? 1.2f : 1f);
                 view.transform.localScale = Vector3.one * scale;
                 string id = node.id;
                 view.Show(node, map.StateOf(node), map.LockReason(node), selected == node, () => Select?.Invoke(id));
@@ -192,9 +193,9 @@ namespace RealityDirector.UI.Hub
             if (selected == null)
             {
                 if (infoTitle != null)
-                    infoTitle.text = "Выберите следующую сцену";
+                    infoTitle.text = "Выберите следующую комнату";
                 if (infoBody != null)
-                    infoBody.text = "Каждая сцена влияет на тон сезона и бюджет. Пройденный путь не переснять.";
+                    infoBody.text = "Съёмки дают материал, события и маркетинг — последствия. Пройденный путь не переснять, в конце — монтаж.";
             }
             else
             {
@@ -233,13 +234,13 @@ namespace RealityDirector.UI.Hub
                 infoBody.text = body;
         }
 
-        static string ActionLabel(MapNodeType type)
+        static string ActionLabel(RoomType type)
         {
             switch (type)
             {
-                case MapNodeType.Shop: return "В МАГАЗИН";
-                case MapNodeType.RandomEvent:
-                case MapNodeType.Editing: return "ПРОЙТИ";
+                case RoomType.Marketing: return "К СПОНСОРАМ";
+                case RoomType.Event: return "ПРОЙТИ";
+                case RoomType.Montage: return "МОНТАЖ";
                 default: return "СНИМАТЬ";
             }
         }

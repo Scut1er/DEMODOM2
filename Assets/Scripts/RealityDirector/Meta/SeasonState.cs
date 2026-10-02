@@ -21,14 +21,20 @@ namespace RealityDirector.Meta
         public readonly List<string> owned = new List<string>();
         public readonly HashSet<string> played = new HashSet<string>();
         public readonly List<string> picked = new List<string>();
-        // Путь по карте сезона: id узла на каждую серию.
-        public readonly List<string> route = new List<string>();
-        // Шаг по карте сезона (сколько рядов пройдено), seed генерации и число рядов карты.
-        public int step;
-        public int mapSeed;
-        public int mapFloors;
         public int ratingSum;
         public int rated;
+
+        // Сезон и карьера.
+        public int seasonNumber = 1;
+        public string producerName = "";
+        // Сколько выпусков в сезоне (из SeasonConfig).
+        public int seasonLength;
+        // Долгие флаги сезона (условия и эффекты контента).
+        public readonly List<string> flags = new List<string>();
+        // Текущий выпуск: от выхода из хаба до эфира. null — игрок в хабе между выпусками.
+        public EpisodeState episode;
+        // Устарело: квартира (PitchFlow) ещё увеличивает это поле. Мета смотрит на episode.step.
+        public int step;
 
         public void Reset(IList<string> starters)
         {
@@ -41,12 +47,14 @@ namespace RealityDirector.Meta
             owned.Clear();
             played.Clear();
             picked.Clear();
-            route.Clear();
             step = 0;
-            mapSeed = 0;
-            mapFloors = 0;
             ratingSum = 0;
             rated = 0;
+            seasonNumber = 1;
+            producerName = "";
+            seasonLength = 0;
+            flags.Clear();
+            episode = null;
             if (starters == null)
                 return;
             for (int i = 0; i < starters.Count; i++)
@@ -86,6 +94,27 @@ namespace RealityDirector.Meta
             }
 
             return met;
+        }
+
+        public bool HasFlag(string key)
+        {
+            return !string.IsNullOrEmpty(key) && flags.Contains(key);
+        }
+
+        public void SetFlag(string key)
+        {
+            if (!string.IsNullOrEmpty(key) && !flags.Contains(key))
+                flags.Add(key);
+        }
+
+        public int Level(CrewTrack track)
+        {
+            switch (track)
+            {
+                case CrewTrack.Cast: return castLevel;
+                case CrewTrack.Operators: return operatorLevel;
+                default: return writerLevel;
+            }
         }
 
         public bool Owns(string id)

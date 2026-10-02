@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using RealityDirector.Core;
 using RealityDirector.Meta;
 using RealityDirector.Persistence;
@@ -9,7 +10,7 @@ using UnityEngine.InputSystem.UI;
 
 namespace RealityDirector.UI.Hub
 {
-    // Главное меню → хаб → карта сезона → квартира → снова хаб.
+    // Главное меню → хаб → карта выпуска → комнаты (съёмка в квартире, событие, маркетинг) → монтаж → хаб.
     public class HubFlow : MonoBehaviour
     {
         [SerializeField] MainMenuView menu;
@@ -18,14 +19,14 @@ namespace RealityDirector.UI.Hub
         [SerializeField] MapView map;
         [SerializeField] SeasonEndView seasonEnd;
         [SerializeField] SettingsView settings;
-        [Tooltip("Настройки генерации карты сезона. Пусто — встроенные по умолчанию.")]
-        [SerializeField] SeasonMapConfig mapConfig;
+        [Tooltip("Настройки сезона: число выпусков, карты выпусков, лимиты. Пусто — встроенные по умолчанию.")]
+        [SerializeField] SeasonConfig season;
 
         PitchContent _content;
         MetaService _meta;
-        MapService _map;
-        MapGraph _graph;
+        EpisodeService _episode;
         MapNode _selected;
+        string _hubNotice;
         CastMember[] _cast;
         GameObject _back;
 
@@ -33,8 +34,8 @@ namespace RealityDirector.UI.Hub
         {
             _content = PitchContent.Create();
             _cast = CastRoster.All();
-            if (mapConfig == null)
-                mapConfig = SeasonMapConfig.CreateDefault();
+            if (season == null)
+                season = SeasonConfig.CreateDefault();
             EnsureEventSystem();
             Sfx.Bind(gameObject);
 
@@ -62,11 +63,11 @@ namespace RealityDirector.UI.Hub
                 else
                     RefreshHub();
             };
-            hub.StartShoot += OpenMap;
+            hub.StartShoot += () => { Click(); StartOrResumeEpisode(); };
             hub.OpenSettings += () => { Click(); ShowSettings(hub.gameObject); };
             hub.Menu += () => { Click(); ShowMenu(); };
 
-            map.Select += id => { Click(); _selected = _graph.Find(id); RefreshMap(); };
+            map.Select += id => { Click(); _selected = _episode.Map.Map.Find(id); RefreshMap(); };
             // Выбор карт для съёмки — прямо на карте сезона.
             map.Deck.Toggle += id =>
             {
@@ -85,29 +86,37 @@ namespace RealityDirector.UI.Hub
 
         void Start()
         {
-            // Вернулись из квартиры — сразу в хаб или к итогам сезона.
-            if (GameSession.Active)
+            if (!GameSession.Active)
             {
-                Bind();
-                if (GameSession.SeasonOver)
-                    ShowSeasonEnd();
-                else
-                    ShowHub();
+                ShowMenu();
                 return;
             }
 
-            ShowMenu();
+            Bind();
+            // Вернулись со съёмки — комната пройдена, дальше по карте выпуска.
+            if (!string.IsNullOrEmpty(GameSession.RoomNodeId) && _episode.Active)
+            {
+                GameSession.RoomNodeId = null;
+                _episode.FinishSceneRoom();
+                GameSession.Save();
+                AfterStep();
+                return;
+            }
+
+            GameSession.RoomNodeId = null;
+            Resume();
         }
 
         void OnDestroy()
         {
             if (_content != null)
                 _content.DestroyAssets();
+            _episode?.Dispose();
         }
 
         void BeginSeason()
         {
-            GameSession.NewSeason(_content.StarterIds());
+            GameSession.NewSeason(_content.StarterIds(), season);
             Bind();
             Show(intro.gameObject);
         }
@@ -121,8 +130,16 @@ namespace RealityDirector.UI.Hub
             }
 
             Bind();
+            Resume();
+        }
+
+        // Итоги сезона, карта начатого выпуска или хаб.
+        void Resume()
+        {
             if (GameSession.SeasonOver)
                 ShowSeasonEnd();
+            else if (_episode.Active)
+                OpenMap();
             else
                 ShowHub();
         }
@@ -130,15 +147,11 @@ namespace RealityDirector.UI.Hub
         void Bind()
         {
             var state = GameSession.State;
+            // Длина сезона всегда из конфига — дизайнер может поменять её посреди сезона.
+            state.seasonLength = Mathf.Max(1, season.episodes);
             _meta = new MetaService(state, GameSession.Tone, _content.All);
-
-            // Карта строится из seed: тот же seed + конфиг = та же карта, поэтому «Продолжить» её восстанавливает.
-            if (state.mapSeed == 0)
-                state.mapSeed = Random.Range(1, int.MaxValue);
-            int seed = mapConfig.seed != 0 ? mapConfig.seed : state.mapSeed;
-            _graph = MapGenerator.Generate(mapConfig, seed);
-            state.mapFloors = _graph.Layers;
-            _map = new MapService(state, GameSession.Tone, _graph);
+            _episode?.Dispose();
+            _episode = new EpisodeService(state, GameSession.Tone, season);
         }
 
         void ShowMenu()
@@ -172,25 +185,53 @@ namespace RealityDirector.UI.Hub
                 _meta.Crew(CrewTrack.Writers)
             };
             hub.Show(_meta.BuildPrep(), _meta.Stats(), crew, _cast, _meta.CastLevel, _meta.TaskLines());
+            var state = GameSession.State;
+            int number = state.episodeIndex + 1;
+            hub.SetStartCaption(_episode.Active
+                ? "Выпуск " + number + " из " + state.seasonLength + " идёт  ·  вернуться на карту выпуска"
+                : "Выпуск " + number + " из " + state.seasonLength + "  ·  дальше карта выпуска: комнаты и монтаж");
+            hub.SetSubtitle("Сезон " + state.seasonNumber + "  ·  Выпуск " + number + " из " + state.seasonLength + "  ·  Продакшн-хаб"
+                            + (string.IsNullOrEmpty(_hubNotice) ? "" : "\n" + _hubNotice));
         }
 
-        // Карта открыта всегда; колода нужна только для узла-съёмки.
+        // Начало выпуска: каст из хаба, новая карта. Если выпуск уже идёт — просто на карту.
+        void StartOrResumeEpisode()
+        {
+            if (!_episode.Active)
+            {
+                _episode.Begin(CastIds());
+                GameSession.Save();
+            }
+
+            _hubNotice = null;
+            OpenMap();
+        }
+
+        // Пока выбора каста нет: в выпуск идут первые участники по числу мест (уровень Кастинга, не больше castMax).
+        List<string> CastIds()
+        {
+            int seats = Mathf.Min(CastRoster.Seats(_meta.CastLevel), Mathf.Max(1, season.castMax));
+            var ids = new List<string>();
+            for (int i = 0; i < _cast.Length && ids.Count < seats; i++)
+                ids.Add(_cast[i].id);
+            return ids;
+        }
+
         void OpenMap()
         {
-            Click();
-            _selected = _map.CurrentChoice;
+            _selected = _episode.Map.CurrentChoice;
             Show(map.gameObject);
             RefreshMap();
         }
 
         void RefreshMap()
         {
-            map.Show(_map, _selected, _meta.Stats(), GameSession.State.episodeIndex + 1, _meta.TaskLines());
+            map.Show(_episode.Map, _selected, _meta.Stats(), _episode.Current.Number, GameSession.State.seasonLength, _meta.TaskLines());
         }
 
         void PickRandom()
         {
-            var open = _map.Available();
+            var open = _episode.Map.Available();
             if (open.Count == 0)
             {
                 Sfx.Play(Cue.Miss, 0.4f);
@@ -205,7 +246,7 @@ namespace RealityDirector.UI.Hub
         // Кнопка действия на карте: зайти в выбранный узел по его типу.
         void Shoot()
         {
-            if (!_map.CanEnter(_selected))
+            if (!_episode.Map.CanEnter(_selected))
             {
                 Sfx.Play(Cue.Miss, 0.4f);
                 return;
@@ -213,9 +254,9 @@ namespace RealityDirector.UI.Hub
 
             switch (_selected.type)
             {
-                case MapNodeType.Shop: EnterShop(_selected); break;
-                case MapNodeType.RandomEvent: RunRandomEvent(_selected); break;
-                case MapNodeType.Editing: RunEditing(_selected); break;
+                case RoomType.Marketing: EnterMarketing(_selected); break;
+                case RoomType.Event: RunEvent(_selected); break;
+                case RoomType.Montage: RunMontage(_selected); break;
                 default: StartFilming(_selected); break;
             }
         }
@@ -230,13 +271,13 @@ namespace RealityDirector.UI.Hub
 
         void BeginFilming(MapNode node)
         {
-            if (node == null || !_map.CanEnter(node) || !_meta.CanStart())
+            if (node == null || !_episode.Map.CanEnter(node) || !_meta.CanStart())
             {
                 Sfx.Play(Cue.Miss, 0.4f);
                 return;
             }
 
-            if (!_map.Choose(node))
+            if (!_episode.Map.Choose(node))
             {
                 Sfx.Play(Cue.Miss, 0.4f);
                 return;
@@ -254,14 +295,17 @@ namespace RealityDirector.UI.Hub
             Sfx.Play(Cue.Card, 0.45f, 0.8f);
             GameSession.Embarked = true;
             GameSession.SceneTitle = node.title;
+            GameSession.RoomNodeId = node.id;
             GameSession.Save();
-            SceneFlow.ToEpisode();
+            var situation = node.room as SituationRoomDefinition;
+            SceneFlow.ToScene(situation != null && !string.IsNullOrEmpty(situation.scene) ? situation.scene : SceneFlow.Episode);
         }
 
-        // Магазин: окно колоды с вкладкой магазина. «Готово» закрывает шаг (LeaveShop).
-        void EnterShop(MapNode node)
+        // Маркетинг: пока это старый магазин карт (окно колоды). «Готово» закрывает комнату (LeaveShop).
+        // TODO: офферы и спонсорские контракты — шаг Marketing room.
+        void EnterMarketing(MapNode node)
         {
-            if (!_map.Choose(node))
+            if (!_episode.Map.Choose(node))
             {
                 Sfx.Play(Cue.Miss, 0.4f);
                 return;
@@ -275,41 +319,47 @@ namespace RealityDirector.UI.Hub
 
         void LeaveShop()
         {
-            _map.CompleteStep();
+            if (!_episode.Active)
+            {
+                RefreshHub();
+                return;
+            }
+
+            _episode.CompleteRoom();
             GameSession.Save();
             AfterStep();
         }
 
-        // Случайное событие — пока не реализовано: шаг засчитывается сразу.
-        void RunRandomEvent(MapNode node)
+        // Событие — пока не реализовано: комната засчитывается сразу.
+        void RunEvent(MapNode node)
         {
-            if (!_map.Choose(node))
+            if (!_episode.Map.Choose(node))
                 return;
-            // TODO: здесь будет экран события (выбор вариантов, эффекты на героев/бюджет/тон).
+            // TODO: экран события по EventRoomDefinition (текст, 2–3 выбора, эффекты) — шаг Event room.
             Sfx.Play(Cue.Blip, 0.5f);
-            _map.CompleteStep();
+            _episode.CompleteRoom();
             GameSession.Save();
-            AfterStep("Случайное событие", "Пока не реализовано — шаг засчитан. Здесь будет выбор с последствиями.");
+            AfterStep("Событие", "Пока не реализовано — комната засчитана. Здесь будет выбор с последствиями.");
         }
 
-        // Монтаж — пока не реализовано: шаг засчитывается сразу.
-        void RunEditing(MapNode node)
+        // Монтаж — всегда последняя комната. Пока не реализован: выпуск сразу уходит в эфир.
+        void RunMontage(MapNode node)
         {
-            if (!_map.Choose(node))
+            if (!_episode.Map.Choose(node))
                 return;
-            // TODO: здесь будет перемонтаж отснятых кадров (улучшение оценки прошлых выпусков).
+            // TODO: выбор и порядок клипов, оценка монтажа, эфир и HellTube — шаги Montage и HellTube.
             Sfx.Play(Cue.Blip, 0.5f);
-            _map.CompleteStep();
+            _episode.CompleteRoom();
             GameSession.Save();
-            AfterStep("Монтаж", "Пока не реализовано — шаг засчитан. Здесь будет перемонтаж отснятого.");
+            AfterStep();
         }
 
-        // После не-съёмочного шага: конец сезона или снова карта (с пояснением, если есть).
+        // После комнаты: выпуск закончен — в эфир, иначе снова карта (с пояснением, если есть).
         void AfterStep(string noticeTitle = null, string noticeBody = null)
         {
-            if (GameSession.SeasonOver)
+            if (_episode.Active && _episode.Current.Finished)
             {
-                ShowSeasonEnd();
+                AirEpisode();
                 return;
             }
 
@@ -318,6 +368,22 @@ namespace RealityDirector.UI.Hub
             RefreshMap();
             if (noticeTitle != null)
                 map.Notice(noticeTitle, noticeBody);
+        }
+
+        // Эфир выпуска. Экран итогов (монтаж, HellTube) — следующие шаги, пока только строка в хабе.
+        void AirEpisode()
+        {
+            int number = _episode.Current.Number;
+            _episode.End();
+            GameSession.Save();
+            if (GameSession.SeasonOver)
+            {
+                ShowSeasonEnd();
+                return;
+            }
+
+            _hubNotice = "Выпуск " + number + " вышел в эфир. Итоги монтажа и HellTube появятся здесь.";
+            ShowHub();
         }
 
         void ShowSeasonEnd()

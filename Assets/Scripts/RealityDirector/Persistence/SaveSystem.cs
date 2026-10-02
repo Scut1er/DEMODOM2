@@ -27,20 +27,25 @@ namespace RealityDirector.Persistence
         public List<string> played = new List<string>();
         public List<string> picked = new List<string>();
         public List<SavedTask> tasks = new List<SavedTask>();
-        public List<string> route = new List<string>();
         public int step;
-        public int mapSeed;
-        public int mapFloors;
         public int ratingSum;
         public int rated;
         public int drama;
         public int trash;
         public int family;
+        public int seasonNumber = 1;
+        public string producerName = "";
+        public int seasonLength;
+        public List<string> flags = new List<string>();
+        // JsonUtility не умеет null для вложенных классов — поэтому отдельный флаг.
+        public bool hasEpisode;
+        public EpisodeState episode;
     }
 
     public static class SaveSystem
     {
-        const int Version = 1;
+        // 2 — карта стала картой выпуска (EpisodeState). Старые сейвы не читаются.
+        const int Version = 2;
 
         static string FilePath => Path.Combine(Application.persistentDataPath, "season.json");
 
@@ -59,15 +64,18 @@ namespace RealityDirector.Persistence
                 owned = new List<string>(state.owned),
                 played = new List<string>(state.played),
                 picked = new List<string>(state.picked),
-                route = new List<string>(state.route),
                 step = state.step,
-                mapSeed = state.mapSeed,
-                mapFloors = state.mapFloors,
                 ratingSum = state.ratingSum,
                 rated = state.rated,
                 drama = tone.Drama,
                 trash = tone.Trash,
-                family = tone.Family
+                family = tone.Family,
+                seasonNumber = state.seasonNumber,
+                producerName = state.producerName,
+                seasonLength = state.seasonLength,
+                flags = new List<string>(state.flags),
+                hasEpisode = state.episode != null,
+                episode = state.episode
             };
             for (int i = 0; i < state.tasks.Count; i++)
                 data.tasks.Add(new SavedTask { id = state.tasks[i].id, label = state.tasks[i].label });
@@ -109,10 +117,13 @@ namespace RealityDirector.Persistence
             state.writerLevel = data.writerLevel;
             state.played.UnionWith(data.played);
             state.picked.AddRange(data.picked);
-            state.route.AddRange(data.route);
             state.step = data.step;
-            state.mapSeed = data.mapSeed;
-            state.mapFloors = data.mapFloors;
+            state.seasonNumber = data.seasonNumber;
+            state.producerName = data.producerName ?? "";
+            state.seasonLength = data.seasonLength;
+            if (data.flags != null)
+                state.flags.AddRange(data.flags);
+            state.episode = data.hasEpisode ? data.episode : null;
             state.ratingSum = data.ratingSum;
             state.rated = data.rated;
             for (int i = 0; i < data.tasks.Count; i++)

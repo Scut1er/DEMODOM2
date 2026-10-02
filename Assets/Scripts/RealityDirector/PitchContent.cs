@@ -93,11 +93,12 @@ namespace RealityDirector
             Stamp(content.MeditationBell, ShowMood.Family);
             Stamp(content.Confession, ShowMood.Drama);
 
-            content.All = new[]
+            // Ассеты из Resources/Content/Cards переопределяют встроенные карты и добавляют новые (мета, CardLibrary).
+            content.All = Meta.CardLibrary.Merge(new[]
             {
                 content.Provoke, content.FridgeFire, content.NoHotWater, content.OpenBathroom, content.OpenBedroom,
                 content.SpoiledFood, content.CutWifi, content.MeditationBell, content.Confession
-            };
+            });
             return content;
         }
 

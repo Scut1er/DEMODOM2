@@ -59,6 +59,12 @@ namespace RealityDirector.Util
             }
         }
 
+        // По префиксу файлов из ассета персонажа (zloi → Characters/zloi_happy).
+        public static Sprite HeadByPrefix(string prefix, Face face)
+        {
+            return string.IsNullOrEmpty(prefix) ? null : Load("Characters/" + prefix + "_" + face.ToString().ToLowerInvariant());
+        }
+
         public static Sprite Head(string npcId, Face face)
         {
             string prefix = Prefix(npcId);
