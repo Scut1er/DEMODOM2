@@ -33,6 +33,7 @@ namespace RealityDirector.UI
         Text _hint;
         Text _toast;
         Text _camLabel;
+        Image _endPlate;
         Image _flash;
         float _toastUntil;
         int _slotEpoch;
@@ -96,6 +97,8 @@ namespace RealityDirector.UI
             public RectTransform Root;
             public Color Base;
             public bool Used;
+            public Button Button;
+            public CanvasGroup Group;
         }
 
         class Slot
@@ -346,6 +349,18 @@ namespace RealityDirector.UI
             }
         }
 
+        public void SetHandLocked(bool locked)
+        {
+            for (int i = 0; i < _cards.Count; i++)
+            {
+                var card = _cards[i];
+                if (card.Button != null)
+                    card.Button.interactable = !locked && !card.Used;
+                if (card.Group != null)
+                    card.Group.alpha = locked && !card.Used ? 0.45f : 1f;
+            }
+        }
+
         public void SetArmed(EventDefinition def)
         {
             for (int i = 0; i < _cards.Count; i++)
@@ -365,11 +380,44 @@ namespace RealityDirector.UI
         {
             for (int i = 0; i < _cards.Count; i++)
             {
-                if (_cards[i].Def.id != id)
+                if (_cards[i].Def == null || _cards[i].Def.id != id)
                     continue;
-                _cards[i].Used = true;
-                _cards[i].Status.gameObject.SetActive(true);
+                var card = _cards[i];
+                _cards.RemoveAt(i);
+                StartCoroutine(FlyOut(card));
+                return;
             }
+        }
+
+        IEnumerator FlyOut(Card card)
+        {
+            if (card.Root == null)
+                yield break;
+            if (card.Button != null)
+                card.Button.interactable = false;
+            var rect = card.Root;
+            rect.SetParent(transform, true);
+            var element = rect.GetComponent<LayoutElement>();
+            if (element != null)
+                element.ignoreLayout = true;
+            Vector2 start = rect.anchoredPosition;
+            Vector3 scale = rect.localScale;
+            float t = 0f;
+            const float dur = 0.42f;
+            while (t < dur && rect != null)
+            {
+                t += Time.unscaledDeltaTime;
+                float k = 1f - (1f - Mathf.Clamp01(t / dur)) * (1f - Mathf.Clamp01(t / dur));
+                rect.anchoredPosition = start + new Vector2(36f * k, 240f * k);
+                rect.localScale = Vector3.Lerp(scale, scale * 0.7f, k);
+                rect.localRotation = Quaternion.Euler(0f, 0f, -18f * k);
+                if (card.Group != null)
+                    card.Group.alpha = 1f - k;
+                yield return null;
+            }
+
+            if (rect != null)
+                Destroy(rect.gameObject);
         }
 
         public void ClearUsed()
@@ -432,6 +480,15 @@ namespace RealityDirector.UI
             if (photo == null || slot < 0 || slot >= _slots.Length)
                 return;
             StartCoroutine(FlyRoutine(photo, slot, screen, framed, _slotEpoch));
+        }
+
+        public void SetWrapReady(bool on)
+        {
+            if (_endPlate == null)
+                return;
+            _endPlate.color = on
+                ? new Color(0.86f, 0.62f, 0.16f, 1f)
+                : new Color(0.22f, 0.2f, 0.24f, 1f);
         }
 
         public void SetCaptureMode(bool on)
@@ -619,8 +676,24 @@ namespace RealityDirector.UI
                 new Vector2(168f, -132f), new Vector2(180f, 48f), Accent, () => _onCamera?.Invoke());
             _camLabel = cam.GetComponentInChildren<Text>();
 
-            MakeButton(_hud.transform, "КОНЕЦ СЕРИИ", new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(0f, 1f),
-                new Vector2(364f, -132f), new Vector2(210f, 48f), new Color(0.22f, 0.2f, 0.24f, 1f), () => _onEnd?.Invoke());
+            var end = MakeButton(_hud.transform, "КОНЕЦ", new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(0f, 1f),
+                new Vector2(364f, -132f), new Vector2(168f, 48f), new Color(0.22f, 0.2f, 0.24f, 1f), () => _onEnd?.Invoke());
+            _endPlate = end.GetComponent<Image>();
+            var clap = new GameObject("clap", typeof(RectTransform), typeof(Image));
+            clap.transform.SetParent(end.transform, false);
+            var clapRect = clap.GetComponent<RectTransform>();
+            clapRect.anchorMin = new Vector2(0f, 0.5f);
+            clapRect.anchorMax = new Vector2(0f, 0.5f);
+            clapRect.pivot = new Vector2(0f, 0.5f);
+            clapRect.anchoredPosition = new Vector2(8f, 0f);
+            clapRect.sizeDelta = new Vector2(32f, 32f);
+            var clapImg = clap.GetComponent<Image>();
+            clapImg.sprite = IllustratedArt.IconClap;
+            clapImg.preserveAspect = true;
+            clapImg.raycastTarget = false;
+            var endLabel = end.GetComponentInChildren<Text>();
+            endLabel.rectTransform.offsetMin = new Vector2(42f, 0f);
+            endLabel.alignment = TextAnchor.MiddleLeft;
 
             _captureBanner = Panel("banner", _hud.transform, new Color(0.95f, 0.82f, 0.35f, 0.95f)).gameObject;
             var bannerRect = _captureBanner.GetComponent<RectTransform>();
@@ -675,6 +748,7 @@ namespace RealityDirector.UI
             var element = frame.gameObject.AddComponent<LayoutElement>();
             element.preferredWidth = 176f;
             element.preferredHeight = 308f;
+            var group = frame.gameObject.AddComponent<CanvasGroup>();
             var button = frame.gameObject.AddComponent<Button>();
             button.targetGraphic = frame;
             var nav = button.navigation;
@@ -767,7 +841,9 @@ namespace RealityDirector.UI
                 Frame = frame,
                 Status = status,
                 Root = frame.rectTransform,
-                Base = frameArt != null ? Color.white : def.cardColor
+                Base = frameArt != null ? Color.white : def.cardColor,
+                Button = button,
+                Group = group
             };
         }
 
@@ -1223,7 +1299,10 @@ namespace RealityDirector.UI
             rt.anchorMin = new Vector2(0.5f, 0.5f);
             rt.anchorMax = new Vector2(0.5f, 0.5f);
             rt.pivot = new Vector2(0.5f, 0.5f);
-            rt.sizeDelta = new Vector2(260f, 320f);
+            float picAspect = photo.width / (float)Mathf.Max(1, photo.height);
+            const float innerW = 240f;
+            float innerH = innerW / picAspect;
+            rt.sizeDelta = new Vector2(innerW + 24f, innerH + 24f);
             var bg = polaroid.GetComponent<Image>();
             bg.color = new Color(0.97f, 0.96f, 0.93f, 1f);
             bg.raycastTarget = false;
@@ -1280,14 +1359,19 @@ namespace RealityDirector.UI
                 yield break;
 
             rt.SetParent(_slots[slot].Well, false);
-            rt.anchorMin = Vector2.zero;
-            rt.anchorMax = Vector2.one;
+            rt.anchorMin = new Vector2(0.5f, 0.5f);
+            rt.anchorMax = new Vector2(0.5f, 0.5f);
             rt.pivot = new Vector2(0.5f, 0.5f);
-            rt.offsetMin = new Vector2(8f, 8f);
-            rt.offsetMax = new Vector2(-8f, -8f);
             rt.anchoredPosition = Vector2.zero;
-            rt.localScale = Vector3.one;
             rt.localRotation = Quaternion.identity;
+            rt.localScale = Vector3.one;
+            var well = _slots[slot].Well.rect;
+            float maxW = well.width > 8f ? well.width : 148f;
+            float maxH = well.height > 8f ? well.height : 200f;
+            float cardW = rt.sizeDelta.x;
+            float cardH = rt.sizeDelta.y;
+            float fit = Mathf.Min(maxW / cardW, maxH / cardH);
+            rt.sizeDelta = new Vector2(cardW * fit, cardH * fit);
         }
 
         static void DestroyPolaroid(GameObject go)

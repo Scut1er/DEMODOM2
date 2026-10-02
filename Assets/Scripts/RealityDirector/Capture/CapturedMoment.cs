@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using RealityDirector.Core;
+using RealityDirector.NPC;
 using UnityEngine;
 
 namespace RealityDirector.Capture
@@ -20,6 +21,7 @@ namespace RealityDirector.Capture
         public Vector2 screenPoint;
         public ShowMood mood;
         public CaptureGrade grade;
+        public HiddenTrait exposed;
 
         public bool Framed => grade != CaptureGrade.Blank;
 

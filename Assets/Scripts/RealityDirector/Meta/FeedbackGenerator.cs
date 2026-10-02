@@ -51,6 +51,7 @@ namespace RealityDirector.Meta
             bool fire = context != null && context.Had(MomentTags.Fire);
             bool crying = HasTag(moments, MomentTags.Crying);
             bool familyShot = HasMood(moments, ShowMood.Family);
+            bool hugShot = HasTag(moments, MomentTags.Hug);
             bool trashShot = fightShot || HasMood(moments, ShowMood.Trash);
 
             var reviews = new List<ViewerReview>(3);
@@ -88,9 +89,11 @@ namespace RealityDirector.Meta
                 score = fire ? 7 : familyShot ? 7 : 5,
                 body = fire
                     ? "Холодильник полыхнул — и понеслось. Вот это " + MoodStyle.Paint("хаос", ShowMood.Trash) + "."
-                    : familyShot
+                    : hugShot
                         ? "Сняли, как они " + MoodStyle.Paint("обнялись", ShowMood.Family) + ". Тепло, но где искра?"
-                        : "Кухня цела. А где " + MoodStyle.Paint("хаос", ShowMood.Trash) + "?"
+                        : familyShot
+                            ? "Тихий кадр с людьми. Тепло есть, объятий нет."
+                            : "Кухня цела. А где " + MoodStyle.Paint("хаос", ShowMood.Trash) + "?"
             });
 
             reviews.Add(new ViewerReview
@@ -109,6 +112,7 @@ namespace RealityDirector.Meta
             reviews[index].body = OfferBody(id, soft, tone);
 
             PunishBlanks(reviews, moments, index);
+            RevealSecrets(reviews, moments, index, zloi, soft);
             EnsureUnique(reviews);
 
             int sum = 0;
@@ -233,6 +237,44 @@ namespace RealityDirector.Meta
                 default:
                     return MoodStyle.Paint("слёзы " + soft, ShowMood.Drama);
             }
+        }
+
+        static void RevealSecrets(List<ViewerReview> reviews, IReadOnlyList<CapturedMoment> moments, int offerIndex, string zloi, string soft)
+        {
+            int cursor = 0;
+            if (Saw(moments, HiddenTrait.Kleptomaniac))
+                WriteSecret(reviews, offerIndex, ref cursor, soft + " в кадре шарит по чужому. Клептоман.");
+            if (Saw(moments, HiddenTrait.Prankster))
+                WriteSecret(reviews, offerIndex, ref cursor, zloi + " это подстроил. В кадре пранк, не случайность.");
+        }
+
+        static void WriteSecret(List<ViewerReview> reviews, int offerIndex, ref int cursor, string body)
+        {
+            for (int n = 0; n < reviews.Count; n++)
+            {
+                int i = (cursor + n) % reviews.Count;
+                if (i == offerIndex)
+                    continue;
+                reviews[i].body = body;
+                reviews[i].score = UnityEngine.Mathf.Max(reviews[i].score, 8);
+                cursor = i + 1;
+                return;
+            }
+        }
+
+        static bool Saw(IReadOnlyList<CapturedMoment> moments, HiddenTrait trait)
+        {
+            if (moments == null)
+                return false;
+            for (int i = 0; i < moments.Count; i++)
+            {
+                if (moments[i].grade != CaptureGrade.Cast)
+                    continue;
+                if (moments[i].exposed == trait)
+                    return true;
+            }
+
+            return false;
         }
 
         static bool HasMood(IReadOnlyList<CapturedMoment> moments, ShowMood mood)
