@@ -14,6 +14,8 @@ namespace RealityDirector.Meta
         public static string SceneTitle;
         // Серию запустили с карты (рука могла быть и пустой). Нет — квартиру открыли напрямую из редактора.
         public static bool Embarked;
+        // Квартира закрыла сцену — хаб открывает карту, а не меню продакшена.
+        public static bool ReturnToMap;
 
         public static bool Active => State != null;
         // Сезон снят, когда пройдены все ряды карты (последний — финал).
@@ -26,6 +28,7 @@ namespace RealityDirector.Meta
             Tone = null;
             SceneTitle = null;
             Embarked = false;
+            ReturnToMap = false;
             Hand.Clear();
         }
 

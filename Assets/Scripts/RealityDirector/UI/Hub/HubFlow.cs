@@ -85,12 +85,16 @@ namespace RealityDirector.UI.Hub
 
         void Start()
         {
-            // Вернулись из квартиры — сразу в хаб или к итогам сезона.
+            // Вернулись из квартиры: итоги сезона, карта после сцены или хаб.
             if (GameSession.Active)
             {
                 Bind();
+                bool toMap = GameSession.ReturnToMap;
+                GameSession.ReturnToMap = false;
                 if (GameSession.SeasonOver)
                     ShowSeasonEnd();
+                else if (toMap)
+                    ShowMap();
                 else
                     ShowHub();
                 return;
@@ -178,6 +182,11 @@ namespace RealityDirector.UI.Hub
         void OpenMap()
         {
             Click();
+            ShowMap();
+        }
+
+        void ShowMap()
+        {
             _selected = _map.CurrentChoice;
             Show(map.gameObject);
             RefreshMap();

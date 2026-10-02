@@ -550,6 +550,7 @@ namespace RealityDirector
             _state.episodeIndex++;
             // Съёмка — узел карты сезона: отснятый выпуск закрывает текущий шаг.
             _state.step++;
+            GameSession.ReturnToMap = true;
             BackToHub();
         }
 
