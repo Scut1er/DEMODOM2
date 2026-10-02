@@ -109,6 +109,7 @@ namespace RealityDirector.Meta
             reviews[index].body = OfferBody(id, soft, tone);
 
             PunishBlanks(reviews, moments, index);
+            EnsureUnique(reviews);
 
             int sum = 0;
             for (int i = 0; i < reviews.Count; i++)
@@ -151,7 +152,9 @@ namespace RealityDirector.Meta
                 if (onlyBlanks)
                 {
                     reviews[i].score = 2;
-                    reviews[i].body = "В кадре никого. Пустые слоты, мы это выключили.";
+                    reviews[i].body = i == 0
+                        ? "В кадре никого. Я за людей плачу, не за обои."
+                        : "Вся серия — пустые слоты. Я это выключила.";
                     continue;
                 }
 
@@ -160,6 +163,30 @@ namespace RealityDirector.Meta
                     reviews[i].body = blanks == 1
                         ? "Один кадр — голая стена. Слот зря сожгли, такое мы не смотрим."
                         : "Часть кадров — пустой угол. Нам это не понравилось.";
+            }
+        }
+
+        static void EnsureUnique(List<ViewerReview> reviews)
+        {
+            string[] spare =
+            {
+                "Монтаж рваный, я потеряла нить.",
+                "Оператор, половина кадров мимо.",
+                "Шум ради шума. Лиц не хватило."
+            };
+            var seen = new HashSet<string>();
+            for (int i = 0; i < reviews.Count; i++)
+            {
+                string key = reviews[i].body ?? "";
+                if (seen.Add(key))
+                    continue;
+                for (int s = 0; s < spare.Length; s++)
+                {
+                    if (!seen.Add(spare[s]))
+                        continue;
+                    reviews[i].body = spare[s];
+                    break;
+                }
             }
         }
 

@@ -17,6 +17,7 @@ namespace RealityDirector
         public EventDefinition FridgeFire;
         public EventDefinition NoHotWater;
         public EventDefinition OpenBathroom;
+        public EventDefinition OpenBedroom;
         public EventDefinition SpoiledFood;
         public EventDefinition CutWifi;
         public EventDefinition MeditationBell;
@@ -37,6 +38,7 @@ namespace RealityDirector
 
             content.AggressiveRules = Rules(TraitId.Aggressive,
                 Rule(MomentTags.Fire, TraitId.Aggressive, false, true, NpcActionId.SeekFight, "!!!", 20),
+                Rule(MomentTags.Fire, TraitId.Aggressive, false, false, NpcActionId.Emote, "горит?!", 12),
                 Rule(MomentTags.Conflict, TraitId.Aggressive, true, false, NpcActionId.Emote, "злость", 8),
                 Rule(MomentTags.Conflict, TraitId.Aggressive, false, false, NpcActionId.Emote, "злость", 4));
 
@@ -54,6 +56,8 @@ namespace RealityDirector
                 new Color(0.16f, 0.32f, 0.5f, 1f), 0f, false, IllustratedArt.IconWater, MomentTags.Misery);
             content.OpenBathroom = Event("open_bathroom", "Ванная", "клик по заколоченной двери", TargetType.Object, "bath_door",
                 new Color(0.45f, 0.3f, 0.16f, 1f), 0f, false, IllustratedArt.IconDoor);
+            content.OpenBedroom = Event("open_bedroom", "Спальня", "клик по заколоченной двери", TargetType.Object, "bed_door",
+                new Color(0.38f, 0.24f, 0.32f, 1f), 0f, false, IllustratedArt.IconDoor, MomentTags.Warmth);
 
             content.Provoke.starter = true;
             content.Provoke.limitTrait = true;
@@ -77,11 +81,13 @@ namespace RealityDirector
             content.CutWifi.price = 110;
             content.MeditationBell.price = 140;
             content.Confession.price = 160;
+            content.OpenBedroom.price = 100;
 
             Stamp(content.Provoke, ShowMood.Trash, ShowMood.Drama);
             Stamp(content.FridgeFire, ShowMood.Trash);
             Stamp(content.NoHotWater, ShowMood.Drama);
             Stamp(content.OpenBathroom, ShowMood.Family);
+            Stamp(content.OpenBedroom, ShowMood.Family);
             Stamp(content.SpoiledFood, ShowMood.Drama);
             Stamp(content.CutWifi, ShowMood.Trash);
             Stamp(content.MeditationBell, ShowMood.Family);
@@ -89,7 +95,7 @@ namespace RealityDirector
 
             content.All = new[]
             {
-                content.Provoke, content.FridgeFire, content.NoHotWater, content.OpenBathroom,
+                content.Provoke, content.FridgeFire, content.NoHotWater, content.OpenBathroom, content.OpenBedroom,
                 content.SpoiledFood, content.CutWifi, content.MeditationBell, content.Confession
             };
             return content;

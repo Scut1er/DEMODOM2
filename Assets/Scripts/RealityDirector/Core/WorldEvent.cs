@@ -9,6 +9,8 @@ namespace RealityDirector.Core
         public string sourceActorId;
         public string targetActorId;
         public string targetObjectId;
+        public bool hasLocus;
+        public UnityEngine.Vector2 locus;
         public float time;
     }
 }

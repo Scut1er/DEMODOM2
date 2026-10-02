@@ -9,13 +9,22 @@ namespace RealityDirector.NPC
         Timid
     }
 
+    public enum HiddenTrait
+    {
+        None,
+        Prankster,
+        Kleptomaniac,
+        Singer
+    }
+
     public enum NpcActionId
     {
         Idle,
         Panic,
         SeekFight,
         Fight,
-        Emote
+        Emote,
+        Roam
     }
 
     [CreateAssetMenu(menuName = "RealityDirector/Trait", fileName = "Trait")]

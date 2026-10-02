@@ -17,12 +17,15 @@ namespace RealityDirector.Events
             if (def.rageSeconds > 0f && targetActor != null)
                 targetActor.ApplyRage(def.rageSeconds);
 
+            bool placed = targetObject != null;
             EventBus.Publish(new WorldEvent
             {
                 eventId = def.id,
                 tags = def.tags,
                 targetActorId = targetActor != null ? targetActor.Id : null,
                 targetObjectId = targetObject != null ? targetObject.Id : null,
+                hasLocus = placed,
+                locus = placed ? (Vector2)targetObject.transform.position : Vector2.zero,
                 time = Time.time
             });
         }

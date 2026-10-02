@@ -9,6 +9,7 @@ namespace RealityDirector.Core
         public const int PropGain = 8;
         public const int MomentGain = 18;
         public const int Cap = 100;
+        public const float BlankTax = 0.15f;
 
         public int Drama;
         public int Trash;
@@ -41,6 +42,25 @@ namespace RealityDirector.Core
             }
 
             return after - before;
+        }
+
+        public void Tax(float portion, out int drama, out int trash, out int family)
+        {
+            drama = Cut(ref Drama, portion);
+            trash = Cut(ref Trash, portion);
+            family = Cut(ref Family, portion);
+        }
+
+        static int Cut(ref int value, float portion)
+        {
+            if (value <= 0)
+                return 0;
+            int next = Mathf.FloorToInt(value * (1f - portion));
+            if (next >= value)
+                next = value - 1;
+            int lost = value - next;
+            value = Mathf.Max(0, next);
+            return lost;
         }
 
         public void Reset()

@@ -37,6 +37,7 @@ namespace RealityDirector.UI
         float _toastUntil;
         int _slotEpoch;
         readonly List<Tag> _tags = new List<Tag>();
+        readonly List<Bubble> _bubbles = new List<Bubble>();
         readonly List<Card> _cards = new List<Card>();
         readonly Slot[] _slots = new Slot[5];
         readonly Text[] _reviewAuthors = new Text[3];
@@ -68,6 +69,25 @@ namespace RealityDirector.UI
             public Text Text;
             public Func<string> Pull;
             public Vector2 Offset;
+        }
+
+        class Bubble
+        {
+            public Transform Target;
+            public RectTransform Rect;
+            public Text Text;
+            public Func<string> Pull;
+            public Func<bool> Thought;
+            public Vector2 Offset;
+            public string Shown;
+            public bool WasThought;
+            public GameObject Speech;
+            public GameObject ThoughtCloud;
+            public RectTransform Plate;
+            public RectTransform Tail;
+            public RectTransform Fill;
+            public RectTransform[] Lumps;
+            public RectTransform[] Puffs;
         }
 
         class Card
@@ -142,6 +162,161 @@ namespace RealityDirector.UI
                 Pull = pull,
                 Offset = offset
             });
+        }
+
+        public void AddBubble(Transform target, Func<string> pull, Func<bool> thought, Vector2 offset)
+        {
+            var root = new GameObject("bubble", typeof(RectTransform));
+            root.transform.SetParent(_tagsRoot.transform, false);
+            var rect = root.GetComponent<RectTransform>();
+            rect.pivot = new Vector2(0.5f, 0f);
+            rect.sizeDelta = new Vector2(120f, 64f);
+
+            var speech = new GameObject("speech", typeof(RectTransform));
+            speech.transform.SetParent(root.transform, false);
+            Stretch(speech.GetComponent<RectTransform>());
+            var plate = Shape(speech.transform, BubbleRound(), new Vector2(0f, 40f), new Vector2(120f, 48f), true);
+            plate.rectTransform.anchorMin = new Vector2(0.5f, 0f);
+            plate.rectTransform.anchorMax = new Vector2(0.5f, 0f);
+            plate.rectTransform.pivot = new Vector2(0.5f, 0.5f);
+            var tail = Shape(speech.transform, BubbleTail(), Vector2.zero, new Vector2(22f, 16f), false);
+            tail.rectTransform.anchorMin = new Vector2(0.5f, 0f);
+            tail.rectTransform.anchorMax = new Vector2(0.5f, 0f);
+            tail.rectTransform.pivot = new Vector2(0.5f, 0f);
+
+            var cloud = new GameObject("thought", typeof(RectTransform));
+            cloud.transform.SetParent(root.transform, false);
+            Stretch(cloud.GetComponent<RectTransform>());
+            var lumps = new[]
+            {
+                Bump(cloud.transform, 36f),
+                Bump(cloud.transform, 42f),
+                Bump(cloud.transform, 34f)
+            };
+            var fill = Shape(cloud.transform, BubbleRound(), new Vector2(0f, 48f), new Vector2(120f, 48f), true);
+            fill.rectTransform.anchorMin = new Vector2(0.5f, 0f);
+            fill.rectTransform.anchorMax = new Vector2(0.5f, 0f);
+            fill.rectTransform.pivot = new Vector2(0.5f, 0.5f);
+            var puffs = new[]
+            {
+                Puff(cloud.transform, 16f),
+                Puff(cloud.transform, 11f),
+                Puff(cloud.transform, 7f)
+            };
+
+            var label = MakeText(root.transform, "", 22, Color.black, TextAnchor.MiddleCenter);
+            var labelRect = label.rectTransform;
+            labelRect.anchorMin = new Vector2(0.5f, 0f);
+            labelRect.anchorMax = new Vector2(0.5f, 0f);
+            labelRect.pivot = new Vector2(0.5f, 0.5f);
+            labelRect.sizeDelta = new Vector2(80f, 28f);
+            label.fontStyle = FontStyle.Bold;
+            label.horizontalOverflow = HorizontalWrapMode.Wrap;
+            label.verticalOverflow = VerticalWrapMode.Truncate;
+
+            speech.SetActive(false);
+            cloud.SetActive(false);
+            root.SetActive(false);
+            _bubbles.Add(new Bubble
+            {
+                Target = target,
+                Rect = rect,
+                Text = label,
+                Pull = pull,
+                Thought = thought,
+                Offset = offset,
+                Speech = speech,
+                ThoughtCloud = cloud,
+                Plate = plate.rectTransform,
+                Tail = tail.rectTransform,
+                Fill = fill.rectTransform,
+                Lumps = lumps,
+                Puffs = puffs
+            });
+        }
+
+        void LayoutBubble(Bubble bubble, string value, bool thought)
+        {
+            bubble.Shown = value;
+            bubble.WasThought = thought;
+            bubble.Speech.SetActive(!thought);
+            bubble.ThoughtCloud.SetActive(thought);
+            bubble.Text.text = value;
+            bubble.Text.horizontalOverflow = HorizontalWrapMode.Overflow;
+            float inner = Mathf.Clamp(bubble.Text.preferredWidth, 24f, 200f);
+            bubble.Text.horizontalOverflow = HorizontalWrapMode.Wrap;
+            bubble.Text.rectTransform.sizeDelta = new Vector2(inner, 160f);
+            float line = Mathf.Max(22f, bubble.Text.preferredHeight);
+            float bodyW = inner + 36f;
+            float bodyH = line + 22f;
+            float tail = thought ? 26f : 14f;
+            bubble.Rect.sizeDelta = new Vector2(bodyW, bodyH + tail);
+
+            var label = bubble.Text.rectTransform;
+            label.sizeDelta = new Vector2(inner, line);
+            label.anchoredPosition = new Vector2(0f, tail + bodyH * 0.5f);
+
+            if (thought)
+            {
+                float cy = tail + bodyH * 0.5f;
+                bubble.Fill.sizeDelta = new Vector2(bodyW, bodyH);
+                bubble.Fill.anchoredPosition = new Vector2(0f, cy);
+                PlaceLump(bubble.Lumps[0], -bodyW * 0.28f, cy + bodyH * 0.22f, bodyH * 0.72f);
+                PlaceLump(bubble.Lumps[1], 0f, cy + bodyH * 0.32f, bodyH * 0.85f);
+                PlaceLump(bubble.Lumps[2], bodyW * 0.28f, cy + bodyH * 0.2f, bodyH * 0.68f);
+                bubble.Puffs[0].anchoredPosition = new Vector2(10f, tail * 0.55f);
+                bubble.Puffs[1].anchoredPosition = new Vector2(18f, tail * 0.28f);
+                bubble.Puffs[2].anchoredPosition = new Vector2(24f, 0f);
+            }
+            else
+            {
+                bubble.Plate.sizeDelta = new Vector2(bodyW, bodyH);
+                bubble.Plate.anchoredPosition = new Vector2(0f, tail + bodyH * 0.5f);
+                bubble.Tail.anchoredPosition = Vector2.zero;
+            }
+        }
+
+        static Image Shape(Transform parent, Sprite sprite, Vector2 pos, Vector2 size, bool sliced)
+        {
+            var go = new GameObject("shape", typeof(RectTransform), typeof(Image));
+            go.transform.SetParent(parent, false);
+            var image = go.GetComponent<Image>();
+            image.sprite = sprite;
+            image.type = sliced ? Image.Type.Sliced : Image.Type.Simple;
+            image.color = Color.white;
+            image.raycastTarget = false;
+            var rect = image.rectTransform;
+            rect.anchorMin = new Vector2(0.5f, 0.5f);
+            rect.anchorMax = new Vector2(0.5f, 0.5f);
+            rect.pivot = new Vector2(0.5f, 0.5f);
+            rect.anchoredPosition = pos;
+            rect.sizeDelta = size;
+            return image;
+        }
+
+        static RectTransform Bump(Transform parent, float size)
+        {
+            var image = Shape(parent, BubbleRound(), Vector2.zero, new Vector2(size, size), false);
+            var rect = image.rectTransform;
+            rect.anchorMin = new Vector2(0.5f, 0f);
+            rect.anchorMax = new Vector2(0.5f, 0f);
+            rect.pivot = new Vector2(0.5f, 0.5f);
+            return rect;
+        }
+
+        static void PlaceLump(RectTransform rect, float x, float y, float size)
+        {
+            rect.anchoredPosition = new Vector2(x, y);
+            rect.sizeDelta = new Vector2(size, size);
+        }
+
+        static RectTransform Puff(Transform parent, float size)
+        {
+            var image = Shape(parent, BubbleRound(), Vector2.zero, new Vector2(size, size), false);
+            image.rectTransform.anchorMin = new Vector2(0.5f, 0f);
+            image.rectTransform.anchorMax = new Vector2(0.5f, 0f);
+            image.rectTransform.pivot = new Vector2(0.5f, 0f);
+            return image.rectTransform;
         }
 
         public void SetTagsVisible(bool on)
@@ -693,18 +868,20 @@ namespace RealityDirector.UI
 
         public void FlashTone(ShowMood mood, int delta)
         {
-            if (delta <= 0)
+            if (delta == 0)
                 return;
 
             for (int i = 0; i < _toneRows.Length; i++)
             {
                 if (_toneRows[i].Mood != mood)
                     continue;
-                _toneRows[i].Delta.text = "+" + delta;
-                _toneRows[i].Delta.color = MoodStyle.ColorOf(mood);
+                bool up = delta > 0;
+                _toneRows[i].Delta.text = up ? "+" + delta : delta.ToString();
+                _toneRows[i].Delta.color = up ? MoodStyle.ColorOf(mood) : new Color(0.22f, 0.14f, 0.12f, 1f);
                 _toneRows[i].Delta.gameObject.SetActive(true);
                 _toneRows[i].DeltaUntil = Time.unscaledTime + 1.15f;
-                Sfx.Play(Cue.Tick, 0.22f, mood == ShowMood.Drama ? 1.15f : mood == ShowMood.Trash ? 0.82f : 1f);
+                if (up)
+                    Sfx.Play(Cue.Tick, 0.22f, mood == ShowMood.Drama ? 1.15f : mood == ShowMood.Trash ? 0.82f : 1f);
             }
         }
 
@@ -1286,6 +1463,24 @@ namespace RealityDirector.UI
                 if (RectTransformUtility.ScreenPointToLocalPointInRectangle(_canvasRect, screen, null, out var local))
                     tag.Rect.anchoredPosition = local + tag.Offset;
             }
+
+            for (int i = 0; i < _bubbles.Count; i++)
+            {
+                var bubble = _bubbles[i];
+                if (bubble.Target == null)
+                    continue;
+                string value = bubble.Pull != null ? bubble.Pull() : "";
+                bool show = !string.IsNullOrEmpty(value);
+                bubble.Rect.gameObject.SetActive(show);
+                if (!show)
+                    continue;
+                bool thought = bubble.Thought != null && bubble.Thought();
+                if (value != bubble.Shown || thought != bubble.WasThought)
+                    LayoutBubble(bubble, value, thought);
+                Vector3 screen = Camera.main.WorldToScreenPoint(bubble.Target.position);
+                if (RectTransformUtility.ScreenPointToLocalPointInRectangle(_canvasRect, screen, null, out var local))
+                    bubble.Rect.anchoredPosition = local + bubble.Offset;
+            }
         }
 
         IEnumerator FlyRoutine(Texture2D photo, int slot, Vector2 screen, bool framed, int epoch)
@@ -1476,6 +1671,93 @@ namespace RealityDirector.UI
             rect.pivot = new Vector2(0.5f, 0.5f);
             rect.anchoredPosition = pos;
             rect.sizeDelta = size;
+        }
+
+        static Sprite _bubbleRound;
+        static Sprite _bubbleTail;
+
+        static Sprite BubbleRound()
+        {
+            if (_bubbleRound != null)
+                return _bubbleRound;
+            const int n = 64;
+            const float radius = 22f;
+            const float outline = 4f;
+            var tex = new Texture2D(n, n, TextureFormat.RGBA32, false);
+            tex.hideFlags = HideFlags.HideAndDontSave;
+            tex.filterMode = FilterMode.Bilinear;
+            var px = new Color32[n * n];
+            for (int y = 0; y < n; y++)
+            {
+                for (int x = 0; x < n; x++)
+                {
+                    float d = Stadium(x + 0.5f, y + 0.5f, n, n, radius);
+                    px[y * n + x] = d > 0.8f
+                        ? new Color32(0, 0, 0, 0)
+                        : d > -outline
+                            ? new Color32(0, 0, 0, 255)
+                            : new Color32(255, 255, 255, 255);
+                }
+            }
+
+            tex.SetPixels32(px);
+            tex.Apply();
+            _bubbleRound = Sprite.Create(tex, new Rect(0, 0, n, n), new Vector2(0.5f, 0.5f), 100f, 0, SpriteMeshType.FullRect, new Vector4(24, 24, 24, 24));
+            _bubbleRound.hideFlags = HideFlags.HideAndDontSave;
+            return _bubbleRound;
+        }
+
+        static Sprite BubbleTail()
+        {
+            if (_bubbleTail != null)
+                return _bubbleTail;
+            const int w = 32;
+            const int h = 22;
+            var tex = new Texture2D(w, h, TextureFormat.RGBA32, false);
+            tex.hideFlags = HideFlags.HideAndDontSave;
+            tex.filterMode = FilterMode.Bilinear;
+            var px = new Color32[w * h];
+            for (int y = 0; y < h; y++)
+            {
+                for (int x = 0; x < w; x++)
+                    px[y * w + x] = TailColor(x + 0.5f, y + 0.5f);
+            }
+
+            tex.SetPixels32(px);
+            tex.Apply();
+            _bubbleTail = Sprite.Create(tex, new Rect(0, 0, w, h), new Vector2(0.5f, 0f), 100f);
+            _bubbleTail.hideFlags = HideFlags.HideAndDontSave;
+            return _bubbleTail;
+        }
+
+        static Color32 TailColor(float x, float y)
+        {
+            bool ink = InTail(x, y, 3f, 20f, 29f, 3f);
+            bool paper = InTail(x, y, 6f, 20f, 26f, 6f);
+            if (paper)
+                return new Color32(255, 255, 255, 255);
+            if (ink)
+                return new Color32(0, 0, 0, 255);
+            return new Color32(0, 0, 0, 0);
+        }
+
+        static bool InTail(float x, float y, float left, float top, float right, float tip)
+        {
+            if (y < tip || y > top)
+                return false;
+            float t = (y - tip) / (top - tip);
+            float min = Mathf.Lerp(16f, left, t);
+            float max = Mathf.Lerp(16f, right, t);
+            return x >= min && x <= max;
+        }
+
+        static float Stadium(float x, float y, float w, float h, float r)
+        {
+            float dx = Mathf.Abs(x - w * 0.5f) - (w * 0.5f - r);
+            float dy = Mathf.Abs(y - h * 0.5f) - (h * 0.5f - r);
+            float ax = Mathf.Max(dx, 0f);
+            float ay = Mathf.Max(dy, 0f);
+            return Mathf.Sqrt(ax * ax + ay * ay) + Mathf.Min(Mathf.Max(dx, dy), 0f) - r;
         }
     }
 }

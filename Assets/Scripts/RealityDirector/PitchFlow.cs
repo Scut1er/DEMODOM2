@@ -18,7 +18,9 @@ namespace RealityDirector
     {
         static readonly Vector2 ZloiHome = new Vector2(-6.5f, 1.65f);
         static readonly Vector2 DobryakHome = new Vector2(-4.1f, 1.65f);
-        static readonly Vector2 FleePoint = new Vector2(6.2f, 1.65f);
+        static readonly Vector2 BedroomFlee = new Vector2(6.2f, 1.65f);
+        static readonly Vector2 ClosedFlee = new Vector2(-7.05f, 1.7f);
+        const float BedroomGate = 2.55f;
 
         PitchPhase _phase = PitchPhase.Intro;
         PitchContent _content;
@@ -32,6 +34,10 @@ namespace RealityDirector
         GameObject _boards;
         GameObject _bathroom;
         bool _bathOpen;
+        Interactable _bedDoor;
+        GameObject _bedBoards;
+        GameObject _bedroom;
+        bool _bedOpen;
         NPCController _zloi;
         NPCController _dobryak;
         readonly List<NPCController> _cast = new List<NPCController>();
@@ -165,7 +171,6 @@ namespace RealityDirector
             SpriteUtil.Box(root, "foundation", new Vector3(0.15f, y, 0f), new Vector2(16.6f, 5.35f), new Color(0.16f, 0.12f, 0.1f), -2);
             Place(root, "Living", IllustratedArt.Wood, new Vector3(-5.35f, y, 0f), new Vector2(4.55f, 4.55f), 0);
             Place(root, "Kitchen", IllustratedArt.Tile, new Vector3(0.05f, y, 0f), new Vector2(5.15f, 4.55f), 0);
-            Place(root, "Bedroom", IllustratedArt.Wood, new Vector3(5.5f, y, 0f), new Vector2(4.7f, 4.55f), 0);
             WallV(root, -2.85f);
             WallV(root, 2.75f);
             WallH(root, -1.55f, 4.95f, 1.9f);
@@ -175,22 +180,23 @@ namespace RealityDirector
             Place(root, "Sofa", IllustratedArt.Sofa, new Vector3(-5.45f, 3.35f, 0f), new Vector2(2.15f, 1.15f), 4);
             Place(root, "Table", IllustratedArt.Table, new Vector3(-0.55f, 2.9f, 0f), new Vector2(1.45f, 0.95f), 4);
             Place(root, "Stove", IllustratedArt.Stove, new Vector3(2.05f, 3.55f, 0f), new Vector2(0.85f, 0.85f), 4);
-            Place(root, "Bed", IllustratedArt.Bed, new Vector3(6.2f, 3.15f, 0f), new Vector2(1.85f, 2.35f), 4);
             Place(root, "Plant", IllustratedArt.Plant, new Vector3(-7.15f, 4.15f, 0f), new Vector2(0.7f, 0.9f), 5);
             Place(root, "WindowL", IllustratedArt.Window, new Vector3(-5.4f, 4.45f, 0f), new Vector2(1.35f, 0.7f), 5);
-            Place(root, "WindowR", IllustratedArt.Window, new Vector3(6.3f, 4.45f, 0f), new Vector2(1.35f, 0.7f), 5);
 
             _fridge = BuildFridge(root);
             _boards = BuildDoor(root);
             _bathroom = BuildBathroom(root);
             _bathroom.SetActive(false);
+            _bedBoards = BuildBedDoor(root);
+            _bedroom = BuildBedroom(root);
+            _bedroom.SetActive(false);
 
-            _zloi = BuildNpc("npc_zloi", "Злой", "Злому", _content.Aggressive, _content.AggressiveRules, ZloiHome, true);
-            _dobryak = BuildNpc("npc_dobryak", "Добряк", "Добряку", _content.Sentimental, _content.SentimentalRules, DobryakHome, false);
+            _zloi = BuildNpc("npc_zloi", "Злой", "Злому", _content.Aggressive, _content.AggressiveRules, ZloiHome, true, HiddenTrait.Prankster);
+            _dobryak = BuildNpc("npc_dobryak", "Добряк", "Добряку", _content.Sentimental, _content.SentimentalRules, DobryakHome, false, HiddenTrait.Kleptomaniac);
+            RegisterHangouts();
             _zloi.Rival = _dobryak;
             _dobryak.Rival = _zloi;
-            _zloi.FleePoint = FleePoint;
-            _dobryak.FleePoint = FleePoint;
+            ApplyBedroomGate();
             _zloi.ChaseSpeed = 2.75f;
             _dobryak.PanicSpeed = 1.9f;
             _cast.Add(_zloi);
@@ -205,7 +211,10 @@ namespace RealityDirector
 
             RoomTag(root, new Vector3(-5.35f, 4.7f, 0f), "ГОСТИНАЯ");
             RoomTag(root, new Vector3(-1.7f, 4.15f, 0f), "КУХНЯ");
-            RoomTag(root, new Vector3(5.5f, 4.7f, 0f), "СПАЛЬНЯ");
+            var bedLabel = new GameObject("BedLabel").transform;
+            bedLabel.SetParent(root, false);
+            bedLabel.position = new Vector3(5.5f, 4.7f, 0f);
+            _ui.AddTag(bedLabel, () => _bedOpen ? "СПАЛЬНЯ" : "", new Color(0.42f, 0.28f, 0.22f), Vector2.zero, 16, false);
             var bathLabel = new GameObject("BathLabel").transform;
             bathLabel.SetParent(root, false);
             bathLabel.position = new Vector3(0.05f, 7.9f, 0f);
@@ -307,7 +316,73 @@ namespace RealityDirector
             return interactable;
         }
 
-        NPCController BuildNpc(string id, string displayName, string accusative, TraitDefinition trait, ReactionRuleSet rules, Vector2 home, bool angry)
+        void RegisterHangouts()
+        {
+            Hangout.Clear();
+            Hangout.Add(new Vector2(-5.45f, 2.85f), SpotKind.Seat);
+            Hangout.Add(new Vector2(-0.55f, 2.35f), SpotKind.Prop);
+            Hangout.Add(new Vector2(1.15f, 2.55f), SpotKind.Prop);
+            Hangout.Add(new Vector2(2.05f, 2.7f), SpotKind.Prop);
+            Hangout.Add(new Vector2(-4.4f, 2.15f), SpotKind.Floor);
+            Hangout.Add(new Vector2(-6.6f, 2.05f), SpotKind.Floor);
+            Hangout.Add(new Vector2(0.2f, 1.9f), SpotKind.Floor);
+            if (_bedOpen)
+            {
+                Hangout.Add(new Vector2(6.05f, 2.55f), SpotKind.Seat);
+                Hangout.Add(new Vector2(4.6f, 2.1f), SpotKind.Floor);
+            }
+        }
+
+        void ApplyBedroomGate()
+        {
+            Vector2 flee = _bedOpen ? BedroomFlee : ClosedFlee;
+            if (_zloi != null)
+            {
+                _zloi.FleePoint = flee;
+                _zloi.BlockEast = !_bedOpen;
+                _zloi.EastLimit = BedroomGate;
+            }
+
+            if (_dobryak != null)
+            {
+                _dobryak.FleePoint = flee;
+                _dobryak.BlockEast = !_bedOpen;
+                _dobryak.EastLimit = BedroomGate;
+            }
+        }
+
+        GameObject BuildBedroom(Transform root)
+        {
+            var go = new GameObject("Bedroom");
+            go.transform.SetParent(root, false);
+            var t = go.transform;
+            Place(t, "floor", IllustratedArt.Wood, new Vector3(5.5f, 2.6f, 0f), new Vector2(4.7f, 4.55f), 0);
+            Place(t, "Bed", IllustratedArt.Bed, new Vector3(6.2f, 3.15f, 0f), new Vector2(1.85f, 2.35f), 4);
+            Place(t, "WindowR", IllustratedArt.Window, new Vector3(6.3f, 4.45f, 0f), new Vector2(1.35f, 0.7f), 5);
+            return go;
+        }
+
+        GameObject BuildBedDoor(Transform root)
+        {
+            var go = new GameObject("BedDoor");
+            go.transform.SetParent(root, false);
+            go.transform.position = new Vector3(2.75f, 2.05f, 0f);
+            var collider = go.AddComponent<BoxCollider2D>();
+            collider.size = new Vector2(0.7f, 1.35f);
+            var ring = SpriteUtil.Show(go.transform, "ring", Vector3.zero, IllustratedArt.Glow, 5);
+            SpriteUtil.Fit(ring, new Vector2(1.15f, 1.7f));
+            ring.color = new Color(1f, 0.86f, 0.25f, 0.9f);
+            var body = SpriteUtil.Show(go.transform, "boards", Vector3.zero, IllustratedArt.Boards, 6);
+            SpriteUtil.Fit(body, new Vector2(0.72f, 1.35f));
+            var interactable = go.AddComponent<Interactable>();
+            interactable.Id = "bed_door";
+            interactable.DisplayName = "Дверь";
+            interactable.Setup(body, ring, null, null, null);
+            _bedDoor = interactable;
+            return go;
+        }
+
+        NPCController BuildNpc(string id, string displayName, string accusative, TraitDefinition trait, ReactionRuleSet rules, Vector2 home, bool angry, HiddenTrait hidden)
         {
             var go = new GameObject(id);
             go.transform.position = home;
@@ -327,6 +402,7 @@ namespace RealityDirector
             npc.DisplayName = displayName;
             npc.AccusativeName = accusative;
             npc.Trait = trait;
+            npc.Hidden = hidden;
             npc.Rules = rules;
             npc.Home = home;
             npc.BindVisual(visual, ring);
@@ -337,11 +413,10 @@ namespace RealityDirector
         void WireTags()
         {
             var paper = new Color(0.96f, 0.93f, 0.88f, 1f);
-            var hot = new Color(1f, 0.78f, 0.35f, 1f);
             _ui.AddTag(_zloi.transform, () => _zloi.DisplayName + "\n" + _zloi.Trait.displayName, paper, new Vector2(0f, 78f), 18, true);
             _ui.AddTag(_dobryak.transform, () => _dobryak.DisplayName + "\n" + _dobryak.Trait.displayName, paper, new Vector2(0f, 78f), 18, true);
-            _ui.AddTag(_zloi.transform, () => _zloi.Emote, hot, new Vector2(0f, 132f), 22, false);
-            _ui.AddTag(_dobryak.transform, () => _dobryak.Emote, hot, new Vector2(0f, 132f), 22, false);
+            _ui.AddBubble(_zloi.transform, () => _zloi.Emote, () => _zloi.Thought, new Vector2(-18f, 148f));
+            _ui.AddBubble(_dobryak.transform, () => _dobryak.Emote, () => _dobryak.Thought, new Vector2(18f, 148f));
         }
 
         void RoomTag(Transform root, Vector3 position, string text)
@@ -456,6 +531,7 @@ namespace RealityDirector
             _hand = new EventDefinition[0];
             _tone.Reset();
             _state.Reset(_content.StarterIds());
+            CloseBedroom();
             _ui.RefreshTone(_tone);
             _ui.ClearHand();
             ResetSet();
@@ -716,6 +792,16 @@ namespace RealityDirector
             }
 
             _capture.SetSticky(false);
+            if (def.id == "open_bedroom" && _bedOpen)
+            {
+                _armed = null;
+                _ui.SetArmed(null);
+                _ui.MarkUsed(def.id);
+                _state.played.Add(def.id);
+                _ui.Toast("Спальня уже открыта.");
+                return;
+            }
+
             if (def.id == "open_bathroom" && _bathOpen)
             {
                 _armed = null;
@@ -852,6 +938,7 @@ namespace RealityDirector
             }
 
             bool openBath = _armed.id == "open_bathroom";
+            bool openBed = _armed.id == "open_bedroom";
             EventDefinition played = _armed;
             JuiceCard(played, obj.transform.position);
             _executor.Play(played, obj, null);
@@ -861,6 +948,8 @@ namespace RealityDirector
             _ui.SetArmed(null);
             if (openBath)
                 StartCoroutine(RevealBathroom());
+            if (openBed)
+                StartCoroutine(RevealBedroom());
         }
 
         IEnumerator RevealBathroom()
@@ -917,6 +1006,64 @@ namespace RealityDirector
             _bathroom.SetActive(false);
         }
 
+        IEnumerator RevealBedroom()
+        {
+            if (_bedOpen || _bedroom == null)
+                yield break;
+            _bedOpen = true;
+            if (_bedBoards != null)
+                _bedBoards.SetActive(false);
+            _bedroom.SetActive(true);
+            ApplyBedroomGate();
+            RegisterHangouts();
+            var renderers = _bedroom.GetComponentsInChildren<SpriteRenderer>(true);
+            for (int i = 0; i < renderers.Length; i++)
+            {
+                var c = renderers[i].color;
+                c.a = 0f;
+                renderers[i].color = c;
+            }
+
+            _shake.Punch(0.12f, 0.28f);
+            Sfx.Play(Cue.Card, 0.55f, 0.7f);
+            FadeBit.Burst(new Vector3(2.75f, 2.05f, 0f), 14, new Color(0.55f, 0.36f, 0.18f, 1f));
+            _ui.Toast("Дверь в спальню открыта.");
+            float t = 0f;
+            while (t < 0.45f)
+            {
+                t += Time.deltaTime;
+                float a = Mathf.Clamp01(t / 0.45f);
+                for (int i = 0; i < renderers.Length; i++)
+                {
+                    var c = renderers[i].color;
+                    c.a = a;
+                    renderers[i].color = c;
+                }
+
+                yield return null;
+            }
+        }
+
+        void CloseBedroom()
+        {
+            _bedOpen = false;
+            if (_bedBoards != null)
+                _bedBoards.SetActive(true);
+            ApplyBedroomGate();
+            RegisterHangouts();
+            if (_bedroom == null)
+                return;
+            var renderers = _bedroom.GetComponentsInChildren<SpriteRenderer>(true);
+            for (int i = 0; i < renderers.Length; i++)
+            {
+                var c = renderers[i].color;
+                c.a = 1f;
+                renderers[i].color = c;
+            }
+
+            _bedroom.SetActive(false);
+        }
+
         void RefreshTargeting()
         {
             if (_zloi == null)
@@ -930,6 +1077,8 @@ namespace RealityDirector
             _fridge.SetTargeted(objects && _armed.requiredObjectId == _fridge.Id);
             if (_bathDoor != null)
                 _bathDoor.SetTargeted(objects && _armed.requiredObjectId == _bathDoor.Id);
+            if (_bedDoor != null)
+                _bedDoor.SetTargeted(objects && _armed.requiredObjectId == _bedDoor.Id);
         }
 
         string Coach()
@@ -949,12 +1098,14 @@ namespace RealityDirector
             bool fighting = _zloi.IsFighting || _dobryak.IsFighting;
             if (fighting)
                 return "Драка. Отношения −20. C — камера, Space — снять.";
+            if (_fridge.IsOnFire && (_zloi.IsApproaching || _dobryak.IsApproaching))
+                return "Кто ближе к холодильнику — тот подойдёт первым. Сними реакцию, пока она держится.";
             if (_fridge.IsOnFire && _zloi.HasRage)
                 return "Добряк бежит, Злой догоняет. Дождись драки и жми C.";
             if (_zloi.HasRage)
                 return "Злой на взводе. Теперь «Поджог» на холодильник.";
             if (_fridge.IsOnFire)
-                return "Добряк в панике. Разозли Злого — он догонит.";
+                return "Ждут, кто заметит огонь. Ближний подойдёт первым.";
             if (_capture.Moments.Count > 0)
                 return "Можно снять ещё или закрыть серию.";
             return "Карты внизу. C — камера, Space — кадр.";
@@ -996,13 +1147,22 @@ namespace RealityDirector
 
         void OnCaptured(CapturedMoment moment)
         {
-            int amount = moment.grade == CaptureGrade.Cast
-                ? SeasonTone.MomentGain
-                : moment.grade == CaptureGrade.Prop ? SeasonTone.PropGain : 0;
-            int gained = amount > 0 ? _tone.Add(moment.mood, amount) : 0;
-            _ui.RefreshTone(_tone);
-            if (gained > 0)
-                _ui.FlashTone(moment.mood, gained);
+            if (moment.grade == CaptureGrade.Blank)
+            {
+                _tone.Tax(SeasonTone.BlankTax, out int drama, out int trash, out int family);
+                _ui.RefreshTone(_tone);
+                _ui.FlashTone(ShowMood.Drama, -drama);
+                _ui.FlashTone(ShowMood.Trash, -trash);
+                _ui.FlashTone(ShowMood.Family, -family);
+            }
+            else
+            {
+                int amount = moment.grade == CaptureGrade.Cast ? SeasonTone.MomentGain : SeasonTone.PropGain;
+                int gained = _tone.Add(moment.mood, amount);
+                _ui.RefreshTone(_tone);
+                if (gained > 0)
+                    _ui.FlashTone(moment.mood, gained);
+            }
 
             int index = _capture.Moments.Count - 1;
             _ui.FlyPhoto(moment.photo, index, moment.screenPoint, moment.Framed);
