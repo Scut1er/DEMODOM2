@@ -96,6 +96,8 @@ namespace RealityDirector.UI
             public RectTransform Root;
             public Color Base;
             public bool Used;
+            public Button Button;
+            public CanvasGroup Group;
         }
 
         class Slot
@@ -346,6 +348,18 @@ namespace RealityDirector.UI
             }
         }
 
+        public void SetHandLocked(bool locked)
+        {
+            for (int i = 0; i < _cards.Count; i++)
+            {
+                var card = _cards[i];
+                if (card.Button != null)
+                    card.Button.interactable = !locked && !card.Used;
+                if (card.Group != null)
+                    card.Group.alpha = locked && !card.Used ? 0.45f : 1f;
+            }
+        }
+
         public void SetArmed(EventDefinition def)
         {
             for (int i = 0; i < _cards.Count; i++)
@@ -365,11 +379,44 @@ namespace RealityDirector.UI
         {
             for (int i = 0; i < _cards.Count; i++)
             {
-                if (_cards[i].Def.id != id)
+                if (_cards[i].Def == null || _cards[i].Def.id != id)
                     continue;
-                _cards[i].Used = true;
-                _cards[i].Status.gameObject.SetActive(true);
+                var card = _cards[i];
+                _cards.RemoveAt(i);
+                StartCoroutine(FlyOut(card));
+                return;
             }
+        }
+
+        IEnumerator FlyOut(Card card)
+        {
+            if (card.Root == null)
+                yield break;
+            if (card.Button != null)
+                card.Button.interactable = false;
+            var rect = card.Root;
+            rect.SetParent(transform, true);
+            var element = rect.GetComponent<LayoutElement>();
+            if (element != null)
+                element.ignoreLayout = true;
+            Vector2 start = rect.anchoredPosition;
+            Vector3 scale = rect.localScale;
+            float t = 0f;
+            const float dur = 0.42f;
+            while (t < dur && rect != null)
+            {
+                t += Time.unscaledDeltaTime;
+                float k = 1f - (1f - Mathf.Clamp01(t / dur)) * (1f - Mathf.Clamp01(t / dur));
+                rect.anchoredPosition = start + new Vector2(36f * k, 240f * k);
+                rect.localScale = Vector3.Lerp(scale, scale * 0.7f, k);
+                rect.localRotation = Quaternion.Euler(0f, 0f, -18f * k);
+                if (card.Group != null)
+                    card.Group.alpha = 1f - k;
+                yield return null;
+            }
+
+            if (rect != null)
+                Destroy(rect.gameObject);
         }
 
         public void ClearUsed()
@@ -675,6 +722,7 @@ namespace RealityDirector.UI
             var element = frame.gameObject.AddComponent<LayoutElement>();
             element.preferredWidth = 176f;
             element.preferredHeight = 308f;
+            var group = frame.gameObject.AddComponent<CanvasGroup>();
             var button = frame.gameObject.AddComponent<Button>();
             button.targetGraphic = frame;
             var nav = button.navigation;
@@ -751,7 +799,9 @@ namespace RealityDirector.UI
                 Frame = frame,
                 Status = status,
                 Root = frame.rectTransform,
-                Base = def.cardColor
+                Base = def.cardColor,
+                Button = button,
+                Group = group
             };
         }
 

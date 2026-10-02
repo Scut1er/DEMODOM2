@@ -124,6 +124,8 @@ namespace RealityDirector.Capture
             {
                 grade = CaptureGrade.Cast;
                 mood = ResolveMood(inside, tags, fridgeIn);
+                if (HugInFrame(inside))
+                    Add(tags, MomentTags.Hug);
                 if (mood == ShowMood.Family)
                     Add(tags, MomentTags.Warmth);
             }
@@ -155,7 +157,8 @@ namespace RealityDirector.Capture
                 photo = photo,
                 screenPoint = screen,
                 mood = mood,
-                grade = grade
+                grade = grade,
+                exposed = grade == CaptureGrade.Cast ? ExposedIn(inside) : HiddenTrait.None
             };
             for (int i = 0; i < inside.Count; i++)
                 moment.actorNames.Add(inside[i].DisplayName);
@@ -241,6 +244,8 @@ namespace RealityDirector.Capture
 
                 if (inside[i].IsCrying)
                     Add(tags, MomentTags.Crying);
+                if (inside[i].IsHugging || inside[i].IsSeekingComfort)
+                    Add(tags, MomentTags.Hug);
 
                 if (inside[i].HasRage)
                     Add(tags, MomentTags.Conflict);
@@ -273,6 +278,8 @@ namespace RealityDirector.Capture
 
             if (fight)
                 return ShowMood.Trash;
+            if (HugInFrame(inside))
+                return ShowMood.Family;
             if (cry)
                 return ShowMood.Drama;
             if (rage || sceneOnFire)
@@ -282,6 +289,36 @@ namespace RealityDirector.Capture
             if (emoting && tags.Contains(MomentTags.Conflict))
                 return ShowMood.Trash;
             return ShowMood.Family;
+        }
+
+        static bool HugInFrame(List<NPCController> inside)
+        {
+            bool walk = false;
+            int n = 0;
+            for (int i = 0; i < inside.Count; i++)
+            {
+                n++;
+                if (inside[i].IsHugging)
+                    return true;
+                if (inside[i].IsSeekingComfort)
+                    walk = true;
+            }
+
+            return walk && n >= 2;
+        }
+
+        static HiddenTrait ExposedIn(List<NPCController> inside)
+        {
+            HiddenTrait secret = HiddenTrait.None;
+            for (int i = 0; i < inside.Count; i++)
+            {
+                if (inside[i].IsTripping || inside[i].IsPlanting)
+                    return HiddenTrait.Prankster;
+                if (inside[i].IsStealing)
+                    secret = HiddenTrait.Kleptomaniac;
+            }
+
+            return secret;
         }
 
         static void Add(List<string> tags, string tag)

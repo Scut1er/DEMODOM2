@@ -32,6 +32,11 @@ namespace RealityDirector.NPC
         public NpcActionId Action => _action;
         public string Emote => _emote;
         public bool Thought => _thought;
+        public bool IsHugging => _hugging;
+        public bool IsSeekingComfort => _seekingComfort;
+        public bool IsStealing => _stealing;
+        public bool IsPlanting => _planting;
+        public bool IsTripping => _tripping;
 
         public static event Action<NPCController, NPCController> FightStarted;
 
@@ -59,6 +64,17 @@ namespace RealityDirector.NPC
         float _reactHoldUntil;
         Vector2 _locus;
         ReactionRule _queued;
+        bool _comfortTried;
+        bool _seekingComfort;
+        bool _beatComfort;
+        bool _hugging;
+        bool _fought;
+        bool _stealing;
+        bool _planting;
+        bool _tripping;
+        bool _trapArmed;
+        Vector2 _trapPos;
+        float _trapAfter;
 
         public void BindVisual(Transform visual, SpriteRenderer ring)
         {
@@ -91,6 +107,15 @@ namespace RealityDirector.NPC
             _queued = null;
             _pose = PoseKind.None;
             _reactHoldUntil = 0f;
+            _comfortTried = false;
+            _seekingComfort = false;
+            _beatComfort = false;
+            _hugging = false;
+            _fought = false;
+            _stealing = false;
+            _planting = false;
+            _tripping = false;
+            _trapArmed = false;
             _nextThink = Time.time + UnityEngine.Random.Range(0.4f, 1.4f);
             RelationToRival = 0f;
             transform.position = Home;
@@ -107,7 +132,12 @@ namespace RealityDirector.NPC
             Say("злость", 90f, true);
             Sfx.Play(Cue.Blip, 0.4f, 0.62f);
             FadeBit.Burst(transform.position + Vector3.up * 0.85f, 6, new Color(1f, 0.28f, 0.12f, 1f));
-            if (Interactable.AnyOnFire && !IsFighting && _action != NpcActionId.SeekFight)
+            bool cutIn = Interactable.AnyOnFire || (Rival != null && (Rival.IsCrying || Rival.IsSeekingComfort || Rival.IsHugging));
+            if (Rival != null && (Rival.IsCrying || Rival.IsSeekingComfort || Rival.IsHugging))
+                Rival.AbortComfort();
+            _hugging = false;
+            _seekingComfort = false;
+            if (cutIn && !IsFighting && _action != NpcActionId.SeekFight)
             {
                 _hasPending = false;
                 _noticed = false;
@@ -291,6 +321,10 @@ namespace RealityDirector.NPC
                 _thought = false;
             }
 
+            TickTrap();
+            if (_seekingComfort && Rival != null && (Rival.HasRage || Rival.IsFighting || Rival.Action == NpcActionId.SeekFight))
+                AbortComfort();
+
             if (IsFighting)
             {
                 FightShake();
@@ -351,6 +385,10 @@ namespace RealityDirector.NPC
                 {
                     _action = NpcActionId.Idle;
                     _pose = PoseKind.None;
+                    _hugging = false;
+                    _stealing = false;
+                    _planting = false;
+                    _tripping = false;
                     RestoreVisual();
                     _nextThink = Time.time + UnityEngine.Random.Range(0.45f, 1.1f);
                 }
@@ -437,9 +475,10 @@ namespace RealityDirector.NPC
                 return;
             }
 
-            if (Hidden == HiddenTrait.Kleptomaniac && UnityEngine.Random.value < 0.6f)
+            var fridge = new Vector2(1.15f, 2.55f);
+            if (Hidden == HiddenTrait.Kleptomaniac && UnityEngine.Random.value < 0.6f && Apart(fridge))
             {
-                _goal = Hangout.Pick(SpotKind.Prop, Home);
+                _goal = fridge;
                 _rummage = true;
                 _action = NpcActionId.Roam;
                 return;
@@ -466,6 +505,26 @@ namespace RealityDirector.NPC
         void StartBeat()
         {
             _action = NpcActionId.Emote;
+            _stealing = false;
+            _planting = false;
+            _tripping = false;
+            _hugging = false;
+            if (_beatComfort)
+            {
+                _beatComfort = false;
+                _seekingComfort = false;
+                if (Rival != null && Rival.AcceptHug(ReadFor("ну ладно")))
+                {
+                    _hugging = true;
+                    Say("обними", ReadFor("обними"), false);
+                    return;
+                }
+
+                _action = NpcActionId.Panic;
+                _reactHoldUntil = 0f;
+                return;
+            }
+
             if (_beatTalk)
             {
                 _beatTalk = false;
@@ -493,13 +552,24 @@ namespace RealityDirector.NPC
             if (_prank)
             {
                 _prank = false;
-                Say("пранк", ReadFor("пранк"), true);
+                _planting = true;
+                Say("хех", ReadFor("хех"), true);
+                if (Rival != null)
+                    Rival.ArmTrap(transform.position, 2.3f);
                 return;
             }
 
             if (_rummage)
             {
                 _rummage = false;
+                if (!Apart(transform.position))
+                {
+                    _action = NpcActionId.Idle;
+                    _nextThink = Time.time + UnityEngine.Random.Range(0.4f, 0.9f);
+                    return;
+                }
+
+                _stealing = true;
                 Say("тырит", ReadFor("тырит"), true);
                 return;
             }
@@ -551,6 +621,16 @@ namespace RealityDirector.NPC
             switch (_action)
             {
                 case NpcActionId.Panic:
+                    if (!_comfortTried)
+                    {
+                        _comfortTried = true;
+                        if (IsCrying && CanComfort())
+                        {
+                            BeginComfort();
+                            return;
+                        }
+                    }
+
                     MoveTowards(FleePoint, PanicSpeed);
                     break;
                 case NpcActionId.SeekFight:
@@ -593,6 +673,10 @@ namespace RealityDirector.NPC
                 return;
 
             _fightAnnounced = true;
+            _fought = true;
+            other._fought = true;
+            AbortComfort();
+            other.AbortComfort();
             Vector3 mid = (transform.position + other.transform.position) * 0.5f;
             transform.position = mid + Vector3.left * 0.48f;
             other.transform.position = mid + Vector3.right * 0.48f;
@@ -611,6 +695,132 @@ namespace RealityDirector.NPC
                 time = Time.time
             });
             FightStarted?.Invoke(this, other);
+        }
+
+        void BeginComfort()
+        {
+            _seekingComfort = true;
+            _beatComfort = true;
+            _pose = PoseKind.None;
+            ClearBeatFlags();
+            Vector2 gap = (Vector2)transform.position - (Vector2)Rival.transform.position;
+            if (gap.sqrMagnitude < 0.04f)
+                gap = Vector2.left;
+            _goal = (Vector2)Rival.transform.position + gap.normalized * 0.95f;
+            _action = NpcActionId.Roam;
+            Say("обними...", 2.6f, false);
+        }
+
+        bool CanComfort()
+        {
+            if (_fought || Rival == null || Rival.IsFighting || Rival.HasRage || Rival._fought)
+                return false;
+            return Rival.Action != NpcActionId.SeekFight;
+        }
+
+        public void AbortComfort()
+        {
+            bool leave = _seekingComfort || _hugging || _beatComfort;
+            _seekingComfort = false;
+            _beatComfort = false;
+            _hugging = false;
+            _comfortTried = true;
+            if (!leave || IsFighting)
+                return;
+            if (_action == NpcActionId.Emote || _action == NpcActionId.Roam)
+            {
+                _action = NpcActionId.Panic;
+                _reactHoldUntil = 0f;
+                _emote = "";
+                _thought = false;
+            }
+        }
+
+        public bool AcceptHug(float seconds)
+        {
+            if (IsFighting || HasRage || _fought || _action == NpcActionId.SeekFight)
+                return false;
+            _hasPending = false;
+            _noticed = false;
+            _queued = null;
+            _trapArmed = false;
+            ClearBeatFlags();
+            _seekingComfort = false;
+            _hugging = true;
+            _action = NpcActionId.Emote;
+            _pose = PoseKind.None;
+            Say("ну ладно", seconds, false);
+            return true;
+        }
+
+        public void ArmTrap(Vector2 pos, float delay)
+        {
+            _trapPos = pos;
+            _trapAfter = Time.time + delay;
+            _trapArmed = true;
+        }
+
+        void TickTrap()
+        {
+            if (!_trapArmed || IsFighting || _seekingComfort || _hugging)
+                return;
+            if (_action == NpcActionId.Panic || _action == NpcActionId.SeekFight)
+                return;
+            if (Time.time < _trapAfter)
+                return;
+            if (Vector2.Distance(transform.position, _trapPos) < 0.62f)
+            {
+                _trapArmed = false;
+                Trip();
+                return;
+            }
+
+            if (Time.time > _trapAfter + 7f)
+            {
+                _trapArmed = false;
+                return;
+            }
+
+            if (_hasPending || _action == NpcActionId.Emote)
+                return;
+            ClearBeatFlags();
+            _goal = _trapPos;
+            _pose = PoseKind.None;
+            _action = NpcActionId.Roam;
+        }
+
+        void Trip()
+        {
+            _hasPending = false;
+            _noticed = false;
+            _queued = null;
+            _seekingComfort = false;
+            _beatComfort = false;
+            _hugging = false;
+            _stealing = false;
+            _planting = false;
+            _action = NpcActionId.Emote;
+            _pose = PoseKind.None;
+            _tripping = true;
+            Say("ай!", ReadFor("ай!"), false);
+        }
+
+        bool Apart(Vector2 spot)
+        {
+            if (Rival == null)
+                return true;
+            return RoomOf(spot) != RoomOf(Rival.transform.position);
+        }
+
+        static int RoomOf(Vector2 p)
+        {
+            if (p.y > 5.35f)
+                return 3;
+            if (p.x < -2.2f)
+                return 0;
+            if (p.x > 3.05f)
+                return 2;
+            return 1;
         }
 
         const float BodyGap = 0.76f;

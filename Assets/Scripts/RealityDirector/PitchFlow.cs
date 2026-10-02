@@ -47,6 +47,7 @@ namespace RealityDirector
         float _rumble;
         bool _panning;
         Vector2 _panLast;
+        float _handUntil;
         SeasonTone _tone => GameSession.Tone;
         SeasonState _state => GameSession.State;
         EventDefinition[] _hand = new EventDefinition[0];
@@ -106,6 +107,12 @@ namespace RealityDirector
         void Update()
         {
             TickCamera();
+            if (_handUntil > 0f && Time.unscaledTime >= _handUntil)
+            {
+                _handUntil = 0f;
+                if (_ui != null)
+                    _ui.SetHandLocked(false);
+            }
             bool fighting = (_zloi != null && _zloi.IsFighting) || (_dobryak != null && _dobryak.IsFighting);
             if (fighting)
             {
@@ -569,6 +576,8 @@ namespace RealityDirector
             _ui.ClearUsed();
             _ui.SetArmed(null);
             _ui.ClearSlots();
+            _handUntil = 0f;
+            _ui.SetHandLocked(false);
         }
 
         void ArmAt(int index)
@@ -620,6 +629,12 @@ namespace RealityDirector
         {
             if (_phase != PitchPhase.Play || def == null)
                 return;
+            if (Time.unscaledTime < _handUntil)
+            {
+                _ui.Toast("Подожди, пусть сцена доиграет.");
+                Sfx.Play(Cue.Miss, 0.35f);
+                return;
+            }
             if (_state.played.Contains(def.id))
             {
                 _ui.Toast("Уже сыграно.");
@@ -920,6 +935,9 @@ namespace RealityDirector
                 return "Кадр есть. Сними ещё или жми «Конец серии».";
             }
 
+            if (Time.unscaledTime < _handUntil)
+                return "Колода на паузе. Сними реакцию. Следующая карта перебьёт то, что ещё не кончилось.";
+
             if (_armed != null)
                 return "«" + _armed.displayName + "» — " + _armed.hint + ". ПКМ отмена.";
 
@@ -928,6 +946,8 @@ namespace RealityDirector
                 return "Драка. Отношения −20. C — камера, Space — снять.";
             if (_fridge.IsOnFire && (_zloi.IsApproaching || _dobryak.IsApproaching))
                 return "Кто ближе к холодильнику — тот подойдёт первым. Сними реакцию, пока она держится.";
+            if (_dobryak.IsSeekingComfort || _dobryak.IsHugging || _zloi.IsHugging)
+                return "Добряк идёт обниматься. Разозли Злого сейчас — и объятие сорвётся в драку.";
             if (_fridge.IsOnFire && _zloi.HasRage)
                 return "Добряк бежит, Злой догоняет. Дождись драки и жми C.";
             if (_zloi.HasRage)
@@ -959,6 +979,10 @@ namespace RealityDirector
             if (def == null)
                 return;
             _state.played.Add(def.id);
+            _handUntil = Time.unscaledTime + 3.4f;
+            _armed = null;
+            _ui.SetArmed(null);
+            _ui.SetHandLocked(true);
             if (def.moods == null)
                 return;
 
