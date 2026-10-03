@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using RealityDirector.Meta;
+using RealityDirector.Util;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
@@ -43,6 +44,8 @@ namespace RealityDirector.UI.Hub
         bool _ready;
         string _nick;
         float _cueY;
+        // Озвучка реплик босса (Resources, путь в поле voice скрипта интро).
+        AudioSource _voice;
 
         [Serializable]
         class Script
@@ -65,6 +68,7 @@ namespace RealityDirector.UI.Hub
             public string placeholder;
             public string button;
             public string fineprint;
+            public string voice;
         }
 
         void Awake()
@@ -111,6 +115,11 @@ namespace RealityDirector.UI.Hub
                 _beats = script != null ? script.beats : null;
             }
 
+            _voice = gameObject.AddComponent<AudioSource>();
+            _voice.playOnAwake = false;
+            _voice.spatialBlend = 0f;
+            _voice.ignoreListenerPause = true;
+
             BuildCaption();
             BuildDialog();
             BuildInput();
@@ -124,6 +133,7 @@ namespace RealityDirector.UI.Hub
             var beat = _beats[_i];
             _typing = false;
             _skip = false;
+            Speak(beat.voice);
             if (_bg != null)
             {
                 string plate = Plate(beat.bg);
@@ -225,6 +235,7 @@ namespace RealityDirector.UI.Hub
         void Finish()
         {
             _epoch++;
+            Speak(null);
             string name = string.IsNullOrWhiteSpace(_nick) ? "Продюсер" : _nick.Trim();
             if (GameSession.State != null)
             {
@@ -283,8 +294,37 @@ namespace RealityDirector.UI.Hub
             _cue.gameObject.SetActive(true);
         }
 
+        // Новая реплика обрывает прошлую. Пока босс говорит, музыка тише.
+        void Speak(string path)
+        {
+            if (_voice == null)
+                return;
+            _voice.Stop();
+            var clip = string.IsNullOrEmpty(path) ? null : Resources.Load<AudioClip>(path);
+            if (clip != null)
+            {
+                _voice.clip = clip;
+                _voice.Play();
+            }
+
+            MusicBed.Duck(clip != null);
+        }
+
+        void OnDisable()
+        {
+            if (_voice != null)
+                _voice.Stop();
+            MusicBed.Duck(false);
+        }
+
         void Update()
         {
+            if (_voice != null && _voice.clip != null && !_voice.isPlaying)
+            {
+                _voice.clip = null;
+                MusicBed.Duck(false);
+            }
+
             if (_cue == null || !_cue.gameObject.activeSelf)
                 return;
             float y = Mathf.Sin(Time.unscaledTime * Mathf.PI * 2f / 0.8f) * 4f;

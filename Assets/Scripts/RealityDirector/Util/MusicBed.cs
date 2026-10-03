@@ -16,10 +16,21 @@ namespace RealityDirector.Util
         string _path;
         float _fade;
         bool _fading;
+        // Громкость ведущего трека (кроссфейд) и приглушение под озвучку.
+        float _level = 1f;
+        float _duck = 1f;
+        static bool _ducked;
+        const float DuckLevel = 0.35f;
 
         public static void Play(string path)
         {
             Ensure().StartFade(path);
+        }
+
+        // Пока говорит персонаж — музыка тише, потом плавно возвращается.
+        public static void Duck(bool on)
+        {
+            _ducked = on;
         }
 
         static MusicBed Ensure()
@@ -78,27 +89,35 @@ namespace RealityDirector.Util
             _in.loop = true;
             _in.Play();
             _fade = 0f;
+            _level = 0f;
             _fading = true;
         }
 
         void Update()
         {
-            if (!_fading || _in == null)
-                return;
-            _fade += Time.unscaledDeltaTime;
-            float k = Mathf.Clamp01(_fade / Fade);
-            k = k * k * (3f - 2f * k);
-            _in.volume = k;
-            if (_out != null)
-                _out.volume = 1f - k;
-            if (_fade < Fade)
-                return;
-            _fading = false;
-            _in.volume = 1f;
-            if (_out == null)
-                return;
-            _out.volume = 0f;
-            _out.Stop();
+            _duck = Mathf.MoveTowards(_duck, _ducked ? DuckLevel : 1f, Time.unscaledDeltaTime * 2.5f);
+            if (_fading && _in != null)
+            {
+                _fade += Time.unscaledDeltaTime;
+                float k = Mathf.Clamp01(_fade / Fade);
+                k = k * k * (3f - 2f * k);
+                _level = k;
+                if (_out != null)
+                    _out.volume = (1f - k) * _duck;
+                if (_fade >= Fade)
+                {
+                    _fading = false;
+                    _level = 1f;
+                    if (_out != null)
+                    {
+                        _out.volume = 0f;
+                        _out.Stop();
+                    }
+                }
+            }
+
+            if (_in != null)
+                _in.volume = _level * _duck;
         }
     }
 }
