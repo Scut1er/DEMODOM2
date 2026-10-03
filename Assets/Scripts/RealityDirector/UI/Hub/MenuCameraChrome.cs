@@ -14,8 +14,9 @@ namespace RealityDirector.UI.Hub
         const float PlateH = 900f;
 
         static readonly Color Ink = new Color(0.07f, 0.02f, 0.01f, 1f);
-        static readonly Color Paper = new Color(0.93f, 0.9f, 0.82f, 0.96f);
-        static readonly Color Rec = new Color(0.92f, 0.16f, 0.16f, 1f);
+        static readonly Color Blood = new Color(0.82f, 0.1f, 0.04f, 1f);
+        static readonly Color Ember = new Color(1f, 0.46f, 0.08f, 1f);
+        static readonly Color Rec = new Color(1f, 0.28f, 0.06f, 1f);
 
         Texture2D _tex;
         Color32[] _px;
@@ -165,34 +166,34 @@ namespace RealityDirector.UI.Hub
             float arm = 112f;
             float thick = 12f;
             float inset = 26f;
-            Corner(hud, new Vector2(0f, 1f), arm, thick, inset, Paper);
-            Corner(hud, new Vector2(1f, 1f), arm, thick, inset, Paper);
-            Corner(hud, new Vector2(0f, 0f), arm, thick, inset, Paper);
-            Corner(hud, new Vector2(1f, 0f), arm, thick, inset, Paper);
-            Tick(hud, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0f, -inset), new Vector2(36f, thick), Paper);
-            Tick(hud, new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(0f, inset), new Vector2(36f, thick), Paper);
-            Tick(hud, new Vector2(0f, 0.5f), new Vector2(0f, 0.5f), new Vector2(inset, 0f), new Vector2(thick, 36f), Paper);
-            Tick(hud, new Vector2(1f, 0.5f), new Vector2(1f, 0.5f), new Vector2(-inset, 0f), new Vector2(thick, 36f), Paper);
+            Corner(hud, new Vector2(0f, 1f), arm, thick, inset);
+            Corner(hud, new Vector2(1f, 1f), arm, thick, inset);
+            Corner(hud, new Vector2(0f, 0f), arm, thick, inset);
+            Corner(hud, new Vector2(1f, 0f), arm, thick, inset);
+            Mark(hud, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0f, -inset), new Vector2(36f, thick));
+            Mark(hud, new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(0f, inset), new Vector2(36f, thick));
+            Mark(hud, new Vector2(0f, 0.5f), new Vector2(0f, 0.5f), new Vector2(inset, 0f), new Vector2(thick, 36f));
+            Mark(hud, new Vector2(1f, 0.5f), new Vector2(1f, 0.5f), new Vector2(-inset, 0f), new Vector2(thick, 36f));
 
-            _rec = Tick(hud, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(156f, -40f), new Vector2(18f, 18f), Rec);
-            var rec = Label(hud, "REC", 22, Rec);
-            Pin(rec.rectTransform, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(182f, -32f), new Vector2(90f, 32f));
-            var cam = Label(hud, "CAM 1", 22, Paper);
-            Pin(cam.rectTransform, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(280f, -32f), new Vector2(140f, 32f));
-            _clock = Label(hud, "00:00:00", 24, Paper);
+            _rec = Tick(hud, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(156f, -52f), new Vector2(28f, 28f), Rec);
+            var rec = Label(hud, "REC", 40);
+            Pin(rec.rectTransform, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(196f, -40f), new Vector2(150f, 56f));
+            var cam = Label(hud, "CAM 1", 34);
+            Pin(cam.rectTransform, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(360f, -42f), new Vector2(200f, 52f));
+            _clock = Label(hud, "00:00:00", 40);
             _clock.alignment = TextAnchor.MiddleRight;
             var clock = _clock.rectTransform;
             clock.anchorMin = clock.anchorMax = new Vector2(1f, 1f);
             clock.pivot = new Vector2(1f, 1f);
-            clock.anchoredPosition = new Vector2(-150f, -30f);
-            clock.sizeDelta = new Vector2(220f, 36f);
-            var standby = Label(hud, "STBY", 20, Paper);
+            clock.anchoredPosition = new Vector2(-150f, -38f);
+            clock.sizeDelta = new Vector2(280f, 56f);
+            var standby = Label(hud, "STBY", 32);
             standby.alignment = TextAnchor.MiddleRight;
             var st = standby.rectTransform;
             st.anchorMin = st.anchorMax = new Vector2(1f, 0f);
             st.pivot = new Vector2(1f, 0f);
-            st.anchoredPosition = new Vector2(-150f, 34f);
-            st.sizeDelta = new Vector2(120f, 30f);
+            st.anchoredPosition = new Vector2(-150f, 36f);
+            st.sizeDelta = new Vector2(180f, 48f);
         }
 
         void DressButtons()
@@ -242,15 +243,31 @@ namespace RealityDirector.UI.Hub
             Bar(parent, new Vector2(1f, 0f), new Vector2(1f, 1f), new Vector2(1f, 0.5f), Vector2.zero, new Vector2(thick, 0f), color);
         }
 
-        static void Corner(Transform parent, Vector2 anchor, float arm, float thick, float inset, Color color)
+        static void Corner(Transform parent, Vector2 anchor, float arm, float thick, float inset)
         {
             float sx = anchor.x < 0.5f ? 1f : -1f;
             float sy = anchor.y < 0.5f ? 1f : -1f;
             var pos = new Vector2(sx * inset, sy * inset);
+            var outPos = pos + new Vector2(-sx * 4f, -sy * 4f);
+            L(parent, anchor, outPos, arm + 12f, thick + 8f, Color.black);
+            L(parent, anchor, pos, arm, thick, Blood);
+            L(parent, anchor, pos + new Vector2(sx * 3f, sy * 3f), arm - 26f, Mathf.Max(5f, thick * 0.42f), Ember);
+        }
+
+        static void L(Transform parent, Vector2 anchor, Vector2 pos, float arm, float thick, Color color)
+        {
             var h = Tick(parent, anchor, anchor, pos, new Vector2(arm, thick), color);
             var v = Tick(parent, anchor, anchor, pos, new Vector2(thick, arm), color);
             h.rectTransform.pivot = anchor;
             v.rectTransform.pivot = anchor;
+        }
+
+        static void Mark(Transform parent, Vector2 anchor, Vector2 pivot, Vector2 pos, Vector2 size)
+        {
+            float ox = anchor.x < 0.5f ? -3f : anchor.x > 0.5f ? 3f : 0f;
+            float oy = anchor.y < 0.5f ? -3f : anchor.y > 0.5f ? 3f : 0f;
+            Tick(parent, anchor, pivot, pos + new Vector2(ox, oy), size + new Vector2(6f, 6f), Color.black);
+            Tick(parent, anchor, pivot, pos, size, Ember);
         }
 
         static Image Tick(Transform parent, Vector2 anchor, Vector2 pivot, Vector2 pos, Vector2 size, Color color)
@@ -291,9 +308,9 @@ namespace RealityDirector.UI.Hub
             return image;
         }
 
-        static Text Label(Transform parent, string value, int size, Color color)
+        static Text Label(Transform parent, string value, int size)
         {
-            var go = new GameObject("t", typeof(RectTransform), typeof(CanvasRenderer), typeof(Text));
+            var go = new GameObject("t", typeof(RectTransform), typeof(CanvasRenderer), typeof(Text), typeof(Outline));
             go.transform.SetParent(parent, false);
             var font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
             if (font == null)
@@ -303,9 +320,13 @@ namespace RealityDirector.UI.Hub
             text.text = value;
             text.fontSize = size;
             text.fontStyle = FontStyle.Bold;
-            text.color = color;
+            text.color = Color.white;
             text.alignment = TextAnchor.MiddleLeft;
             text.raycastTarget = false;
+            var outline = go.GetComponent<Outline>();
+            outline.effectColor = Color.black;
+            outline.effectDistance = new Vector2(3f, -3f);
+            outline.useGraphicAlpha = true;
             return text;
         }
 

@@ -250,14 +250,10 @@ namespace RealityDirector.UI.Hub
         {
             GameSession.NewSeason(_content.StarterIds(), season);
             Bind();
-            _screens.AskName("", (name, teach) =>
-            {
-                GameSession.State.producerName = name;
-                GameSession.State.wantsTutorial = teach;
-                GameSession.State.tutorialBeat = 0;
-                GameSession.Commit();
-                Show(intro.gameObject);
-            });
+            GameSession.State.wantsTutorial = true;
+            GameSession.State.tutorialBeat = 0;
+            Show(intro.gameObject);
+            intro.Play();
         }
 
         void ContinueSeason()
@@ -1056,7 +1052,7 @@ namespace RealityDirector.UI.Hub
         {
             if (_bed != null)
                 return _bed;
-            var sources = FindObjectsByType<AudioSource>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+            var sources = FindObjectsByType<AudioSource>(FindObjectsInactive.Include);
             for (int i = 0; i < sources.Length; i++)
             {
                 if (sources[i].GetComponent<MainMenuView>() != null)

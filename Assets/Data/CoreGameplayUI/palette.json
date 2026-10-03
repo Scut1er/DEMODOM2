@@ -1,0 +1,19 @@
+{
+  "bg": "#0B0A10",
+  "panel": "#16131D",
+  "panel2": "#211B2A",
+  "text": "#F6F1E9",
+  "muted": "#9E97AA",
+  "red": "#FF334B",
+  "red2": "#8E1329",
+  "gold": "#FFCA48",
+  "gold2": "#8E5A0A",
+  "purple": "#B95DFF",
+  "purple2": "#52216E",
+  "green": "#45E7A3",
+  "green2": "#166B4C",
+  "orange": "#FF8A28",
+  "cyan": "#43D7FF",
+  "blue": "#3A9CFF",
+  "family": "#45E783"
+}
