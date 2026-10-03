@@ -33,6 +33,12 @@ namespace RealityDirector.UI.Hub
                 button.onClick.AddListener(() => _onClick?.Invoke());
         }
 
+        public void SetEnabled(bool on)
+        {
+            if (button != null)
+                button.interactable = on;
+        }
+
         public void Show(MapNode node, MapNodeState state, string lockReason, bool selected, Action onClick)
         {
             _onClick = onClick;

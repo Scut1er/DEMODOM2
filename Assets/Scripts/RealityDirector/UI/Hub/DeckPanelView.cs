@@ -71,6 +71,19 @@ namespace RealityDirector.UI.Hub
             gameObject.SetActive(false);
         }
 
+        public void SetLocked(bool locked)
+        {
+            var buttons = GetComponentsInChildren<Button>(true);
+            for (int i = 0; i < buttons.Length; i++)
+                buttons[i].interactable = !locked;
+        }
+
+        public void SetCancelEnabled(bool on)
+        {
+            if (cancel != null)
+                cancel.interactable = on;
+        }
+
         public void SetTab(int tab)
         {
             if (tab == ShopTab && !_shopOpen)

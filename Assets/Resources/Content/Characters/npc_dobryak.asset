@@ -13,11 +13,17 @@ MonoBehaviour:
   m_Name: npc_dobryak
   m_EditorClassIdentifier: Assembly-CSharp::RealityDirector.Meta.ActorDefinition
   id: npc_dobryak
+  designerNotes: 
   displayName: "\u0414\u043E\u0431\u0440\u044F\u043A"
+  archetype: "\u0443\u0432\u0438\u0434\u0435\u043B \u043E\u0433\u043E\u043D\u044C \u2014 \u043D\u043E\u0441\u0438\u0442\u0441\u044F \u043F\u043E \u0432\u0441\u0435\u0439 \u043A\u0432\u0430\u0440\u0442\u0438\u0440\u0435"
+  bio: 
   portrait: {fileID: 0}
   artPrefix: dobryak
   visibleTraits:
-  - "\u0441\u0435\u043D\u0442\u0438\u043C\u0435\u043D\u0442\u0430\u043B\u044C\u043D\u044B\u0439"
+  - "\u043F\u0430\u043D\u0438\u043A\u0435\u0440"
+  mainTrait: 3
+  hiddenTrait: 2
   hiddenTraitLabel: "\u0441\u043A\u0440\u044B\u0442\u0430\u044F \u0447\u0435\u0440\u0442\u0430: ???"
   order: 1
   available: 1
+  castingWeight: 1

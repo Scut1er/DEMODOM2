@@ -132,8 +132,10 @@ namespace RealityDirector.EditorTools
 
             Object.DestroyImmediate(content.Aggressive);
             Object.DestroyImmediate(content.Sentimental);
+            Object.DestroyImmediate(content.Panicker);
             Object.DestroyImmediate(content.AggressiveRules);
             Object.DestroyImmediate(content.SentimentalRules);
+            Object.DestroyImmediate(content.PanickerRules);
             return new List<EventDefinition>(content.All);
         }
 

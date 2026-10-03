@@ -37,7 +37,7 @@ namespace RealityDirector.Meta
                         continue;
                     if (cast[i].Trait.traitId == TraitId.Aggressive)
                         aggressive = cast[i];
-                    else if (cast[i].Trait.traitId == TraitId.Sentimental)
+                    else if (cast[i].Trait.traitId == TraitId.Sentimental || cast[i].Trait.traitId == TraitId.Panicker)
                         sentimental = cast[i];
                 }
             }
@@ -146,6 +146,141 @@ namespace RealityDirector.Meta
 
             result.score = UnityEngine.Mathf.Round(sum * 10f / result.reviews.Count) / 10f;
             return result;
+        }
+
+        // Зритель видит только финальный кат. context сюда не передаём — вырезанное он не знает.
+        public static FeedbackResult BuildCut(IReadOnlyList<CapturedMoment> cut, SeasonTone tone, int coherence, bool sponsorAired)
+        {
+            var result = Build(null, cut, null, tone);
+            if (result.reviews == null)
+                result.reviews = new List<ViewerReview>();
+            var extra = Extras(cut, coherence, sponsorAired);
+            var seen = new HashSet<string>();
+            for (int i = 0; i < result.reviews.Count; i++)
+                seen.Add(result.reviews[i].body ?? "");
+            for (int i = 0; i < extra.Count && result.reviews.Count < 6; i++)
+            {
+                if (!seen.Add(extra[i].body ?? ""))
+                    continue;
+                result.reviews.Add(extra[i]);
+            }
+
+            int sum = 0;
+            for (int i = 0; i < result.reviews.Count; i++)
+                sum += result.reviews[i].score;
+            result.score = result.reviews.Count > 0
+                ? UnityEngine.Mathf.Round(sum * 10f / result.reviews.Count) / 10f
+                : 0f;
+            return result;
+        }
+
+        static List<ViewerReview> Extras(IReadOnlyList<CapturedMoment> cut, int coherence, bool sponsorAired)
+        {
+            bool fight = HasTag(cut, MomentTags.Fight);
+            bool fire = HasTag(cut, MomentTags.Fire);
+            bool crying = HasTag(cut, MomentTags.Crying);
+            bool hug = HasTag(cut, MomentTags.Hug);
+            bool blank = false;
+            bool repeat = false;
+            var titles = new HashSet<string>();
+            int n = cut != null ? cut.Count : 0;
+            for (int i = 0; i < n; i++)
+            {
+                if (cut[i].grade == CaptureGrade.Blank)
+                    blank = true;
+                string title = cut[i].Title;
+                if (!titles.Add(title))
+                    repeat = true;
+            }
+
+            var list = new List<ViewerReview>(8);
+            if (coherence >= 70 && n >= 2)
+                list.Add(Line("девятый_круг_FM", 8, "Это уже история, а не нарезка криков."));
+            if (coherence <= 30 && n >= 2)
+                list.Add(Line("скучающий_демон", 4, "я ничего не понял, но мужик где-то упал"));
+            if (sponsorAired)
+                list.Add(Line("котёл_номер_7", 3, "опять банку в лицо. это шоу или ларёк?"));
+            if (repeat)
+                list.Add(Line("мама_антихриста", 4, "один и тот же момент крутите дважды"));
+            if (fire)
+                list.Add(Line("суккуб_с_попкорном", 9, "НАКОНЕЦ-ТО НОРМАЛЬНОЕ ТЕЛЕВИДЕНИЕ"));
+            if (fight)
+                list.Add(Line("котёл_номер_7", 9, "перемотал разговоры, драка 10/10"));
+            if (crying)
+                list.Add(Line("девятый_круг_FM", 7, "почему плачет? зато это показали"));
+            if (hug)
+                list.Add(Line("мама_антихриста", 7, "Она заслуживает лучшего"));
+            if (blank)
+                list.Add(Line("скучающий_демон", 2, "в эфире обои. я за людей плачу"));
+            if (n == 0)
+                list.Add(Line("суккуб_с_попкорном", 1, "серия вышла, а смотреть нечего"));
+            list.Add(Line("скучающий_демон", 5, "я досмотрел. для этого канала это уже много"));
+            list.Add(Line("мама_антихриста", 5, "поставьте на повтор, я не доела"));
+            list.Add(Line("девятый_круг_FM", 6, "шум, лица, кто-то орёт. беру"));
+            int start = (coherence + n * 3) % Pool.Length;
+            for (int k = 0; k < Pool.Length; k++)
+            {
+                int score = 3 + ((start + k) % 6);
+                list.Add(Line(Authors[(start + k) % Authors.Length], score, Pool[(start + k) % Pool.Length]));
+            }
+
+            return list;
+        }
+
+        static readonly string[] Authors =
+        {
+            "девятый_круг_FM", "скучающий_демон", "котёл_номер_7", "мама_антихриста", "суккуб_с_попкорном"
+        };
+
+        static readonly string[] Pool =
+        {
+            "я включил на фон и в итоге орёл в экран",
+            "это не шоу, это чужая кухня",
+            "где драка? я за неё заплатил вниманием",
+            "лицо крупно. наконец-то",
+            "монтаж как после аварии",
+            "они смотрят в камеру. мне стыдно за них",
+            "тишина в кадре страшнее крика",
+            "опять холодильник. убейте уже технику",
+            "я поставил лайк из жалости",
+            "кто продюсер? пусть выйдет и извинится",
+            "серия короче рекламы. или это и была реклама",
+            "плакал не я. почти",
+            "обнимашки на фоне кринжа. беру",
+            "оператор дышит в микрофон. это персонаж?",
+            "вырезали лучшее, я чувствую",
+            "пустой угол — тоже высказывание. плохое",
+            "тон скачет. определитесь, вы цирк или семья",
+            "я узнал свою тётю. выключите",
+            "чат орёт, и он прав",
+            "это уже третья серия про еду. я голоден и зол",
+            "скрытая черта так и осталась скрытой. трусы",
+            "если это финал, я требую продолжение",
+            "звука нет, лица есть. как немое кино, только хуже",
+            "я перемотал. потом вернул. потом пожалел",
+            "связка кадров есть. смысла нет. мне норм",
+            "кто-то явно играет, кто-то нет. интересно кто",
+            "поставьте субтитры, я ору вместе с ними",
+            "рейтинг завышен. я один это вижу?",
+            "моя мама сказала выключить. я не выключил",
+            "кадр с дверью дольше, чем с людьми",
+            "они устали. это видно. это и есть шоу",
+            "я ждал признания и получил чай",
+            "спор из ничего. мой любимый жанр",
+            "камера трясётся. оператор тоже человек. к сожалению",
+            "вынесите мусор из кадра. и из сценария",
+            "это нельзя показывать детям. поэтому я смотрю",
+            "один смотрит в пол, другой в камеру. любовный треугольник с полом",
+            "я поставил дизлайк и всё равно досмотрел",
+            "серия пахнет дешёвым контрактом",
+            "если следующий выпуск тише, я отпишусь. нет, не отпишусь",
+            "герой серии — тот, кто молчал",
+            "я сохранил момент. стыдно, но сохранил"
+        };
+
+        static ViewerReview Line(string author, int score, string body)
+        {
+            return new ViewerReview { author = author, score = score, body = body };
         }
 
         static void PunishBlanks(List<ViewerReview> reviews, IReadOnlyList<CapturedMoment> moments, int offerIndex)

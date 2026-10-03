@@ -35,6 +35,10 @@ namespace RealityDirector.Persistence
         public int family;
         public int seasonNumber = 1;
         public string producerName = "";
+        public List<string> castPick = new List<string>();
+        public int sponsorReputation = 25;
+        public bool wantsTutorial;
+        public int tutorialBeat;
         public int seasonLength;
         public List<string> flags = new List<string>();
         // JsonUtility не умеет null для вложенных классов — поэтому отдельный флаг.
@@ -72,6 +76,10 @@ namespace RealityDirector.Persistence
                 family = tone.Family,
                 seasonNumber = state.seasonNumber,
                 producerName = state.producerName,
+                castPick = new List<string>(state.castPick),
+                sponsorReputation = state.sponsorReputation,
+                wantsTutorial = state.wantsTutorial,
+                tutorialBeat = state.tutorialBeat,
                 seasonLength = state.seasonLength,
                 flags = new List<string>(state.flags),
                 hasEpisode = state.episode != null,
@@ -120,6 +128,11 @@ namespace RealityDirector.Persistence
             state.step = data.step;
             state.seasonNumber = data.seasonNumber;
             state.producerName = data.producerName ?? "";
+            if (data.castPick != null)
+                state.castPick.AddRange(data.castPick);
+            state.sponsorReputation = data.sponsorReputation;
+            state.wantsTutorial = data.wantsTutorial;
+            state.tutorialBeat = data.tutorialBeat;
             state.seasonLength = data.seasonLength;
             if (data.flags != null)
                 state.flags.AddRange(data.flags);

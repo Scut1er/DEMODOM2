@@ -22,6 +22,7 @@ namespace RealityDirector.Meta
         public float time;
         public string description;
         public string plotline;
+        public int exposed;
         [Tooltip("Ссылка на видео/скриншот клипа — формат задаёт кор (Стефан).")]
         public string clipRef;
         public bool failed;
@@ -45,6 +46,22 @@ namespace RealityDirector.Meta
         public List<string> matchingFootageIds = new List<string>();
         public bool footageWasAired;
         public int payout;
+        public int scoreHit;
+    }
+
+    [Serializable]
+    public class ActorRuntime
+    {
+        public string actorId;
+        public int stress;
+        public int anger;
+        public int sadness;
+        public int attraction;
+        public int confidence = 40;
+        public int selfControl = 50;
+        public int hostility;
+        public string memory;
+        public bool seeded;
     }
 
     [Serializable]
@@ -74,9 +91,15 @@ namespace RealityDirector.Meta
         public int budgetAtStart;
         [Tooltip("Нал выпуска. Тратится в магазине на карте, в хаб не переносится.")]
         public int cash;
-        [Tooltip("Сыгранные в этой сцене спонсоры. Списываются в фидбеке.")]
-        public int sponsorPay;
-        public int sponsorHit;
+        [Tooltip("Сыгранные спонсорские карты, которым ещё нужен кадр.")]
+        public List<string> pendingSponsors = new List<string>();
+        public int footageLimit = 5;
+        public List<string> finalCut = new List<string>();
+        public bool settled;
+        public int settledPay;
+        public int settledSponsor;
+        public string settledLine;
+        [TextArea(1, 3)] public string roleBrief;
 
         [Header("Карта выпуска")]
         public int mapSeed;
@@ -95,6 +118,28 @@ namespace RealityDirector.Meta
         public List<string> narrativeTags = new List<string>();
         public List<Modifier> nextRoomModifiers = new List<Modifier>();
         public List<Modifier> broadcastModifiers = new List<Modifier>();
+        public List<ActorRuntime> actors = new List<ActorRuntime>();
+
+        public void EnsureLists()
+        {
+            if (pendingSponsors == null)
+                pendingSponsors = new List<string>();
+            if (finalCut == null)
+                finalCut = new List<string>();
+            if (contracts == null)
+                contracts = new List<SponsorContractState>();
+            if (footage == null)
+                footage = new List<FootageEntry>();
+            if (actors == null)
+                actors = new List<ActorRuntime>();
+            if (nextRoomModifiers == null)
+                nextRoomModifiers = new List<Modifier>();
+            for (int i = 0; i < contracts.Count; i++)
+            {
+                if (contracts[i].matchingFootageIds == null)
+                    contracts[i].matchingFootageIds = new List<string>();
+            }
+        }
 
         public int Number => index + 1;
         public bool Finished => mapLayers > 0 && step >= mapLayers;
@@ -148,6 +193,20 @@ namespace RealityDirector.Meta
             if (string.IsNullOrEmpty(key))
                 return;
             list.Add(new Modifier { key = key, value = value, sourceId = sourceId });
+        }
+
+        public ActorRuntime Actor(string actorId)
+        {
+            EnsureLists();
+            for (int i = 0; i < actors.Count; i++)
+            {
+                if (actors[i].actorId == actorId)
+                    return actors[i];
+            }
+
+            var created = new ActorRuntime { actorId = actorId, confidence = 40, selfControl = 50 };
+            actors.Add(created);
+            return created;
         }
 
         public static int Sum(List<Modifier> list, string key)

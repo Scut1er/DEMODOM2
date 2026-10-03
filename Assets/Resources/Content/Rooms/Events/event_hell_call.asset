@@ -66,7 +66,7 @@ MonoBehaviour:
       key: sponsor_cola
       value: 0
       mood: 0
-    - type: 9
+    - type: 11
       key: 
       value: 30
       mood: 0

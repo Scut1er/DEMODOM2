@@ -18,8 +18,16 @@ namespace RealityDirector.Meta
         [Min(0)] public int startingCash = 90;
 
         [Header("Каст")]
+        [Tooltip("Минимум участников в выпуске.")]
+        [Min(1)] public int castMin = 2;
         [Tooltip("Максимум участников в выпуске (места ещё ограничивает уровень Кастинга).")]
         [Min(1)] public int castMax = 5;
+
+        [Header("Монтаж")]
+        [Tooltip("Сколько клипов может накопиться за выпуск.")]
+        [Min(1)] public int footageLimit = 5;
+        [Tooltip("Сколько клипов входит в финальный эфир.")]
+        [Min(1)] public int finalCutSize = 3;
 
         public EpisodeMapConfig MapFor(int episodeIndex)
         {

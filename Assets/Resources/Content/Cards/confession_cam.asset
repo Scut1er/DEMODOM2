@@ -33,7 +33,7 @@ MonoBehaviour:
   limitTrait: 1
   targetTrait: 1
   status: 2
-  category: 2
+  category: Confession
   tier: 0
   rarity: 2
   hellTokenCost: 1.5

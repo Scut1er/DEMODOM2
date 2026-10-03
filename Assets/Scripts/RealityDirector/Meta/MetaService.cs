@@ -171,6 +171,70 @@ namespace RealityDirector.Meta
             return true;
         }
 
+        // Контракт не списывает нал. Выплата — только если карта сыграна и кадр в монтаже.
+        public bool TryTakeContract(string cardId, int payout, int scoreHit)
+        {
+            var ep = _state.episode;
+            if (ep == null || string.IsNullOrEmpty(cardId))
+                return false;
+            ep.EnsureLists();
+            int active = 0;
+            for (int i = 0; i < ep.contracts.Count; i++)
+            {
+                if (ep.contracts[i].grantedCardId == cardId)
+                {
+                    Reject = "Этот контракт уже взят.";
+                    return false;
+                }
+
+                if (ep.contracts[i].status == ContractStatus.Active)
+                    active++;
+            }
+
+            int slots = Progression.ContractSlots(_state.writerLevel);
+            if (active >= slots)
+            {
+                Reject = "Слоты контрактов заняты (" + slots + ").";
+                return false;
+            }
+
+            ep.contracts.Add(new SponsorContractState
+            {
+                offerId = "deal_" + cardId,
+                brandId = cardId,
+                grantedCardId = cardId,
+                payout = payout,
+                scoreHit = scoreHit,
+                status = ContractStatus.Active,
+                cardWasPlayed = false
+            });
+            if (!ep.tempCards.Contains(cardId))
+                ep.tempCards.Add(cardId);
+            Reject = null;
+            return true;
+        }
+
+        public string ReputationLine()
+        {
+            int r = _state.sponsorReputation;
+            string tier = r <= 20 ? "токсичный" : r <= 40 ? "сомнительный" : r <= 60 ? "надёжный" : r <= 80 ? "востребованный" : "любимчик";
+            var ep = _state.episode;
+            int active = 0;
+            if (ep != null)
+            {
+                ep.EnsureLists();
+                for (int i = 0; i < ep.contracts.Count; i++)
+                {
+                    if (ep.contracts[i].status == ContractStatus.Active)
+                        active++;
+                }
+            }
+
+            return "Репутация спонсоров " + r + " · " + tier
+                   + "  ·  контракты " + active + "/" + Progression.ContractSlots(_state.writerLevel)
+                   + (Reject != null ? "\n" + Reject : "");
+        }
+
         // Снимать можно с любым числом выбранных карт — от нуля до лимита слотов.
         public bool CanStart()
         {
@@ -252,9 +316,9 @@ namespace RealityDirector.Meta
                 slotsLabel = slotsLabel,
                 crew = new[]
                 {
-                    CrewButtonOf("УЧАСТНИКИ", true, _state.castLevel, "ур. " + _state.castLevel + "\nчек +" + hype + "%\nв кадре пока 2"),
-                    CrewButtonOf("ОПЕРАТОРЫ", false, _state.operatorLevel, "ур. " + _state.operatorLevel + "\nкадров: " + Progression.CaptureSlots(_state.operatorLevel)),
-                    CrewButtonOf("СЦЕНАРИСТЫ", false, _state.writerLevel, writers)
+                    CrewButtonOf("УЧАСТНИКИ", true, _state.castLevel, "ур. " + _state.castLevel + "\nмест: " + CastRoster.Seats(_state.castLevel) + "\nчек +" + hype + "%"),
+                    CrewButtonOf("ОПЕРАТОРЫ", false, _state.operatorLevel, "ур. " + _state.operatorLevel + "\nкадров: " + Progression.CaptureSlots(_state.operatorLevel) + (_state.operatorLevel >= 2 ? "\nтег в монтаже" : "")),
+                    CrewButtonOf("СЦЕНАРИСТЫ", false, _state.writerLevel, writers + "\n" + CategoryLine(_state.writerLevel))
                 },
                 deck = CollectCards(false),
                 shop = CollectCards(true)
@@ -281,21 +345,21 @@ namespace RealityDirector.Meta
             {
                 case CrewTrack.Cast:
                     info.title = "КАСТИНГ";
-                    info.description = "Больше участников — больше реакций в доме и выше потолок оценки. Чек за серию растёт с размером каста.";
+                    info.description = "Места в касте и, с 3 уровня, подсказка скрытой черты. Чек растёт следом.";
                     info.now = CastLines(level);
                     info.next = CastLines(up);
                     break;
                 case CrewTrack.Operators:
                     info.title = "СЪЁМОЧНАЯ";
-                    info.description = "Операторы решают, сколько хайлайтов можно снять за серию. Больше кадров — больше шансов на хороший отзыв.";
-                    info.now = "• кадров за серию: " + Progression.CaptureSlots(level);
-                    info.next = "• кадров за серию: " + Progression.CaptureSlots(up);
+                    info.description = "Сколько клипов влезает в выпуск. Со 2 уровня монтаж показывает общий тег соседних кадров.";
+                    info.now = OpLines(level);
+                    info.next = OpLines(up);
                     break;
                 default:
                     info.title = "СЦЕНАРНАЯ";
-                    info.description = "Сценаристы готовят провокации: больше карт ивентов в каждую серию.";
-                    info.now = "• карт в серию: " + Progression.EventSlots(level, 1);
-                    info.next = "• карт в серию: " + Progression.EventSlots(up, 1);
+                    info.description = "Новые категории карт и второй слот контракта на 4 уровне. Число карт в серию — следом.";
+                    info.now = WriterLines(level);
+                    info.next = WriterLines(up);
                     break;
             }
 
@@ -307,7 +371,33 @@ namespace RealityDirector.Meta
         static string CastLines(int level)
         {
             int hype = Mathf.RoundToInt(Progression.HypeBonus(level) * 100f);
-            return "• мест в касте: " + CastRoster.Seats(level) + "\n• бонус к чеку: +" + hype + "%";
+            return "• мест в касте: " + CastRoster.Seats(level)
+                   + "\n• скрытая черта: " + (level >= 3 ? "видна в кастинге" : "закрыта")
+                   + "\n• бонус к чеку: +" + hype + "%";
+        }
+
+        static string OpLines(int level)
+        {
+            return "• клипов за выпуск: " + Progression.CaptureSlots(level)
+                   + "\n• монтаж: " + (level >= 2 ? "имя общего тега" : "только связка");
+        }
+
+        static string WriterLines(int level)
+        {
+            return "• карт в серию: " + Progression.EventSlots(level, 1)
+                   + "\n• " + CategoryLine(level)
+                   + "\n• контрактов: " + Progression.ContractSlots(level);
+        }
+
+        static string CategoryLine(int level)
+        {
+            if (level >= 4)
+                return "категории: все";
+            if (level >= 3)
+                return "категории: +разоблачение";
+            if (level >= 2)
+                return "категории: +социальные";
+            return "категории: провокация, среда";
         }
 
         public StatsModel Stats()
@@ -380,6 +470,8 @@ namespace RealityDirector.Meta
                 if (def == null)
                     continue;
                 bool owned = _state.Owns(def.id);
+                if (!Progression.CategoryOpen(def.category, _state.writerLevel))
+                    continue;
                 if (shop)
                 {
                     if (owned || def.sponsor || def.price <= 0)
@@ -441,7 +533,7 @@ namespace RealityDirector.Meta
             for (int i = 0; i < _catalog.Count; i++)
             {
                 var def = _catalog[i];
-                if (def == null || def.runPrice <= 0 || ep.tempCards.Contains(def.id))
+                if (def == null || def.sponsor || def.runPrice <= 0 || ep.tempCards.Contains(def.id))
                     continue;
                 if (!def.sponsor && _state.Owns(def.id))
                     continue;

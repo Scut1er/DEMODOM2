@@ -33,7 +33,7 @@ MonoBehaviour:
   limitTrait: 0
   targetTrait: 0
   status: 2
-  category: 4
+  category: Environment
   tier: 0
   rarity: 0
   hellTokenCost: 1

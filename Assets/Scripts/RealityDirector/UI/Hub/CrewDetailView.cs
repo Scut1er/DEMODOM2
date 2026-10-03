@@ -51,7 +51,16 @@ namespace RealityDirector.UI.Hub
             if (upgradeLabel != null)
                 upgradeLabel.text = info.upgradeLabel;
             if (upgrade != null)
-                upgrade.interactable = info.affordable;
+                upgrade.interactable = info.affordable && _upgradeOpen;
+        }
+
+        bool _upgradeOpen = true;
+
+        public void SetUpgradeEnabled(bool on)
+        {
+            _upgradeOpen = on;
+            if (upgrade != null && !on)
+                upgrade.interactable = false;
         }
 
         Sprite Icon(CrewTrack track)

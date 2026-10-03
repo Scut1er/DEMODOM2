@@ -128,6 +128,8 @@ namespace RealityDirector.Meta
                         e.tempCards.Add(fx.key);
                     break;
                 case EffectType.RemoveTempCard: e?.tempCards.Remove(fx.key); break;
+                case EffectType.NextRoomModifier: e?.AddModifier(e.nextRoomModifiers, fx.key, fx.value); break;
+                case EffectType.BroadcastModifier: e?.AddModifier(e.broadcastModifiers, fx.key, fx.value); break;
                 case EffectType.Cash:
                     if (e != null)
                         e.cash = Mathf.Max(0, e.cash + fx.value);

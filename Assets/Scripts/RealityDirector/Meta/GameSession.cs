@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using RealityDirector.Capture;
 using RealityDirector.Core;
 using RealityDirector.Persistence;
 using UnityEngine;
@@ -18,6 +19,8 @@ namespace RealityDirector.Meta
         public static string RoomNodeId;
         // Квартира закрыла сцену — хаб открывает карту, а не меню продакшена.
         public static bool ReturnToMap;
+        // Игрок сам вышел со съёмки. Комнату не закрываем, хаб не прыгает обратно на карту.
+        public static bool ExitToHub;
 
         public static bool Active => State != null;
         public static bool InEpisode => Active && State.episode != null;
@@ -34,7 +37,9 @@ namespace RealityDirector.Meta
             Embarked = false;
             RoomNodeId = null;
             ReturnToMap = false;
+            ExitToHub = false;
             Hand.Clear();
+            FootageReel.ReleaseAll();
         }
 
         public static void NewSeason(IList<string> starters, SeasonConfig config = null)
@@ -50,6 +55,7 @@ namespace RealityDirector.Meta
             Tone = new SeasonTone();
             RoomNodeId = null;
             Hand.Clear();
+            FootageReel.ReleaseAll();
             Save();
         }
 

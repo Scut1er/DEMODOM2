@@ -38,7 +38,8 @@ namespace RealityDirector.Meta
             {
                 index = _state.episodeIndex,
                 budgetAtStart = _state.money,
-                cash = cash
+                cash = cash,
+                footageLimit = _season != null && _season.footageLimit > 0 ? _season.footageLimit : 5
             };
             if (cast != null)
                 ep.cast.AddRange(cast);
@@ -48,7 +49,10 @@ namespace RealityDirector.Meta
             var config = MapConfig(ep.index);
             _catalog = new RoomCatalog(config);
             ep.mapSeed = config.seed != 0 ? config.seed + ep.index : Random.Range(1, int.MaxValue);
-            var graph = MapGenerator.Generate(_catalog, ep.mapSeed, Context);
+            bool teach = _state.wantsTutorial && _state.tutorialBeat < 6;
+            var graph = teach
+                ? MapGenerator.Tutorial(_catalog, Context)
+                : MapGenerator.Generate(_catalog, ep.mapSeed, Context);
             ep.nodes = graph.nodes;
             ep.mapLayers = graph.Layers;
             ep.mapLanes = graph.Lanes;
@@ -68,7 +72,7 @@ namespace RealityDirector.Meta
             Map = new MapService(Context, new MapGraph(ep.nodes) { Layers = ep.mapLayers, Lanes = ep.mapLanes });
         }
 
-        // Сцена съёмки вернулась в хаб. Квартира пока сама увеличивает номер серии — возвращаем его выпуску.
+        // Съёмка вернулась на карту выпуска. Номер серии не двигается — эфир после монтажа.
         public void FinishSceneRoom()
         {
             if (!Active)

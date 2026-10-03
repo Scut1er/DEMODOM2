@@ -31,6 +31,10 @@ namespace RealityDirector.Meta
         public int seasonLength;
         // Долгие флаги сезона (условия и эффекты контента).
         public readonly List<string> flags = new List<string>();
+        public readonly List<string> castPick = new List<string>();
+        public int sponsorReputation = 25;
+        public bool wantsTutorial;
+        public int tutorialBeat;
         // Текущий выпуск: от выхода из хаба до эфира. null — игрок в хабе между выпусками.
         public EpisodeState episode;
         // Устарело: квартира (PitchFlow) ещё увеличивает это поле. Мета смотрит на episode.step.
@@ -54,6 +58,10 @@ namespace RealityDirector.Meta
             producerName = "";
             seasonLength = 0;
             flags.Clear();
+            castPick.Clear();
+            sponsorReputation = 25;
+            wantsTutorial = false;
+            tutorialBeat = 0;
             episode = null;
             if (starters == null)
                 return;

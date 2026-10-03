@@ -16,6 +16,8 @@ namespace RealityDirector.Meta
         AddNarrativeTag,   // key
         AddTempCard,       // key — id карты продюсера, только на этот выпуск
         RemoveTempCard,    // key
+        NextRoomModifier,  // key, value — модификатор следующей съёмки (квартира читает stress/anger/sadness/hostility)
+        BroadcastModifier, // key, value — модификатор эфира (пока никто не читает)
         Cash,              // value — +/- нал выпуска
         AddDeckCard,       // key — id карты, в колоду навсегда
         RemoveDeckCard     // key — id карты, из колоды навсегда

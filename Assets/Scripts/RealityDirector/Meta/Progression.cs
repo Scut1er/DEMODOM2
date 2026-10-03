@@ -38,6 +38,26 @@ namespace RealityDirector.Meta
             }
         }
 
+        public static int ContractSlots(int writerLevel)
+        {
+            return writerLevel >= 4 ? 2 : 1;
+        }
+
+        public static bool CategoryOpen(string category, int writerLevel)
+        {
+            if (string.IsNullOrEmpty(category) || category == "Sponsor")
+                return true;
+            if (writerLevel >= 4)
+                return true;
+            if (category == "Provocation" || category == "Environment" || category == "Comedy")
+                return true;
+            if (writerLevel >= 2 && (category == "Social" || category == "Confession"))
+                return true;
+            if (writerLevel >= 3 && category == "Reveal")
+                return true;
+            return false;
+        }
+
         public static int CaptureSlots(int operatorLevel)
         {
             return Mathf.Clamp(operatorLevel, 1, MaxLevel);

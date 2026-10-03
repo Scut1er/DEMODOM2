@@ -19,6 +19,8 @@ namespace RealityDirector.Events
         public string id;
         public string displayName;
         public string hint;
+        [Tooltip("Provocation, Environment, Social, Confession, Reveal, Comedy, Sponsor. Пусто — карта открыта сразу.")]
+        public string category;
         public TargetType targetType;
         public string requiredObjectId;
         public Color cardColor = Color.white;
@@ -41,7 +43,6 @@ namespace RealityDirector.Events
         [Header("Паспорт карты")]
         [Tooltip("Выключенной карты нет в игре: ни в колоде, ни в магазинах.")]
         public CardStatus status;
-        public CardCategory category;
         public CardTier tier;
         public CardRarity rarity;
         [Tooltip("Цена розыгрыша в HellToken, $.")]

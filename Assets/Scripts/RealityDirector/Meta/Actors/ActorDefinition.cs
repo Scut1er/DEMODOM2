@@ -1,11 +1,11 @@
 using System.Collections.Generic;
+using RealityDirector.NPC;
 using UnityEngine;
 
 namespace RealityDirector.Meta
 {
     // Участник шоу. Создавать: ПКМ → Create → RealityDirector → Character. Класть в Resources/Content/Characters.
-    // Сейчас из ассета берутся хаб и каст выпуска. В съёмке (квартира) пока живут только npc_zloi и npc_dobryak —
-    // их поведение задано в коде квартиры.
+    // Из ассета берутся хаб, выбор каста и участники в квартире (главная и скрытая черта).
     [CreateAssetMenu(menuName = "RealityDirector/Character", fileName = "Character_")]
     public class ActorDefinition : ContentDefinition
     {
@@ -23,6 +23,12 @@ namespace RealityDirector.Meta
         public List<string> visibleTraits = new List<string>();
         [Tooltip("Строка про скрытую черту. Пусто — не показывать.")]
         public string hiddenTraitLabel = "скрытая черта: ???";
+
+        [Header("Поведение в съёмке")]
+        [Tooltip("Главная черта: по ней квартира выбирает реакции участника.")]
+        public TraitId mainTrait;
+        [Tooltip("Скрытая черта — игрок узнаёт её по ходу сезона.")]
+        public HiddenTrait hiddenTrait;
 
         [Header("Кастинг")]
         [Tooltip("Порядок в списке участников и в касте выпуска (меньше — раньше).")]

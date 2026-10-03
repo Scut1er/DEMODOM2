@@ -90,7 +90,36 @@ namespace RealityDirector.EditorTools
 
         public static string Passport(EventDefinition c)
         {
-            return "$" + c.hellTokenCost.ToString("0.00") + "  ·  " + Enum(c.category) + "  ·  Tier " + c.tier + "  ·  " + Enum(c.rarity) + "  ·  " + Enum(c.status);
+            return "$" + c.hellTokenCost.ToString("0.00") + "  ·  " + CategoryName(c.category) + "  ·  Tier " + c.tier + "  ·  " + Enum(c.rarity) + "  ·  " + Enum(c.status);
+        }
+
+        // Категории карт — те, что понимает игра (Progression.CategoryOpen): по ним карты открываются уровнем Сценаристов.
+        public static readonly string[] Categories = { "", "Provocation", "Environment", "Comedy", "Social", "Confession", "Reveal", "Sponsor" };
+        public static readonly string[] CategoryNames =
+        {
+            "Без категории — открыта сразу",
+            "Провокация — открыта сразу",
+            "Окружение — открыта сразу",
+            "Комедия — открыта сразу",
+            "Социальная — Сценаристы ур. 2",
+            "Исповедь — Сценаристы ур. 2",
+            "Раскрытие — Сценаристы ур. 3",
+            "Спонсор — открыта сразу"
+        };
+
+        public static string CategoryName(string category)
+        {
+            int i = System.Array.IndexOf(Categories, category ?? "");
+            if (i < 0)
+                return category + " (неизвестная — откроется только на Сценаристах ур. 4)";
+            string name = CategoryNames[i];
+            int dash = name.IndexOf(" —");
+            return dash > 0 ? name.Substring(0, dash) : name;
+        }
+
+        public static int CategoryIndex(string category)
+        {
+            return System.Array.IndexOf(Categories, category ?? "");
         }
 
         // Русское имя значения enum из [InspectorName].
@@ -178,7 +207,7 @@ namespace RealityDirector.EditorTools
             _rules = new List<ReactionRule>();
             _ruleTraits = new List<TraitId>();
             var content = PitchContent.Create();
-            foreach (var set in new[] { content.AggressiveRules, content.SentimentalRules })
+            foreach (var set in new[] { content.AggressiveRules, content.SentimentalRules, content.PanickerRules })
             {
                 if (set == null)
                     continue;
@@ -193,8 +222,10 @@ namespace RealityDirector.EditorTools
                 Object.DestroyImmediate(card);
             Object.DestroyImmediate(content.Aggressive);
             Object.DestroyImmediate(content.Sentimental);
+            Object.DestroyImmediate(content.Panicker);
             Object.DestroyImmediate(content.AggressiveRules);
             Object.DestroyImmediate(content.SentimentalRules);
+            Object.DestroyImmediate(content.PanickerRules);
         }
 
         public static string ActorsWith(TraitId trait)

@@ -105,14 +105,15 @@ namespace RealityDirector.EditorTools
         [MenuItem("RealityDirector/Content/Create Default Characters")]
         public static void CreateCharacters()
         {
-            Character("npc_zloi", "Злой", "zloi", 0, "агрессивный");
-            Character("npc_dobryak", "Добряк", "dobryak", 1, "сентиментальный");
+            Character("npc_zloi", "Злой", "zloi", 0, RealityDirector.NPC.TraitId.Aggressive, RealityDirector.NPC.HiddenTrait.Prankster, "агрессивный");
+            Character("npc_dobryak", "Добряк", "dobryak", 1, RealityDirector.NPC.TraitId.Panicker, RealityDirector.NPC.HiddenTrait.Kleptomaniac, "паникер");
             AssetDatabase.SaveAssets();
             DesignerData.Invalidate();
             Debug.Log("Characters: участники готовы (" + DesignerData.CharactersRoot + "). Существующие не тронуты.");
         }
 
-        static void Character(string id, string displayName, string prefix, int order, string visible)
+        static void Character(string id, string displayName, string prefix, int order,
+            RealityDirector.NPC.TraitId trait, RealityDirector.NPC.HiddenTrait hidden, string visible)
         {
             Directory.CreateDirectory(DesignerData.CharactersRoot);
             string path = DesignerData.CharactersRoot + "/" + id + ".asset";
@@ -124,6 +125,8 @@ namespace RealityDirector.EditorTools
             actor.displayName = displayName;
             actor.artPrefix = prefix;
             actor.order = order;
+            actor.mainTrait = trait;
+            actor.hiddenTrait = hidden;
             actor.visibleTraits.Add(visible);
             AssetDatabase.CreateAsset(actor, path);
         }

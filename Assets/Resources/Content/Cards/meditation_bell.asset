@@ -33,7 +33,7 @@ MonoBehaviour:
   limitTrait: 0
   targetTrait: 0
   status: 2
-  category: 3
+  category: Social
   tier: 0
   rarity: 1
   hellTokenCost: 1.25

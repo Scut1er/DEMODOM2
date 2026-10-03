@@ -12,5 +12,6 @@ namespace RealityDirector.Core
         public bool hasLocus;
         public UnityEngine.Vector2 locus;
         public float time;
+        public int depth;
     }
 }

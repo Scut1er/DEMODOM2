@@ -27,7 +27,7 @@ namespace RealityDirector.EditorTools
             Field("id", "ID", "Стабильный id. Колода и сейвы ссылаются на него — не меняйте после выхода карты в игру.");
             Field("displayName", "Название", "Крупно на карте.");
             Field("status", "Статус", "Черновик / на тесте / готова — для команды. «Выключена» — карты нет в игре.");
-            Field("category", "Категория ◇", "Для фильтров, синергий и открытия карт.");
+            CategoryPopup();
             DrawTags();
             DrawMoods();
             Field("tier", "Tier ◇", "Ступень улучшения. Улучшенные версии — отдельные карты (блок «Улучшения»).");
@@ -147,6 +147,23 @@ namespace RealityDirector.EditorTools
 
             Warnings(card);
             Buttons(card);
+        }
+
+        // Категория открывает карту уровнем Сценаристов (как считает игра).
+        void CategoryPopup()
+        {
+            var prop = serializedObject.FindProperty("category");
+            int index = CardInsight.CategoryIndex(prop.stringValue);
+            var names = new List<string>(CardInsight.CategoryNames);
+            if (index < 0)
+            {
+                names.Add("«" + prop.stringValue + "» — неизвестная, откроется на ур. 4");
+                index = names.Count - 1;
+            }
+
+            int chosen = EditorGUILayout.Popup(new GUIContent("Категория", "Открывает карту в колоде и магазине по уровню Сценаристов."), index, names.ToArray());
+            if (chosen < CardInsight.Categories.Length)
+                prop.stringValue = CardInsight.Categories[chosen];
         }
 
         void Upgrade(EventDefinition card, string field, string budget, CardTier tier)

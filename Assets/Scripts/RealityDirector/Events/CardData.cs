@@ -14,18 +14,6 @@ namespace RealityDirector.Events
         [InspectorName("Выключена — нет в игре")] Disabled
     }
 
-    public enum CardCategory
-    {
-        [InspectorName("Провокация")] Provocation,
-        [InspectorName("Социальная")] Social,
-        [InspectorName("Раскрытие / секрет")] Reveal,
-        [InspectorName("Контроль")] Control,
-        [InspectorName("Хаос / комедия")] Chaos,
-        [InspectorName("Окружение")] Environment,
-        [InspectorName("Спонсор")] Sponsor,
-        [InspectorName("Управление колодой")] DeckManagement
-    }
-
     public enum CardTier
     {
         [InspectorName("I")] I,

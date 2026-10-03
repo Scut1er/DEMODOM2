@@ -258,7 +258,7 @@ namespace RealityDirector.EditorTools
             ("Злость", 50, "Секунд злости цели (только «участник»)."),
             ("Огонь", 42, "Поджигает (только «объект»)."),
             ("Статус", 90, "«Выключена» — карты нет в игре."),
-            ("Категория", 120, "◇ для фильтров и синергий."),
+            ("Категория", 170, "Открывает карту уровнем Сценаристов."),
             ("Tier", 44, "◇"),
             ("Редкость", 96, "◇"),
             ("HellToken $", 76, "◇ цена розыгрыша."),
@@ -325,7 +325,11 @@ namespace RealityDirector.EditorTools
                 using (new EditorGUI.DisabledScope(card.targetType != TargetType.Object))
                     Toggle(so, "ignite", Columns[11].width);
                 EditorGUILayout.PropertyField(so.FindProperty("status"), GUIContent.none, GUILayout.Width(Columns[12].width));
-                EditorGUILayout.PropertyField(so.FindProperty("category"), GUIContent.none, GUILayout.Width(Columns[13].width));
+                var cat = so.FindProperty("category");
+                int ci = CardInsight.CategoryIndex(cat.stringValue);
+                int cn = EditorGUILayout.Popup(Mathf.Max(0, ci), CardInsight.CategoryNames, GUILayout.Width(Columns[13].width));
+                if (ci < 0 ? cn != 0 : cn != ci)
+                    cat.stringValue = CardInsight.Categories[cn];
                 EditorGUILayout.PropertyField(so.FindProperty("tier"), GUIContent.none, GUILayout.Width(Columns[14].width));
                 EditorGUILayout.PropertyField(so.FindProperty("rarity"), GUIContent.none, GUILayout.Width(Columns[15].width));
                 var cost = so.FindProperty("hellTokenCost");
@@ -413,14 +417,14 @@ namespace RealityDirector.EditorTools
                 foreach (CardStatus st in System.Enum.GetValues(typeof(CardStatus)))
                     Row(CardInsight.Enum(st), all.Count(c => c.status == st), "");
 
-                Header("Категории ◇ и цена в HellToken");
-                foreach (CardCategory cat in System.Enum.GetValues(typeof(CardCategory)))
+                Header("Категории (открываются Сценаристами) и цена в HellToken ◇");
+                foreach (var cat in CardInsight.Categories)
                 {
                     var inCat = all.Where(c => c.category == cat && c.status != CardStatus.Disabled).ToList();
                     string costs = inCat.Count > 0
                         ? "$" + inCat.Average(c => c.hellTokenCost).ToString("0.00") + " в среднем (от $" + inCat.Min(c => c.hellTokenCost).ToString("0.00") + " до $" + inCat.Max(c => c.hellTokenCost).ToString("0.00") + ")"
                         : "нет карт";
-                    Row(CardInsight.Enum(cat), inCat.Count, costs);
+                    Row(CardInsight.CategoryName(cat), inCat.Count, costs);
                 }
 
                 Header("Редкость ◇");

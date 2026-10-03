@@ -129,7 +129,7 @@ namespace RealityDirector.UI.Hub
             if (shopButton != null)
                 shopButton.gameObject.SetActive(true);
             if (startCaption != null)
-                startCaption.text = "Выпуск " + prep.episodeNumber + "  ·  дальше сценарий: выбор сцены и карт";
+                startCaption.text = "Выпуск " + prep.episodeNumber + "  ·  дальше карта эпизода";
 
             if (deck != null && deck.IsOpen)
                 deck.Show(prep);
@@ -145,6 +145,59 @@ namespace RealityDirector.UI.Hub
         {
             if (subtitle != null)
                 subtitle.text = text;
+        }
+
+        public RectTransform ZoneFocus(CrewTrack track)
+        {
+            for (int i = 0; i < zones.Length; i++)
+            {
+                if (zones[i] != null && zones[i].Track == track)
+                    return zones[i].transform as RectTransform;
+            }
+
+            return null;
+        }
+
+        public RectTransform DeckFocus()
+        {
+            return deckButton != null ? deckButton.transform as RectTransform : null;
+        }
+
+        public RectTransform ShopFocus()
+        {
+            return shopButton != null ? shopButton.transform as RectTransform : null;
+        }
+
+        public RectTransform StartFocus()
+        {
+            return start != null ? start.transform as RectTransform : null;
+        }
+
+        // Обучение: пока босс говорит — ничего. После речи на хабе жива только кнопка старта.
+        public void ApplyTutorial(bool teach, bool talking, bool startReady)
+        {
+            bool chrome = !teach;
+            bool canStart = !teach || (startReady && !talking);
+            for (int i = 0; i < zones.Length; i++)
+            {
+                if (zones[i] != null)
+                    zones[i].SetEnabled(!teach && !talking);
+            }
+
+            if (detail != null)
+                detail.SetUpgradeEnabled(chrome && !talking);
+            if (deckButton != null)
+                deckButton.interactable = chrome && !talking;
+            if (shopButton != null)
+                shopButton.interactable = chrome && !talking;
+            if (settingsButton != null)
+                settingsButton.interactable = chrome;
+            if (menuButton != null)
+                menuButton.interactable = chrome;
+            if (start != null)
+                start.interactable = canStart;
+            if (deck != null)
+                deck.SetLocked(teach && talking);
         }
     }
 }

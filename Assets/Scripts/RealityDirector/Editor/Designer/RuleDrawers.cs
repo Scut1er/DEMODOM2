@@ -141,6 +141,36 @@ namespace RealityDirector.EditorTools
     [CustomPropertyDrawer(typeof(Effect))]
     public class EffectDrawer : PropertyDrawer
     {
+        // Ключи, которые квартира читает из модификаторов следующей съёмки (PitchFlow).
+        static readonly string[] ModifierKeys = { "stress", "anger", "sadness", "hostility" };
+        static readonly string[] ModifierNames = { "Стресс", "Злость", "Грусть", "Вражда" };
+
+        // «Модификатор эфира» скрыт: его пока никто не читает.
+        static readonly EffectType[] Shown =
+        {
+            EffectType.Budget, EffectType.Cash, EffectType.Tone,
+            EffectType.SetEpisodeFlag, EffectType.ClearEpisodeFlag, EffectType.SetSeasonFlag, EffectType.ClearSeasonFlag,
+            EffectType.AddNarrativeTag, EffectType.AddTempCard, EffectType.RemoveTempCard,
+            EffectType.AddDeckCard, EffectType.RemoveDeckCard, EffectType.NextRoomModifier
+        };
+
+        static string[] _shownNames;
+
+        static int TypePopup(Rect rect, int current)
+        {
+            if (_shownNames == null)
+            {
+                _shownNames = new string[Shown.Length];
+                for (int i = 0; i < Shown.Length; i++)
+                    _shownNames[i] = TypeNames[(int)Shown[i]];
+            }
+
+            int index = System.Array.IndexOf(Shown, (EffectType)current);
+            if (index < 0)
+                return EditorGUI.Popup(rect, current, TypeNames);
+            return (int)Shown[EditorGUI.Popup(rect, index, _shownNames)];
+        }
+
         static readonly string[] TypeNames =
         {
             "Бюджет +/-",
@@ -152,6 +182,8 @@ namespace RealityDirector.EditorTools
             "Добавить сюжетный тег",
             "Дать временную карту (на выпуск)",
             "Забрать временную карту",
+            "Следующая съёмка: актёры начнут с…",
+            "Модификатор эфира",
             "Нал +/-",
             "Карта в колоду навсегда",
             "Убрать карту из колоды навсегда"
@@ -174,11 +206,16 @@ namespace RealityDirector.EditorTools
             var mood = property.FindPropertyRelative("mood");
 
             var r = new Rect(position.x, position.y + Gap, position.width, Line);
-            type.enumValueIndex = EditorGUI.Popup(r, type.enumValueIndex, TypeNames);
+            type.enumValueIndex = TypePopup(r, type.enumValueIndex);
 
             r.y += Line + Gap;
             switch ((EffectType)type.enumValueIndex)
             {
+                case EffectType.NextRoomModifier:
+                    ConditionDrawer.Split(r, out var ml, out var mr);
+                    DesignerData.PickerField(ml, new GUIContent("Что"), key, ModifierKeys, ModifierNames);
+                    EditorGUI.PropertyField(mr, value, new GUIContent("Сколько"));
+                    break;
                 case EffectType.Budget:
                     EditorGUI.PropertyField(r, value, new GUIContent("Кредиты (минус — списать)"));
                     break;

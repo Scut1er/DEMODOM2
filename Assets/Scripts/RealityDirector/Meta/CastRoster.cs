@@ -10,6 +10,8 @@ namespace RealityDirector.Meta
         public string name;
         public string[] traits;
         public Sprite portrait;
+        public string secretHidden;
+        public string secretKnown;
     }
 
     // Участники для хаба: из ассетов Resources/Content/Characters (ActorDefinition).
@@ -37,25 +39,59 @@ namespace RealityDirector.Meta
                 return BuiltIn();
 
             defs.Sort((a, b) => a.order != b.order ? a.order.CompareTo(b.order) : string.CompareOrdinal(a.Id, b.Id));
-            var members = new CastMember[defs.Count];
+            var members = new List<CastMember>();
             for (int i = 0; i < defs.Count; i++)
-                members[i] = From(defs[i]);
-            return members;
+                members.Add(From(defs[i]));
+            var extra = BuiltIn();
+            for (int i = 0; i < extra.Length; i++)
+            {
+                bool have = false;
+                for (int j = 0; j < members.Count; j++)
+                {
+                    if (members[j].id == extra[i].id)
+                        have = true;
+                }
+
+                if (!have)
+                    members.Add(extra[i]);
+            }
+
+            return members.ToArray();
         }
 
         static CastMember From(ActorDefinition def)
         {
-            var traits = new List<string>(def.visibleTraits);
-            if (!string.IsNullOrEmpty(def.hiddenTraitLabel))
-                traits.Add(def.hiddenTraitLabel);
+            var traits = new List<string>();
+            if (def.visibleTraits != null)
+            {
+                for (int i = 0; i < def.visibleTraits.Count; i++)
+                {
+                    if (!string.IsNullOrEmpty(def.visibleTraits[i]) && !def.visibleTraits[i].Contains("???"))
+                        traits.Add(def.visibleTraits[i]);
+                }
+            }
+
             return new CastMember
             {
                 id = def.Id,
                 name = def.displayName,
                 traits = traits.ToArray(),
                 portrait = def.portrait != null ? def.portrait
-                    : GameArt.HeadByPrefix(def.artPrefix, Face.Happy) ?? GameArt.Head(def.Id, Face.Happy) ?? IllustratedArt.PersonKind
+                    : GameArt.HeadByPrefix(def.artPrefix, Face.Happy) ?? GameArt.Head(def.Id, Face.Happy) ?? IllustratedArt.PersonKind,
+                secretHidden = string.IsNullOrEmpty(def.hiddenTraitLabel) ? "" : def.hiddenTraitLabel,
+                secretKnown = SecretName(def.hiddenTrait)
             };
+        }
+
+        static string SecretName(NPC.HiddenTrait trait)
+        {
+            switch (trait)
+            {
+                case NPC.HiddenTrait.Prankster: return "пранкер";
+                case NPC.HiddenTrait.Kleptomaniac: return "клептоман";
+                case NPC.HiddenTrait.Singer: return "поёт";
+                default: return "";
+            }
         }
 
         static CastMember[] BuiltIn()
@@ -66,15 +102,46 @@ namespace RealityDirector.Meta
                 {
                     id = "npc_zloi",
                     name = "Злой",
-                    traits = new[] { "агрессивный", "скрытая черта: ???" },
-                    portrait = GameArt.Head("npc_zloi", Face.Happy) ?? IllustratedArt.PersonAngry
+                    traits = new[] { "агрессивный" },
+                    portrait = GameArt.Head("npc_zloi", Face.Happy) ?? IllustratedArt.PersonAngry,
+                    secretHidden = "скрытая черта: ???",
+                    secretKnown = "пранкер"
                 },
                 new CastMember
                 {
                     id = "npc_dobryak",
                     name = "Добряк",
-                    traits = new[] { "сентиментальный", "скрытая черта: ???" },
-                    portrait = GameArt.Head("npc_dobryak", Face.Happy) ?? IllustratedArt.PersonKind
+                    traits = new[] { "паникер" },
+                    portrait = GameArt.Head("npc_dobryak", Face.Happy) ?? IllustratedArt.PersonKind,
+                    secretHidden = "скрытая черта: ???",
+                    secretKnown = "клептоман"
+                },
+                new CastMember
+                {
+                    id = "npc_kira",
+                    name = "Кира",
+                    traits = new[] { "ревнивая" },
+                    portrait = IllustratedArt.PersonAngry,
+                    secretHidden = "",
+                    secretKnown = ""
+                },
+                new CastMember
+                {
+                    id = "npc_max",
+                    name = "Макс",
+                    traits = new[] { "тщеславный" },
+                    portrait = IllustratedArt.PersonKind,
+                    secretHidden = "скрытая черта: ???",
+                    secretKnown = "поёт"
+                },
+                new CastMember
+                {
+                    id = "npc_lyusya",
+                    name = "Люся",
+                    traits = new[] { "застенчивая" },
+                    portrait = IllustratedArt.PersonKind,
+                    secretHidden = "",
+                    secretKnown = ""
                 }
             };
         }

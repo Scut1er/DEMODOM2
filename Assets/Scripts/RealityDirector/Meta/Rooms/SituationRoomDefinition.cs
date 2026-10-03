@@ -10,6 +10,8 @@ namespace RealityDirector.Meta
         [Header("Съёмка")]
         [Tooltip("Сцена, которая загружается при входе.")]
         public string scene = SceneFlow.Episode;
+        [Tooltip("Роли для этой съёмки. Не имена: «инициатор — вспыльчивый».")]
+        [TextArea(1, 3)] public string roleBrief;
 
         public override RoomType Type => RoomType.Situation;
     }
