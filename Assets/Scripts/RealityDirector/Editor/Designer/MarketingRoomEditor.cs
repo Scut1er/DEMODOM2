@@ -15,7 +15,7 @@ namespace RealityDirector.EditorTools
         public override void OnInspectorGUI()
         {
             var room = (MarketingRoomDefinition)target;
-            EditorGUILayout.HelpBox("Маркетинг на карте выпуска: слева ПОКУПКИ (нал выпуска → карта или бонус), справа КОНТРАКТЫ "
+            EditorGUILayout.HelpBox("Маркетинг на карте выпуска: слева ПОКУПКИ (УЕ выпуска → карта или бонус), справа КОНТРАКТЫ "
                                     + "(карта бренда; платят, если кадр с брендом попадёт в эфир). «Показывать» — сколько предложений "
                                     + "выпадет в этой комнате (для узла карты выбор постоянный).", MessageType.None);
             DrawDefaultInspector();
@@ -28,7 +28,7 @@ namespace RealityDirector.EditorTools
             }
 
             EditorGUILayout.Space(8);
-            _preview = EditorGUILayout.Foldout(_preview, "Как увидит игрок (репутация 25, нал 90, контракт 1)", true);
+            _preview = EditorGUILayout.Foldout(_preview, "Как увидит игрок (репутация 25, 90 УЕ, контракт 1)", true);
             if (_preview)
             {
                 var season = new SeasonState();

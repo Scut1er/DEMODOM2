@@ -30,7 +30,7 @@ namespace RealityDirector.Meta
         public string brand;
     }
 
-    // Покупка за нал и спонсорский контракт. Контракт не платит сразу.
+    // Покупка за УЕ и спонсорский контракт. Контракт не платит сразу.
     [CreateAssetMenu(menuName = "RealityDirector/Rooms/Marketing", fileName = "Marketing_")]
     public class MarketingRoomDefinition : RoomDefinition
     {

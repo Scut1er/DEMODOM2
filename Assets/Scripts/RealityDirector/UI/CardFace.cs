@@ -291,7 +291,7 @@ namespace RealityDirector.UI
             _fallbackIcon.color = Color.Lerp(_accent, Color.white, 0.5f);
         }
 
-        // Цена: в руке — HellToken, в магазине хаба — кр или нал. Не хватает — красная.
+        // Цена: в руке — HellToken, в магазине хаба — ЕБ, в магазине выпуска — УЕ. Не хватает — красная.
         public void SetCost(string text, bool poor)
         {
             _cost.gameObject.SetActive(!string.IsNullOrEmpty(text));

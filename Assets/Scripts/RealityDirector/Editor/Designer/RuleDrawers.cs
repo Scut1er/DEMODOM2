@@ -23,7 +23,7 @@ namespace RealityDirector.EditorTools
             "Уровень команды не меньше",
             "Спонсорский контракт активен",
             "Тон сезона не меньше",
-            "Нал выпуска не меньше"
+            "УЕ выпуска не меньше"
         };
 
         // Что видно в списке. «Спонсорский контракт активен» скрыт: контрактов в игре пока нет, условие всегда ложно.
@@ -85,7 +85,7 @@ namespace RealityDirector.EditorTools
                     EditorGUI.PropertyField(r, value, new GUIContent("Номер выпуска (с 1)"));
                     break;
                 case ConditionType.BudgetAtLeast:
-                    EditorGUI.PropertyField(r, value, new GUIContent("Кредитов"));
+                    EditorGUI.PropertyField(r, value, new GUIContent("ЕБ"));
                     break;
                 case ConditionType.CashAtLeast:
                     EditorGUI.PropertyField(r, value, new GUIContent("Нала"));
@@ -147,7 +147,7 @@ namespace RealityDirector.EditorTools
 
         // Ключи модификатора эфира, которые читает эфир (HubFlow).
         static readonly string[] AirKeys = { EpisodeState.AirRating, EpisodeState.AirPay, EpisodeState.AirSponsorPay };
-        static readonly string[] AirNames = { "Оценка эфира (в десятых балла)", "Кр к выплате за эфир", "Кр к выплате спонсора" };
+        static readonly string[] AirNames = { "Оценка эфира (в десятых балла)", "ЕБ к выплате за эфир", "ЕБ к выплате спонсора" };
 
         static readonly EffectType[] Shown =
         {
@@ -188,7 +188,7 @@ namespace RealityDirector.EditorTools
             "Забрать временную карту",
             "Следующая съёмка: актёры начнут с…",
             "Модификатор эфира",
-            "Нал +/-",
+            "УЕ +/-",
             "Карта в колоду навсегда",
             "Убрать карту из колоды навсегда",
             "Репутация спонсоров +/-"
@@ -222,7 +222,7 @@ namespace RealityDirector.EditorTools
                     EditorGUI.PropertyField(mr, value, new GUIContent("Сколько"));
                     break;
                 case EffectType.Budget:
-                    EditorGUI.PropertyField(r, value, new GUIContent("Кредиты (минус — списать)"));
+                    EditorGUI.PropertyField(r, value, new GUIContent("ЕБ (минус — списать)"));
                     break;
                 case EffectType.Tone:
                     ConditionDrawer.Split(r, out var l, out var rr);
@@ -247,7 +247,7 @@ namespace RealityDirector.EditorTools
                     DesignerData.PickerField(r, new GUIContent("id карты"), key, DesignerData.CardIds());
                     break;
                 case EffectType.Cash:
-                    EditorGUI.PropertyField(r, value, new GUIContent("Нал (минус — списать)"));
+                    EditorGUI.PropertyField(r, value, new GUIContent("УЕ (минус — списать)"));
                     break;
                 case EffectType.BroadcastModifier:
                     ConditionDrawer.Split(r, out var al, out var ar);

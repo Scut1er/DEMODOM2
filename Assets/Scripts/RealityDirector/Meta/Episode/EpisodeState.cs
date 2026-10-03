@@ -91,7 +91,7 @@ namespace RealityDirector.Meta
         public int index;
         public List<string> cast = new List<string>();
         public int budgetAtStart;
-        [Tooltip("Нал выпуска. Тратится в магазине на карте, в хаб не переносится.")]
+        [Tooltip("УЕ выпуска (в коде — cash). Тратятся в магазине на карте, в хаб не переносятся.")]
         public int cash;
         public const float HellCap = 10f;
         [Tooltip("HellToken съёмки ($). Тратится на cost карт. Новый заход в комнату заливает пул заново.")]
@@ -144,8 +144,8 @@ namespace RealityDirector.Meta
         public List<Modifier> broadcastModifiers = new List<Modifier>();
         // Ключи модификаторов эфира (эффект BroadcastModifier, читает эфир в HubFlow).
         public const string AirRating = "rating";          // оценка эфира, в десятых балла
-        public const string AirPay = "pay";                // кр к выплате за эфир
-        public const string AirSponsorPay = "sponsorPay";  // кр к выплате спонсора, если реклама вышла в эфир
+        public const string AirPay = "pay";                // ЕБ к выплате за эфир
+        public const string AirSponsorPay = "sponsorPay";  // ЕБ к выплате спонсора, если реклама вышла в эфир
         public List<ActorRuntime> actors = new List<ActorRuntime>();
 
         public void OpenHell(string roomId)

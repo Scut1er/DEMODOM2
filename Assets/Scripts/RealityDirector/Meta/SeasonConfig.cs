@@ -12,9 +12,9 @@ namespace RealityDirector.Meta
         [Min(1)] public int episodes = 4;
         [Tooltip("Карта для каждого выпуска по порядку: элемент 0 — выпуск 1. Если выпусков больше — берётся последняя карта.")]
         public List<EpisodeMapConfig> maps = new List<EpisodeMapConfig>();
-        [Tooltip("Бюджет в начале сезона. Кр тратятся в хабе: прокачка и колода.")]
+        [Tooltip("Бюджет в начале сезона. ЕБ тратятся в хабе: прокачка и колода.")]
         [Min(0)] public int startingBudget;
-        [Tooltip("Нал в начале каждого выпуска. Тратится в магазине на карте выпуска.")]
+        [Tooltip("УЕ в начале каждого выпуска. Тратятся в магазине на карте выпуска.")]
         [Min(0)] public int startingCash = 90;
         [Tooltip("HellToken ($) на каждую съёмку: из него платят за розыгрыш карт. Заливается заново в каждой комнате.")]
         [Min(1)] public float hellTokenBudget = 10f;

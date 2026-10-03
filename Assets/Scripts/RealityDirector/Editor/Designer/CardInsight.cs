@@ -38,9 +38,9 @@ namespace RealityDirector.EditorTools
             if (c.starter)
                 parts.Add("стартовая колода");
             if (c.price > 0 && !c.sponsor)
-                parts.Add("магазин хаба " + c.price + " кр");
+                parts.Add("магазин хаба " + c.price + " ЕБ");
             if (c.runPrice > 0)
-                parts.Add("магазин выпуска " + c.runPrice + " нал");
+                parts.Add("магазин выпуска " + c.runPrice + " УЕ");
             return parts.Count > 0 ? string.Join("  ·  ", parts) : "нигде не выдаётся";
         }
 
@@ -187,7 +187,7 @@ namespace RealityDirector.EditorTools
             }
 
             if (c.sponsor)
-                lines.Add("Спонсор: после сцены +" + c.sponsorPay + " кр, но каждый отзыв зрителей −" + c.sponsorScoreHit + ".");
+                lines.Add("Спонсор: после сцены +" + c.sponsorPay + " ЕБ, но каждый отзыв зрителей −" + c.sponsorScoreHit + ".");
             if (System.Array.IndexOf(DesignerData.SpecialCardIds, c.id) >= 0)
                 lines.Add("Плюс особая механика из кода квартиры (по id «" + c.id + "»).");
             return lines;

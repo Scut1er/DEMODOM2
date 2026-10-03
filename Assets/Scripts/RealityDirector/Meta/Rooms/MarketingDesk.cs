@@ -94,8 +94,8 @@ namespace RealityDirector.Meta
                 if (!string.IsNullOrEmpty(o.brand))
                     v.brand = o.brand;
                 v.gets = "карта «" + v.card + "» до эфира";
-                v.price = "+" + o.payout + " кр";
-                v.success = "+" + o.payout + " кр, репутация +12";
+                v.price = "+" + o.payout + " ЕБ";
+                v.success = "+" + o.payout + " ЕБ, репутация +12";
                 v.fail = "репутация −15";
                 v.lifetime = "кадр с брендом должен попасть в эфир" + (o.scoreHit > 0 ? " · отзывы −" + o.scoreHit : "");
                 v.requirement = o.minReputation > 0 ? "репутация " + o.minReputation + "+ (у вас " + reputation + ")" : "";
@@ -129,7 +129,7 @@ namespace RealityDirector.Meta
                 }
 
                 v.task = o.blurb;
-                v.price = o.price + " нал";
+                v.price = o.price + " УЕ";
                 string bought = "bought_" + (string.IsNullOrEmpty(o.id) ? o.title : o.id);
                 v.done = ep != null && ep.HasFlag(bought);
                 int cash = ep != null ? ep.cash : 0;
@@ -142,7 +142,7 @@ namespace RealityDirector.Meta
                 else if (!string.IsNullOrEmpty(o.cardId) && ep != null && ep.tempCards.Contains(o.cardId))
                     v.reason = "карта уже в выпуске";
                 else if (o.price > cash)
-                    v.reason = "не хватает " + (o.price - cash) + " нал";
+                    v.reason = "не хватает " + (o.price - cash) + " УЕ";
             }
 
             v.available = string.IsNullOrEmpty(v.reason);

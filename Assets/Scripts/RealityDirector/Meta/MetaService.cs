@@ -96,7 +96,7 @@ namespace RealityDirector.Meta
             int cost = Progression.UpgradeCost(track == CrewTrack.Cast, level, max);
             if (level >= max || cost <= 0 || _state.money < cost)
             {
-                Reject = level >= max ? "Уже максимум." : "Не хватает кр.";
+                Reject = level >= max ? "Уже максимум." : "Не хватает ЕБ.";
                 return false;
             }
 
@@ -118,7 +118,7 @@ namespace RealityDirector.Meta
             var def = Find(id);
             if (def == null || def.price <= 0 || def.sponsor || _state.money < def.price)
             {
-                Reject = "Не хватает кр.";
+                Reject = "Не хватает ЕБ.";
                 return false;
             }
 
@@ -148,7 +148,7 @@ namespace RealityDirector.Meta
 
             if (offer.price > 0 && ep.cash < offer.price)
             {
-                Reject = "Не хватает кассы выпуска.";
+                Reject = "Не хватает УЕ.";
                 return false;
             }
 
@@ -160,7 +160,7 @@ namespace RealityDirector.Meta
                     return false;
                 }
 
-                // Колода сезона уже сдаёт эту карту: разовая копия ничего не добавит, а нал сгорит.
+                // Колода сезона уже сдаёт эту карту: разовая копия ничего не добавит, а УЕ сгорят.
                 if (_state.Owns(offer.cardId))
                 {
                     Reject = "Уже в колоде сезона.";
@@ -185,7 +185,7 @@ namespace RealityDirector.Meta
             return true;
         }
 
-        // Контракт не списывает нал. Выплата — только если карта сыграна и кадр в монтаже.
+        // Контракт не списывает УЕ. Выплата — только если карта сыграна и кадр в монтаже.
         public bool TryTakeContract(string cardId, int payout, int scoreHit)
         {
             var ep = _state.episode;
@@ -469,7 +469,7 @@ namespace RealityDirector.Meta
                 maxLevel = max,
                 maxed = maxed,
                 affordable = !maxed && _state.money >= cost,
-                cost = maxed ? "—" : cost + " кр",
+                cost = maxed ? "—" : cost + " ЕБ",
                 upgradeLabel = maxed ? "МАКСИМУМ" : "УЛУЧШИТЬ ДО УРОВНЯ " + (level + 1)
             };
 
@@ -566,7 +566,7 @@ namespace RealityDirector.Meta
             string tone = _tone != null && _tone.TryLead(out ShowMood lead)
                 ? MoodStyle.Paint(MoodStyle.Full(lead), lead)
                 : "ничья — концовку не выбрать";
-            return "Тон сезона: " + tone + "\nБюджет: " + _state.money + " кр\nСами концовки напишем следом.";
+            return "Тон сезона: " + tone + "\nБюджет: " + _state.money + " ЕБ\nСами концовки напишем следом.";
         }
 
         public List<string> TaskLines()
@@ -588,7 +588,7 @@ namespace RealityDirector.Meta
                 detail = detail,
                 maxed = maxed,
                 affordable = !maxed && _state.money >= cost,
-                costLabel = maxed ? "МАКС" : "апгрейд " + cost + " кр"
+                costLabel = maxed ? "МАКС" : "апгрейд " + cost + " ЕБ"
             };
         }
 
@@ -658,8 +658,8 @@ namespace RealityDirector.Meta
         string MoneyLine()
         {
             if (_state.episode == null)
-                return _state.money + " кр";
-            return _state.money + " кр   ·   касса выпуска " + _state.episode.cash;
+                return _state.money + " ЕБ";
+            return _state.money + " ЕБ   ·   " + _state.episode.cash + " УЕ на выпуск";
         }
 
         PrepCard CardOf(EventDefinition def, bool inHand, string unit)

@@ -314,6 +314,10 @@ namespace RealityDirector.UI.Hub
             if (hub.FirstEpisode)
                 return;
 
+            // Обучение пропустили — экскурсии по студии не будет, но что такое ЕБ, сказать надо.
+            if (state != null && state.flags.Contains(TutorialSkipped) && !state.flags.Contains(StudioTaught))
+                TipOnce("money", "Сверху — бюджет в ЕБ. Это «единицы бюджета», а не то, что ты подумал. Копятся с эфиров, тратишь здесь, на людей и карты.");
+
             // Студия открылась после первого эфира — один раз рассказать, что тут к чему.
             if (state == null || state.flags.Contains(StudioTaught) || state.flags.Contains(TutorialSkipped))
                 return;
@@ -321,11 +325,11 @@ namespace RealityDirector.UI.Hub
             GameSession.Save();
             var teach = new List<CoachStep>();
             BossCoach.Line(teach, BossMood.Smug, "Первый эфир позади. Студия открыта: теперь деньги с эфира можно вложить.", hub.StatsFocus());
-            BossCoach.Line(teach, BossMood.Aside, "Сверху — кр, рейтинг и тон сезона. кр тратишь здесь, на людей и карты. Hell Token — отдельные деньги, их жгут карты уже на площадке.", hub.StatsFocus());
+            BossCoach.Line(teach, BossMood.Aside, "Сверху — бюджет, рейтинг и тон сезона. Бюджет в ЕБ — «единицах бюджета», а не то, что ты подумал. Тратишь здесь, на людей и карты. Hell Token — отдельные деньги, их жгут карты уже на площадке.", hub.StatsFocus());
             BossCoach.Line(teach, BossMood.Think, "Кастинг. Апгрейд даёт места в кадре и процент к чеку. С третьего уровня на карточке откроется скрытая черта. Раньше она закрыта.", hub.ZoneFocus(CrewTrack.Cast));
             BossCoach.Line(teach, BossMood.Annoyed, "Съёмочная. На сцене всегда 5 слотов футажа. Два апгрейда, каждый добавляет ещё один слот на сцену. В монтаже берёшь 3 кадра из всего, что снял за выпуск. Со второго уровня здесь ещё и общий тег соседних кадров.", hub.ZoneFocus(CrewTrack.Operators));
             BossCoach.Line(teach, BossMood.Smug, "Сценарная. Открывает новые типы карт в магазине. Рука на площадке от неё не растёт. На четвёртом уровне — второй рекламный контракт за выпуск.", hub.ZoneFocus(CrewTrack.Writers));
-            BossCoach.Line(teach, BossMood.Shock, "Магазин. Платишь кр один раз. Карта остаётся в колоде до конца сезона. На площадке её сдадут в руку вместе с остальными.", hub.ShopFocus());
+            BossCoach.Line(teach, BossMood.Shock, "Магазин. Платишь ЕБ один раз. Карта остаётся в колоде до конца сезона. На площадке её сдадут в руку вместе с остальными.", hub.ShopFocus());
             // Обучение к этому моменту закончено (эфир), поэтому не Guide, а прямая цепочка реплик.
             if (teach.Count > 0)
                 BossCoach.Ensure().Tell(teach.ToArray(), () => StartCoroutine(ShowDeckLesson()));
@@ -552,7 +556,7 @@ namespace RealityDirector.UI.Hub
             SceneFlow.ToScene(GameSession.SceneId);
         }
 
-        // Покупка за нал или контракт без денег. Выплата контракта ждёт монтаж.
+        // Покупка за УЕ или контракт без денег. Выплата контракта ждёт монтаж.
         void EnterMarketing(MapNode node)
         {
             if (!_episode.Map.Choose(node))
@@ -573,7 +577,7 @@ namespace RealityDirector.UI.Hub
             {
                 state.flags.Add("tut_market");
                 var steps = new List<CoachStep>();
-                BossCoach.Line(steps, BossMood.Smug, "Маркетинг. Слева покупки: тратишь нал выпуска — получаешь карту или бонус на следующие съёмки. Написано, что дадут и сколько действует.", _market.BuysFocus);
+                BossCoach.Line(steps, BossMood.Smug, "Маркетинг. Слева покупки: тратишь УЕ — «условные единицы», деньги этого выпуска. Получаешь карту или бонус на следующие съёмки. Написано, что дадут и сколько действует.", _market.BuysFocus);
                 BossCoach.Line(steps, BossMood.Aside, "Справа контракты. Бренд даёт свою карту. Сыграй её, сними бренд в кадре и оставь кадр в монтаже — заплатят и репутация вырастет. Нет кадра в эфире — штраф.", _market.DealsFocus);
                 BossCoach.Line(steps, BossMood.Mad, "Купил, подписал — закрывай комнату. Сюда не вернуться.", _market.BuysFocus);
                 BossCoach.Ensure().Tell(steps.ToArray(), null);
@@ -594,7 +598,7 @@ namespace RealityDirector.UI.Hub
             if (!_episode.Active)
                 return;
             var state = GameSession.State;
-            TipOnce("market", "Маркетинг. Касса — деньги этого выпуска. Кр копится на сезон и тратится в хабе. Контракт не платит сразу: сыграй карту спонсора и оставь этот ролик в монтаже.");
+            TipOnce("market", "Маркетинг. УЕ, «условные единицы», — деньги этого выпуска: тратишь здесь, в хаб они не переходят. ЕБ копятся на сезон и тратятся в хабе. Контракт не платит сразу: сыграй карту спонсора и оставь этот ролик в монтаже.");
             var ep = state.episode;
             int slots = Progression.ContractSlots(state.writerLevel);
             var views = new List<OfferView>();
@@ -603,7 +607,7 @@ namespace RealityDirector.UI.Hub
             string title = _marketing != null && !string.IsNullOrEmpty(_marketing.title) ? _marketing.title.ToUpperInvariant() : "МАРКЕТИНГ";
             if (_marketing != null && !string.IsNullOrEmpty(_marketing.subtitle))
                 title += "  ·  " + _marketing.subtitle;
-            string status = "Касса выпуска: <b>" + (ep != null ? ep.cash : 0) + "</b>   ·   " + _meta.ReputationLine().Replace("\n", "   ·   ");
+            string status = "На выпуск: <b>" + (ep != null ? ep.cash : 0) + " УЕ</b>   ·   " + _meta.ReputationLine().Replace("\n", "   ·   ");
             _market.Show(title, status, views, offer =>
             {
                 int before = ep != null ? ep.cash : 0;
@@ -615,7 +619,7 @@ namespace RealityDirector.UI.Hub
                     var v = MarketingDesk.Describe(offer, state, ep, slots, _meta.Find);
                     _market.Notice(offer.kind == OfferKind.Contract
                         ? "Контракт подписан: «" + offer.title + "». Карта «" + v.card + "» в колоде выпуска — снимите бренд и вставьте кадр в эфир."
-                        : "Куплено: «" + offer.title + "» — " + v.gets + ".  Касса: " + before + " → " + (ep != null ? ep.cash : 0), true);
+                        : "Куплено: «" + offer.title + "» — " + v.gets + ".  УЕ: " + before + " → " + (ep != null ? ep.cash : 0), true);
                 }
                 else
                 {
@@ -925,14 +929,18 @@ namespace RealityDirector.UI.Hub
             BossCoach.Ensure().Freeze(
                 "Эфир. Зрители видят только кат. «Нравится» — та же оценка в процентах, не отдельные деньги. Рейтинг кормит чек.",
                 () => BossCoach.Ensure().Freeze(
-                    "Обучение окончено. Дальше сам.",
-                    () =>
-                    {
-                        state.tutorialBeat = 6;
-                        state.wantsTutorial = false;
-                        GameSession.MarkTutorialDone();
-                        GameSession.Save();
-                    }),
+                    BossMood.Smug,
+                    "Доход — в ЕБ. Это «единицы бюджета», а не то, что ты подумал. Копятся за сезон, тратишь в студии на людей и карты.",
+                    () => BossCoach.Ensure().Freeze(
+                        "Обучение окончено. Дальше сам.",
+                        () =>
+                        {
+                            state.tutorialBeat = 6;
+                            state.wantsTutorial = false;
+                            GameSession.MarkTutorialDone();
+                            GameSession.Save();
+                        }),
+                    _cut.IncomeFocus),
                 _cut.LikesFocus);
         }
 
@@ -1032,13 +1040,13 @@ namespace RealityDirector.UI.Hub
             GameSession.State.money += pay;
             GameSession.State.ratingSum += result.score;
             GameSession.State.rated++;
-            string line = empty ? "0 кр   ·   эфир пустой — платить не за что" : PayLine(pay, hadTasks, wishDone);
+            string line = empty ? "0 ЕБ   ·   эфир пустой — платить не за что" : PayLine(pay, hadTasks, wishDone);
             if (sponsorMoney > 0)
-                line += "   ·   спонсор +" + sponsorMoney + " кр, отзывы −" + hit;
+                line += "   ·   спонсор +" + sponsorMoney + " ЕБ, отзывы −" + hit;
             else if (playedAd)
                 line += "   ·   реклама не в эфире, выплаты нет";
             if (bonus != 0)
-                line += "   ·   события выпуска " + (bonus > 0 ? "+" : "−") + Mathf.Abs(bonus) + " кр";
+                line += "   ·   события выпуска " + (bonus > 0 ? "+" : "−") + Mathf.Abs(bonus) + " ЕБ";
             episode.settled = true;
             episode.settledPay = pay;
             episode.settledSponsor = sponsorMoney;
@@ -1224,10 +1232,10 @@ namespace RealityDirector.UI.Hub
         static string PayLine(int pay, bool hadTasks, bool wishDone)
         {
             if (!hadTasks)
-                return "+" + pay + " кр   ·   задач не было";
+                return "+" + pay + " ЕБ   ·   задач не было";
             if (wishDone)
-                return "+" + pay + " кр   ·   задача закрыта ×1.3";
-            return "+" + pay + " кр   ·   задачи открыты, мимо";
+                return "+" + pay + " ЕБ   ·   задача закрыта ×1.3";
+            return "+" + pay + " ЕБ   ·   задачи открыты, мимо";
         }
 
         void ShowSeasonEnd()

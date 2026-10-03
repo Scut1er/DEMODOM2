@@ -192,7 +192,7 @@ namespace RealityDirector.Meta
         public static FeedbackResult BuildCut(IReadOnlyList<CapturedMoment> cut, SeasonTone tone, int coherence, bool sponsorAired,
             CutReport report = null, string brand = null)
         {
-            // Пустой эфир: смотреть нечего. Раньше общие отзывы давали ~4/10 и 50–60 кр за пустоту.
+            // Пустой эфир: смотреть нечего. Раньше общие отзывы давали ~4/10 и 50–60 ЕБ за пустоту.
             if (cut == null || cut.Count == 0)
                 return EmptyAir(tone);
             var result = Build(null, cut, tone);

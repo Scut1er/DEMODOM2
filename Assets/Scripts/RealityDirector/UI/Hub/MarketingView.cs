@@ -6,7 +6,7 @@ using UnityEngine.UI;
 
 namespace RealityDirector.UI.Hub
 {
-    // Комната маркетинга: слева ПОКУПКИ (тратишь нал — получаешь карту или бонус), справа СПОНСОРСКИЕ КОНТРАКТЫ
+    // Комната маркетинга: слева ПОКУПКИ (тратишь УЕ — получаешь карту или бонус), справа СПОНСОРСКИЕ КОНТРАКТЫ
     // (бренд, задача, карта, выплата, последствия, репутация). Каждое предложение — карточка с ценой, сроком
     // и причиной, если нельзя. После покупки — подтверждение сверху и состояние «куплено / принят».
     public class MarketingView : MonoBehaviour
@@ -56,7 +56,7 @@ namespace RealityDirector.UI.Hub
             _notice.supportRichText = true;
             UiKit.Place(_notice.rectTransform, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(80f, -140f), new Vector2(1700f, 32f));
 
-            _buys = Column("ПОКУПКИ", "тратишь нал выпуска — получаешь карту или бонус", 80f);
+            _buys = Column("ПОКУПКИ", "тратишь УЕ выпуска — получаешь карту или бонус", 80f);
             _deals = Column("СПОНСОРСКИЕ КОНТРАКТЫ", "бесплатно — платят, если кадр с брендом попадёт в эфир", 80f + ColumnWidth + 60f);
 
             var leave = UiKit.Img("leave", _root, null, Color.white, true);

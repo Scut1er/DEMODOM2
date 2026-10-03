@@ -12,7 +12,7 @@ namespace RealityDirector.EditorTools
     public class CardWorkshop : EditorWindow
     {
         static readonly string[] Modes = { "Карточка", "Таблица", "Обзор" };
-        static readonly string[] Filters = { "Все", "Стартовые", "Магазин хаба (кр)", "Магазин выпуска (нал)", "Спонсоры", "Негде взять", "Драма", "Трэш", "Семья", "Черновики", "На тесте", "Готовые", "Выключенные", "NOT RUNTIME SUPPORTED" };
+        static readonly string[] Filters = { "Все", "Стартовые", "Магазин хаба (ЕБ)", "Магазин выпуска (УЕ)", "Спонсоры", "Негде взять", "Драма", "Трэш", "Семья", "Черновики", "На тесте", "Готовые", "Выключенные", "NOT RUNTIME SUPPORTED" };
 
         int _mode;
         int _filter;
@@ -239,7 +239,7 @@ namespace RealityDirector.EditorTools
             if (!CardInsight.Obtainable(card))
                 badge.normal.textColor = new Color(1f, 0.45f, 0.4f);
             GUI.Label(new Rect(rect.xMax - 70, rect.y + 3, 64, 16), CardInsight.Badge(card), badge);
-            string price = card.sponsor ? "+" + card.sponsorPay + " кр" : card.runPrice > 0 ? card.runPrice + " нал" : card.price > 0 ? card.price + " кр" : "";
+            string price = card.sponsor ? "+" + card.sponsorPay + " ЕБ" : card.runPrice > 0 ? card.runPrice + " УЕ" : card.price > 0 ? card.price + " ЕБ" : "";
             GUI.Label(new Rect(rect.xMax - 70, rect.y + 19, 64, 16), price, new GUIStyle(EditorStyles.miniLabel) { alignment = TextAnchor.MiddleRight });
             if (Event.current.type == EventType.MouseDown && rect.Contains(Event.current.mousePosition))
             {
@@ -261,10 +261,10 @@ namespace RealityDirector.EditorTools
             ("Тон 1", 70, "Первый тон: +6 к тону сезона и цвет рамки."),
             ("Тон 2", 70, "Второй тон: ещё +6."),
             ("Старт", 42, "В стартовой колоде."),
-            ("Хаб, кр", 60, "Цена в магазине хаба. 0 — не продаётся."),
-            ("Выпуск, нал", 76, "Цена в магазине выпуска. 0 — не продаётся."),
+            ("Хаб, ЕБ", 60, "Цена в магазине хаба. 0 — не продаётся."),
+            ("Выпуск, УЕ", 76, "Цена в магазине выпуска. 0 — не продаётся."),
             ("Спонсор", 54, ""),
-            ("Платит", 54, "Спонсор: кр после сцены."),
+            ("Платит", 54, "Спонсор: ЕБ после сцены."),
             ("Отзывы −", 60, "Спонсор: минус к каждому отзыву."),
             ("Злость", 50, "Секунд злости цели (только «участник»)."),
             ("Огонь", 42, "Поджигает (только «объект»)."),
@@ -408,9 +408,9 @@ namespace RealityDirector.EditorTools
                 Header("Колода целиком: " + all.Count + " карт");
 
                 Row("Стартовые", all.Count(c => c.starter), "у игрока с первого выпуска");
-                Row("Магазин хаба (кр)", all.Count(c => c.price > 0 && !c.sponsor), Avg(all.Where(c => c.price > 0 && !c.sponsor).Select(c => c.price), "кр"));
-                Row("Магазин выпуска (нал)", all.Count(c => c.runPrice > 0), Avg(all.Where(c => c.runPrice > 0).Select(c => c.runPrice), "нал"));
-                Row("Спонсоры", all.Count(c => c.sponsor), Avg(all.Where(c => c.sponsor).Select(c => c.sponsorPay), "кр платят"));
+                Row("Магазин хаба (ЕБ)", all.Count(c => c.price > 0 && !c.sponsor), Avg(all.Where(c => c.price > 0 && !c.sponsor).Select(c => c.price), "ЕБ"));
+                Row("Магазин выпуска (УЕ)", all.Count(c => c.runPrice > 0), Avg(all.Where(c => c.runPrice > 0).Select(c => c.runPrice), "УЕ"));
+                Row("Спонсоры", all.Count(c => c.sponsor), Avg(all.Where(c => c.sponsor).Select(c => c.sponsorPay), "ЕБ платят"));
                 Row("Негде взять", all.Count(c => !CardInsight.Obtainable(c)), "не попадут к игроку");
                 Row("NOT RUNTIME SUPPORTED", all.Count(c => !RealityDirector.Cards.CardRuntime.Playable(c)), "квартира исполнит не всё — в старт и магазин хаба не попадут");
                 Row("Без арта", all.Count(c => RealityDirector.UI.CardVisuals.Art(c) == null), "на карте — иконка категории (поле «Арт» или Art/UI/Cards/Art/<id>.png)");

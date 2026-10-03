@@ -37,9 +37,9 @@ namespace RealityDirector.Events
         [Tooltip("HellToken в долларах ($0.75), чтобы сыграть карту на съёмке.")]
         public float cost;
         public int price;
-        [Tooltip("Цена в магазине выпуска (нал). 0 — в этот магазин не попадает. Карта живёт только до эфира выпуска.")]
+        [Tooltip("Цена в магазине выпуска (УЕ). 0 — в этот магазин не попадает. Карта живёт только до эфира выпуска.")]
         public int runPrice;
-        [Tooltip("Продакт-плейсмент: сыгранная карта даёт кр в конце сцены и режет отзывы.")]
+        [Tooltip("Продакт-плейсмент: сыгранная карта даёт ЕБ в конце сцены и режет отзывы.")]
         public bool sponsor;
         public int sponsorPay;
         public int sponsorScoreHit;
@@ -86,7 +86,7 @@ namespace RealityDirector.Events
         [Header("Улучшения")]
         [Tooltip("Карта Tier II — отдельный ассет со своими значениями.")]
         public EventDefinition upgradeTier2;
-        [Tooltip("Бюджет крафта: 3 × эта карта + кр → Tier II.")]
+        [Tooltip("Бюджет крафта: 3 × эта карта + ЕБ → Tier II.")]
         [Min(0)] public int craftBudgetTier2;
         public EventDefinition upgradeTier3;
         [Min(0)] public int craftBudgetTier3;

@@ -7,7 +7,7 @@ using UnityEngine.UI;
 namespace RealityDirector.UI.Hub
 {
     // Карта в колоде и магазине хаба — то же лицо карты (CardFace), что в руке на съёмке. В магазине — цена
-    // в кр/нал, на что не хватает денег — приглушено; карта в серии — с золотым свечением.
+    // в ЕБ/УЕ, на что не хватает денег — приглушено; карта в серии — с золотым свечением.
     public class EventCardView : MonoBehaviour, IPointerEnterHandler, IPointerExitHandler
     {
         public static readonly Vector2 Size = CardFace.SizeFor(168f);
@@ -85,7 +85,7 @@ namespace RealityDirector.UI.Hub
 
             bool poor = shop && !card.affordable;
             if (shop)
-                _face.SetCost(card.price + " " + (string.IsNullOrEmpty(card.unit) ? "кр" : card.unit == "нал" ? "касса" : card.unit), poor);
+                _face.SetCost(card.price + " " + (string.IsNullOrEmpty(card.unit) ? "ЕБ" : card.unit == "нал" ? "УЕ" : card.unit), poor);
             _face.SetBanner(card.temporary ? "В РУКЕ" : null, UiKit.Gold);
             if (!string.IsNullOrEmpty(card.hint))
                 _face.SetHint(card.hint);

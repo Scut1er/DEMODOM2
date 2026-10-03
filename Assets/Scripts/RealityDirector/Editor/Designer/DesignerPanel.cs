@@ -50,7 +50,7 @@ namespace RealityDirector.EditorTools
             var season = AssetDatabase.LoadAssetAtPath<SeasonConfig>(DesignerData.SeasonPath);
             Section("Сезон");
             if (season != null)
-                Row(season, season.episodes + " выпусков  ·  каст до " + season.castMax + "  ·  нал на выпуск " + season.startingCash);
+                Row(season, season.episodes + " выпусков  ·  каст до " + season.castMax + "  ·  УЕ на выпуск " + season.startingCash);
             else if (GUILayout.Button("Создать SeasonConfig"))
                 DesignerData.CreateAsset<SeasonConfig>("Assets/Data", "SeasonConfig");
 
@@ -124,7 +124,7 @@ namespace RealityDirector.EditorTools
         {
             Hint("Карты продюсера — ассеты в " + DesignerData.CardsRoot + ". Удобнее всего править в «Мастерской карт»:\n" +
                  "карточка с превью и прогнозом реакций, таблица цифр всех карт, обзор баланса и кнопка «Проверить в квартире».\n" +
-                 "Где игрок берёт карту: стартовая колода, магазин хаба (кр, навсегда), магазин выпуска (нал, до эфира), спонсор.");
+                 "Где игрок берёт карту: стартовая колода, магазин хаба (ЕБ, навсегда), магазин выпуска (УЕ, до эфира), спонсор.");
             if (GUILayout.Button("Открыть мастерскую карт", GUILayout.Height(30)))
                 CardWorkshop.Open();
             var cards = DesignerData.LoadAll<EventDefinition>();

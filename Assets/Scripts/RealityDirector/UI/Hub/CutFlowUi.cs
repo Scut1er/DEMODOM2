@@ -542,7 +542,7 @@ namespace RealityDirector.UI.Hub
             // Связность — между соседними кадрами: с одним кадром её нет.
             bool paired = cut != null && cut.Count >= 2;
             _linkStat = Stat(side, 208f, "icon_link_tint", "Связность монтажа", paired ? coherence + "%" : "нужны 2 кадра", paired ? coherence / 100f : -1f);
-            _incomeStat = Stat(side, 270f, "icon_coins_tint", "Доход", "+" + pay + " кр", -1f);
+            _incomeStat = Stat(side, 270f, "icon_coins_tint", "Доход", "+" + pay + " ЕБ", -1f);
             var note = TextOn(side, payLine ?? "", 16, UiKit.Gold, TextAnchor.UpperLeft);
             note.supportRichText = true;
             Pin(note.rectTransform, 30f, 340f, 534f, 110f);

@@ -34,7 +34,7 @@ namespace RealityDirector.EditorTools
 
             Section("Когда выпадает");
             Number("weight", "Вес", "Шанс среди событий. 0 — событие не выпадает само.", true);
-            Field("conditions", "Условия", "Номер выпуска, бюджет, нал, флаги, сюжетные теги, пройденные комнаты, уровень команды, тон.");
+            Field("conditions", "Условия", "Номер выпуска, бюджет, УЕ, флаги, сюжетные теги, пройденные комнаты, уровень команды, тон.");
             Field("uniquePerEpisode", "Не повторять на пути", "Не встретится дважды за выпуск на одном пути.");
 
             Section("При входе");
@@ -117,13 +117,13 @@ namespace RealityDirector.EditorTools
                 y += 48;
             }
 
-            _sandboxOpen = EditorGUILayout.Foldout(_sandboxOpen, "Песочница: как будто выпуск " + Sandbox.episode + ", " + Sandbox.money + " кр, " + Sandbox.cash + " нал", true);
+            _sandboxOpen = EditorGUILayout.Foldout(_sandboxOpen, "Песочница: как будто выпуск " + Sandbox.episode + ", " + Sandbox.money + " ЕБ, " + Sandbox.cash + " УЕ", true);
             if (_sandboxOpen)
             {
                 EditorGUI.indentLevel++;
                 Sandbox.episode = Mathf.Max(1, EditorGUILayout.IntField("Выпуск №", Sandbox.episode));
-                Sandbox.money = Mathf.Max(0, EditorGUILayout.IntField("Бюджет, кр", Sandbox.money));
-                Sandbox.cash = Mathf.Max(0, EditorGUILayout.IntField("Нал", Sandbox.cash));
+                Sandbox.money = Mathf.Max(0, EditorGUILayout.IntField("Бюджет, ЕБ", Sandbox.money));
+                Sandbox.cash = Mathf.Max(0, EditorGUILayout.IntField("УЕ", Sandbox.cash));
                 Sandbox.castLevel = Mathf.Clamp(EditorGUILayout.IntField("Уровень Кастинга", Sandbox.castLevel), 1, 5);
                 string tags = EditorGUILayout.TextField(new GUIContent("Сюжетные теги", "Через запятую — как будто выпуск их уже получил."), string.Join(", ", Sandbox.tags));
                 Sandbox.tags = new List<string>();
@@ -249,14 +249,14 @@ namespace RealityDirector.EditorTools
                     EditorGUILayout.LabelField("Доступность", EditorStyles.miniBoldLabel);
                     Sub(c, "conditions", "Условия", "Невыполненное условие закрывает вариант с пояснением.");
                     Sub(c, "hideIfUnavailable", "Скрыть, если закрыт", "Иначе вариант виден, но закрыт — игрок знает, чего не хватило.");
-                    SubNumber(c, "costMoney", "Цена, кр", 0, 100000);
-                    SubNumber(c, "costCash", "Цена, нал", 0, 100000);
+                    SubNumber(c, "costMoney", "Цена, ЕБ", 0, 100000);
+                    SubNumber(c, "costCash", "Цена, УЕ", 0, 100000);
                     SubNumber(c, "chance", "Шанс успеха, %", 1, 100);
 
                     EditorGUILayout.Space(2);
                     bool chancy = c.FindPropertyRelative("chance").intValue < 100;
                     EditorGUILayout.LabelField(chancy ? "Если успех" : "Последствия", EditorStyles.miniBoldLabel);
-                    Sub(c, "effects", "Эффекты", "Бюджет, нал, тон, флаги, сюжетные теги, карты (на выпуск или в колоду навсегда).");
+                    Sub(c, "effects", "Эффекты", "Бюджет, УЕ, тон, флаги, сюжетные теги, карты (на выпуск или в колоду навсегда).");
                     Sub(c, "resultText", "Текст результата", "Что видит игрок после выбора (можно {роли}).");
                     Sub(c, "resultTags", "Сюжетные теги", "Их проверяют условия следующих комнат и событий.");
                     if (chancy)

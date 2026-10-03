@@ -288,7 +288,7 @@ namespace RealityDirector.UI.Hub
             if (deckTabLabel != null)
                 deckTabLabel.text = "КОЛОДА  ·  " + owned;
             if (money != null)
-                money.text = string.IsNullOrEmpty(model.moneyText) ? model.money + " кр" : model.moneyText;
+                money.text = string.IsNullOrEmpty(model.moneyText) ? model.money + " ЕБ" : model.moneyText;
             for (int i = 0; i < tabPages.Length; i++)
             {
                 if (tabPages[i] != null)

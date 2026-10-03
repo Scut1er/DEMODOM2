@@ -1176,7 +1176,7 @@ namespace RealityDirector.UI
             _linkText.text = LinkPercent(moments) + "%";
             int bright = BrightCount(moments);
             _bonusText.text = "+0,0 (" + bright + ")";
-            _payText.text = "+" + pay + " кр";
+            _payText.text = "+" + pay + " ЕБ";
             _wishText.text = result.payLine ?? "";
             _cutList.text = CutList(moments);
             _feedbackNext = onNext;

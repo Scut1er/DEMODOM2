@@ -110,10 +110,10 @@ namespace RealityDirector.EditorTools
 
             Section("Sponsor", false);
             var sponsor = serializedObject.FindProperty("sponsor");
-            EditorGUILayout.PropertyField(sponsor, new GUIContent("Продакт-плейсмент", "Сыгранная карта платит кр после сцены, но режет отзывы зрителей."));
+            EditorGUILayout.PropertyField(sponsor, new GUIContent("Продакт-плейсмент", "Сыгранная карта платит ЕБ после сцены, но режет отзывы зрителей."));
             if (sponsor.boolValue)
             {
-                Number("sponsorPay", "Платит, кр", "Кредиты после сцены.");
+                Number("sponsorPay", "Платит, ЕБ", "ЕБ после сцены.");
                 Number("sponsorScoreHit", "Отзывы −", "На сколько ниже каждая оценка зрителей.");
                 Field("sponsorId", "Бренд ◇", "Для контрактов и комментариев HellTube.");
             }
@@ -121,8 +121,8 @@ namespace RealityDirector.EditorTools
             Section("Где игрок её берёт", false);
             Field("starter", "В стартовой колоде", "Есть у игрока с начала сезона.");
             using (new EditorGUI.DisabledScope(card.sponsor))
-                Number("price", "Магазин хаба, кр", card.sponsor ? "Спонсорские карты в хабе не продаются." : "Покупка в колоду навсегда. 0 — не продаётся.");
-            Number("runPrice", "Магазин выпуска, нал", "Покупка на карте выпуска. Карта живёт только до эфира. 0 — не продаётся.");
+                Number("price", "Магазин хаба, ЕБ", card.sponsor ? "Спонсорские карты в хабе не продаются." : "Покупка в колоду навсегда. 0 — не продаётся.");
+            Number("runPrice", "Магазин выпуска, УЕ", "Покупка на карте выпуска. Карта живёт только до эфира. 0 — не продаётся.");
 
             Section("Special rules / Lifecycle", false);
             Field("lifetime", "Жизненный цикл", "Что с картой после розыгрыша.");
@@ -206,7 +206,7 @@ namespace RealityDirector.EditorTools
         {
             var prop = serializedObject.FindProperty(field);
             EditorGUILayout.PropertyField(prop, new GUIContent("Карта Tier " + tier, "Отдельный ассет-карта со своими значениями (кубик больше, дешевле, доп. эффект)."));
-            Number(budget, "Крафт, кр", "3 × текущая карта + столько кр → эта карта.");
+            Number(budget, "Крафт, ЕБ", "3 × текущая карта + столько ЕБ → эта карта.");
             if (prop.objectReferenceValue == null && GUILayout.Button("Создать карту Tier " + tier + " из этой", EditorStyles.miniButton))
             {
                 serializedObject.ApplyModifiedProperties();
@@ -399,7 +399,7 @@ namespace RealityDirector.EditorTools
             if (card.sponsor && card.sponsorPay <= 0)
                 EditorGUILayout.HelpBox("Спонсор, который ничего не платит.", MessageType.Warning);
             if (card.sponsor && card.runPrice <= 0 && !card.starter)
-                EditorGUILayout.HelpBox("Спонсорскую карту обычно берут в магазине выпуска — задайте цену в нале.", MessageType.Info);
+                EditorGUILayout.HelpBox("Спонсорскую карту обычно берут в магазине выпуска — задайте цену в УЕ.", MessageType.Info);
             if (card.tags != null)
             {
                 var known = DesignerData.MomentTagList();

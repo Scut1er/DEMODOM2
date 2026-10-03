@@ -37,7 +37,7 @@ namespace RealityDirector.EditorTools
                 {
                     if (c == null)
                         continue;
-                    // Строки таблицы («+80 кр; Trash +6; EpisodeFlag: …») — заметка для команды, а не текст для игрока:
+                    // Строки таблицы («+80 ЕБ; Trash +6; EpisodeFlag: …») — заметка для команды, а не текст для игрока:
                     // игрок видит последствия, собранные из эффектов автоматически.
                     string note = string.IsNullOrEmpty(c.resultText) ? "" : "Успех: " + c.resultText;
                     if (!string.IsNullOrEmpty(c.failText))

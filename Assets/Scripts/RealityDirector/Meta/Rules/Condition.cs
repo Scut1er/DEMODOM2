@@ -9,7 +9,7 @@ namespace RealityDirector.Meta
     {
         EpisodeAtLeast,   // value — номер выпуска (с 1)
         EpisodeAtMost,    // value — номер выпуска (с 1)
-        BudgetAtLeast,    // value — кредиты
+        BudgetAtLeast,    // value — ЕБ
         CastAtLeast,      // value — участников в выпуске
         CastAtMost,       // value — участников в выпуске
         CastHasActor,     // key — id участника
@@ -20,7 +20,7 @@ namespace RealityDirector.Meta
         CrewLevelAtLeast, // key — Cast / Operators / Writers, value — уровень
         ContractActive,   // key — id спонсорского оффера
         ToneAtLeast,      // mood, value — очки тона сезона
-        CashAtLeast       // value — нал выпуска
+        CashAtLeast       // value — УЕ выпуска
     }
 
     [Serializable]

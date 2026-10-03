@@ -641,8 +641,8 @@ namespace RealityDirector.UI.Hub
         void DealRow(Transform parent, MarketingOffer offer, Action<MarketingOffer> pick)
         {
             string price = offer.kind == OfferKind.Contract
-                ? "контракт · +" + offer.payout + " кр"
-                : offer.price + " касса";
+                ? "контракт · +" + offer.payout + " ЕБ"
+                : offer.price + " УЕ";
             var go = new GameObject("deal", typeof(RectTransform), typeof(Image), typeof(Button), typeof(LayoutElement));
             go.transform.SetParent(parent, false);
             go.GetComponent<LayoutElement>().preferredHeight = 72f;

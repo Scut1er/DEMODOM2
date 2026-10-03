@@ -198,7 +198,7 @@ namespace RealityDirector.Meta
                     break;
                 case EffectType.Cash:
                     icon = "icon_budget_tint";
-                    text = e.value >= 0 ? "Нал на этот выпуск" : "Траты нала выпуска";
+                    text = e.value >= 0 ? "УЕ на этот выпуск" : "Траты УЕ выпуска";
                     break;
                 case EffectType.AddTempCard:
                 case EffectType.AddDeckCard:
@@ -243,9 +243,9 @@ namespace RealityDirector.Meta
             int money = c.costMoney + WorstLoss(c, EffectType.Budget);
             int cash = c.costCash + WorstLoss(c, EffectType.Cash);
             if (money > 0 && (ctx.season == null || ctx.season.money < money))
-                return "Нужно " + money + " кр";
+                return "Нужно " + money + " ЕБ";
             if (cash > 0 && (ctx.episode == null || ctx.episode.cash < cash))
-                return "Нужно " + cash + " в кассе выпуска";
+                return "Нужно " + cash + " УЕ";
             return null;
         }
 
@@ -273,9 +273,9 @@ namespace RealityDirector.Meta
         {
             var parts = new List<string>();
             if (c.costMoney > 0)
-                parts.Add("−" + c.costMoney + " кр");
+                parts.Add("−" + c.costMoney + " ЕБ");
             if (c.costCash > 0)
-                parts.Add("−" + c.costCash + " касса");
+                parts.Add("−" + c.costCash + " УЕ");
             return string.Join("  ", parts);
         }
 

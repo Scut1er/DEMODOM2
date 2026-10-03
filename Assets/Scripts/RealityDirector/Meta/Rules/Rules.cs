@@ -82,13 +82,13 @@ namespace RealityDirector.Meta
             {
                 case ConditionType.EpisodeAtLeast: return c.not ? "Только до выпуска " + c.value : "С выпуска " + c.value;
                 case ConditionType.EpisodeAtMost: return c.not ? "Только после выпуска " + c.value : "До выпуска " + c.value;
-                case ConditionType.BudgetAtLeast: return "Нужен бюджет " + c.value + " кр";
+                case ConditionType.BudgetAtLeast: return "Нужен бюджет " + c.value + " ЕБ";
                 case ConditionType.CastAtLeast: return "Нужно участников: " + c.value;
                 case ConditionType.CastAtMost: return "Участников не больше " + c.value;
                 case ConditionType.CastHasActor: return (c.not ? "Без участника " : "Нужен участник ") + c.key;
                 case ConditionType.CrewLevelAtLeast: return "Нужно: " + TrackName(Track(c.key)) + " ур. " + c.value;
                 case ConditionType.ToneAtLeast: return "Нужно: " + MoodStyle.Short(c.mood) + " " + c.value;
-                case ConditionType.CashAtLeast: return "Нужно " + c.value + " в кассе выпуска";
+                case ConditionType.CashAtLeast: return "Нужно " + c.value + " УЕ";
                 default: return "Условие не выполнено";
             }
         }
@@ -161,7 +161,7 @@ namespace RealityDirector.Meta
             return Describe(list, null);
         }
 
-        // Куда сдвинет выбор — до выбора, коротко: «+80 кр · Трэш ↑ · стресс каста ↑». Без скрытых формул,
+        // Куда сдвинет выбор — до выбора, коротко: «+80 ЕБ · Трэш ↑ · стресс каста ↑». Без скрытых формул,
         // но направление видно у каждого эффекта. Флаги и теги — одной строкой «последствия позже».
         public static string Preview(IList<Effect> list, Func<string, string> cardName)
         {
@@ -178,11 +178,11 @@ namespace RealityDirector.Meta
                 {
                     case EffectType.Budget:
                         if (fx.value != 0)
-                            parts.Add((fx.value > 0 ? "+" : "") + fx.value + " кр");
+                            parts.Add((fx.value > 0 ? "+" : "") + fx.value + " ЕБ");
                         break;
                     case EffectType.Cash:
                         if (fx.value != 0)
-                            parts.Add((fx.value > 0 ? "+" : "") + fx.value + " нал");
+                            parts.Add((fx.value > 0 ? "+" : "") + fx.value + " УЕ");
                         break;
                     case EffectType.Tone:
                         if (fx.value != 0)
@@ -256,7 +256,7 @@ namespace RealityDirector.Meta
             }
         }
 
-        // Модификатор эфира словами: оценка — в десятых балла, выплаты — в кр.
+        // Модификатор эфира словами: оценка — в десятых балла, выплаты — в ЕБ.
         static string AirText(string key, int value, bool brief)
         {
             string sign = value > 0 ? "+" : "−";
@@ -266,9 +266,9 @@ namespace RealityDirector.Meta
                 case EpisodeState.AirRating:
                     return brief ? "оценка эфира" + (value > 0 ? " ↑" : " ↓") : "оценка эфира " + sign + (abs / 10f).ToString("0.0");
                 case EpisodeState.AirPay:
-                    return sign + abs + " кр за эфир";
+                    return sign + abs + " ЕБ за эфир";
                 case EpisodeState.AirSponsorPay:
-                    return sign + abs + " кр к выплате спонсора" + (brief ? "" : " (если реклама выйдет в эфир)");
+                    return sign + abs + " ЕБ к выплате спонсора" + (brief ? "" : " (если реклама выйдет в эфир)");
                 default:
                     return key + " " + sign + abs;
             }
@@ -290,11 +290,11 @@ namespace RealityDirector.Meta
                 {
                     case EffectType.Budget:
                         if (fx.value != 0)
-                            parts.Add("бюджет " + (fx.value > 0 ? "+" : "") + fx.value + " кр");
+                            parts.Add("бюджет " + (fx.value > 0 ? "+" : "") + fx.value + " ЕБ");
                         break;
                     case EffectType.Cash:
                         if (fx.value != 0)
-                            parts.Add((fx.value > 0 ? "+" : "") + fx.value + " касса");
+                            parts.Add((fx.value > 0 ? "+" : "") + fx.value + " УЕ");
                         break;
                     case EffectType.Tone:
                         if (fx.value != 0)
