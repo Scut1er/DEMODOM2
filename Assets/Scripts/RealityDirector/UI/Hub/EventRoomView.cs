@@ -89,6 +89,12 @@ namespace RealityDirector.UI.Hub
             _title = Label(_panel, "Title", _titleFont, 52, Gold, TextAnchor.UpperLeft);
             UiTypography.Apply(_title, TextRole.Title);
             Place((RectTransform)_title.transform, 0f, 1f, 1f, 1f, new Vector2(470f, -150f), new Vector2(-40f, -78f));
+            // Длинные названия событий не обрезаются: шрифт ужимается под строку.
+            _title.horizontalOverflow = HorizontalWrapMode.Wrap;
+            _title.verticalOverflow = VerticalWrapMode.Truncate;
+            _title.resizeTextForBestFit = true;
+            _title.resizeTextMinSize = 26;
+            _title.resizeTextMaxSize = _title.fontSize;
             _body = Label(_panel, "Body", _font, 25, Light, TextAnchor.UpperLeft);
             UiTypography.Apply(_body, TextRole.Body);
             Place((RectTransform)_body.transform, 0f, 1f, 1f, 1f, new Vector2(470f, -440f), new Vector2(-40f, -160f));

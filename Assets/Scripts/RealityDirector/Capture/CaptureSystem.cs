@@ -45,6 +45,18 @@ namespace RealityDirector.Capture
 
         // «Нужный момент» (карта NextCaptureBonus): запись, начатая до этого времени, получает бонус качества.
         public static float BonusUntil;
+#if UNITY_EDITOR
+        public static Vector2? DebugAim;
+#endif
+
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        static void ResetStatics()
+        {
+            BonusUntil = 0f;
+#if UNITY_EDITOR
+            DebugAim = null;
+#endif
+        }
         public static bool BonusActive => Time.unscaledTime <= BonusUntil;
         bool _bonus;
 
@@ -647,6 +659,14 @@ namespace RealityDirector.Capture
                 return;
 
             Vector2 screen = Mouse.current.position.ReadValue();
+#if UNITY_EDITOR
+            // Автотесты из редактора (UiTour): навести рамку на точку мира, не трогая мышь.
+            if (DebugAim.HasValue)
+            {
+                _reticle.position = DebugAim.Value;
+                return;
+            }
+#endif
             float dist = Mathf.Abs(Camera.main.transform.position.z);
             Vector3 world = Camera.main.ScreenToWorldPoint(new Vector3(screen.x, screen.y, dist));
             world.z = 0f;

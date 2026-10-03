@@ -74,6 +74,7 @@ namespace RealityDirector.Meta
         public readonly List<string> actors = new List<string>();
         public string topActor;
         public int topActorCount;
+        public bool backwards;
 
         public bool Has(string combo)
         {
@@ -213,7 +214,8 @@ namespace RealityDirector.Meta
                 r.Add(NarrativeRole.Aftermath);
             // Завязка — спокойный кадр, где люди только сходятся: тепло, вечеринка, подарок, публика. Слёзы и ссоры — не завязка.
             bool calm = Any(f, MomentTags.Warmth, "Calm", "Gift", "Party", "Music", "Attention", "Surprise", "Public", "Flirt");
-            bool heavy = conflict || r.Contains(NarrativeRole.Reveal) || r.Contains(NarrativeRole.Reaction) || r.Contains(NarrativeRole.Climax);
+            bool heavy = conflict || r.Contains(NarrativeRole.Reveal) || r.Contains(NarrativeRole.Reaction) || r.Contains(NarrativeRole.Climax)
+                         || r.Contains(NarrativeRole.Payoff) || r.Contains(NarrativeRole.Aftermath);
             if (r.Count == 0 || (calm && f.intensity <= 2 && !heavy))
                 r.Add(NarrativeRole.Setup);
 
@@ -519,10 +521,29 @@ namespace RealityDirector.Meta
         }
 
         // Начинать со взрыва без завязки — зритель не понимает, кто все эти люди.
+        // Последствия раньше причины («сначала помирились, потом подрались») — история задом наперёд.
         static void Opening(CutReport report, ref float coherence)
         {
             if (report.clips.Count < 2)
                 return;
+            for (int i = 0; i < report.clips.Count && !report.backwards; i++)
+            {
+                var a = report.clips[i];
+                if (a.main != NarrativeRole.Payoff && a.main != NarrativeRole.Aftermath)
+                    continue;
+                for (int j = i + 1; j < report.clips.Count; j++)
+                {
+                    var b = report.clips[j];
+                    if (b.main == NarrativeRole.Conflict || b.main == NarrativeRole.Climax || b.main == NarrativeRole.Escalation)
+                    {
+                        report.backwards = true;
+                        coherence -= 6;
+                        report.minus.Add("последствия показаны раньше причины");
+                        break;
+                    }
+                }
+            }
+
             var first = report.clips[0];
             if (first.main == NarrativeRole.Climax && !first.roles.Contains(NarrativeRole.Setup))
             {

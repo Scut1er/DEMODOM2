@@ -455,12 +455,12 @@ namespace RealityDirector.UI.Hub
             Show(map.gameObject);
             RefreshMap();
             var mapTeach = new List<CoachStep>();
-            BossCoach.Line(mapTeach, BossMood.Smug, "Выпуск — маршрут. Сегодня короткий, я сам собрал: съёмка, событие, монтаж. Со следующего будут развилки. Светящаяся комната — единственная, куда можно.", map.BoardFocus);
-            BossCoach.Line(mapTeach, BossMood.Yell, "Съёмка. Колоду тасуют и сдают руку уже там. Карту кидаешь на человека или вещь, камера пишет ролик. Ролик — ещё не эфир.", map.NodeFocus(RoomType.Situation));
-            BossCoach.Line(mapTeach, BossMood.Think, "Событие. Текст и выбор между съёмками. В библиотеку футажа не падает. На кнопке бывает шанс — может не выйти.", map.NodeFocus(RoomType.Event));
-            BossCoach.Line(mapTeach, BossMood.Stern, "Монтаж — последняя дверь. Пока не соберёшь кат и не нажмёшь в эфир, выпуск не закрыт.", map.NodeFocus(RoomType.Montage));
-            BossCoach.Line(mapTeach, BossMood.Aside, "Маркетинга сегодня нет. На следующих картах будет: берёшь контракт, играешь карту спонсора и оставляешь этот ролик в кате. Выкинул из монтажа — выплаты нет, репутация падает.", map.InfoFocus);
-            BossCoach.Line(mapTeach, BossMood.Grin, "Справа цель выпуска и задачи зрителей. Задач пока нет. После эфира заказ можно взять в комментариях — тогда он появится здесь и на хабе.", map.PlanFocus);
+            BossCoach.Line(mapTeach, BossMood.Smug, "Выпуск — маршрут слева направо. На развилке выбираешь одну комнату из соседних — они всегда разные. Светятся те, куда можно.", map.BoardFocus);
+            BossCoach.Line(mapTeach, BossMood.Yell, "Съёмка. У каждой своя постановка: кто где стоит и кто уже на взводе. Карты из руки меняют людей, камера пишет ролик. Ролик — ещё не эфир.", map.NodeFocus(RoomType.Situation));
+            BossCoach.Line(mapTeach, BossMood.Think, "Событие. Текст и выбор между съёмками. На кнопке видно, что будет при успехе и при провале, и шанс.", map.NodeFocus(RoomType.Event));
+            BossCoach.Line(mapTeach, BossMood.Aside, "Маркетинг. Покупки за нал и контракты спонсоров. Спонсор платит, только если кадр с его брендом попадёт в эфир.", map.NodeFocus(RoomType.Marketing));
+            BossCoach.Line(mapTeach, BossMood.Stern, "Монтаж — последняя дверь. Три кадра в историю, потом эфир. Пока не нажмёшь «в эфир», выпуск не закрыт.", map.NodeFocus(RoomType.Montage));
+            BossCoach.Line(mapTeach, BossMood.Grin, "Справа цель выпуска и задачи зрителей. Задач пока нет — заказ можно взять в комментариях после эфира.", map.PlanFocus);
             BossCoach.Line(mapTeach, BossMood.Mad, "Жми на съёмку, потом входи. Назад по карте нельзя. В хаб можно выйти, выпуск от этого не сбросится.", map.EnterFocus);
             if (mapTeach.Count > 0)
                 BossCoach.Play(2, 3, mapTeach.ToArray());
@@ -560,6 +560,17 @@ namespace RealityDirector.UI.Hub
             Sfx.Play(Cue.Coin, 0.4f);
             GameSession.Save();
             RefreshDeals();
+            // Обучение: первый маркетинг — что слева, что справа и как платит спонсор.
+            var state = GameSession.State;
+            if (state != null && state.wantsTutorial && !state.flags.Contains("tut_market"))
+            {
+                state.flags.Add("tut_market");
+                var steps = new List<CoachStep>();
+                BossCoach.Line(steps, BossMood.Smug, "Маркетинг. Слева покупки: тратишь нал выпуска — получаешь карту или бонус на следующие съёмки. Написано, что дадут и сколько действует.", _market.BuysFocus);
+                BossCoach.Line(steps, BossMood.Aside, "Справа контракты. Бренд даёт свою карту. Сыграй её, сними бренд в кадре и оставь кадр в монтаже — заплатят и репутация вырастет. Нет кадра в эфире — штраф.", _market.DealsFocus);
+                BossCoach.Line(steps, BossMood.Mad, "Купил, подписал — закрывай комнату. Сюда не вернуться.", _market.BuysFocus);
+                BossCoach.Ensure().Tell(steps.ToArray(), null);
+            }
         }
 
         // Витрина комнаты маркетинга: предложения из её ассета (пул OWM, если ассет пуст), часть — по сиду узла.
@@ -665,7 +676,7 @@ namespace RealityDirector.UI.Hub
                 "Событие. Это не клип: в библиотеку футажа ничего не падает. Читаешь, что случилось между съёмками.",
                 () => BossCoach.Ensure().Freeze(
                     BossMood.Stern,
-                    "Варианты справа. Если на кнопке процент — это шанс, может не выйти. «Уйти» закрывает комнату и ничего не меняет. Назад выбор не переигрывается.",
+                    "Варианты ниже. Под каждым — что будет, если получится, и что, если нет. Справа шанс и риск. Назад выбор не переигрывается.",
                     () => BossCoach.Ensure().Order(BossMood.Mad, "Выбери одну.", _eventView.Focus),
                     _eventView.Focus),
                 _eventView.BodyFocus);
@@ -786,7 +797,8 @@ namespace RealityDirector.UI.Hub
             var cutTeach = new List<CoachStep>();
             BossCoach.Line(cutTeach, BossMood.Sigh, "Сверху всё, что снял за выпуск. Клик кладёт ролик в один из трёх слотов эфира или убирает. Если ряд длинный — крути колёсико. ▶ смотрит черновик, в эфир от этого ничего не уезжает.", _cut.LibraryFocus);
             BossCoach.Line(cutTeach, BossMood.Annoyed, "Снизу три кадра, которые увидит ад. Выдели кадр: РАНЬШЕ и ПОЗЖЕ меняют порядок, УБРАТЬ выкидывает. Соседние про одно и то же поднимают связность. Про разное — это нарезка.", _cut.CutFocus);
-            BossCoach.Line(cutTeach, BossMood.Grin, "Связность справа. Высокая — зритель видит историю. Низкая — крики без нитки. Со второго уровня съёмочной здесь ещё и общий тег соседей.", _cut.CoherenceFocus);
+            BossCoach.Line(cutTeach, BossMood.Grin, "Между кадрами — стрелки связи: зелёная — история держится, красная — резкий переход. Наведи — скажу почему. Снизу — почему связность такая.", _cut.BreakdownFocus);
+            BossCoach.Line(cutTeach, BossMood.Think, "Справа — как это увидит аудитория: какой тон перевесит, какая история складывается, комбо. Это прогноз — точную оценку даст эфир.", _cut.AudienceFocus);
             BossCoach.Line(cutTeach, BossMood.Yell, "Строчка сверху — это я ору. Не подсказка. Давление. Игнорируешь — я не замолкаю, просто злюсь.", _cut.BossFocus);
             BossCoach.Line(cutTeach, BossMood.Mad, "В ЭФИР. Чего нет в кате — для зрителя не было. Рекламу, которую выкинул, я не оплачу, и репутация спонсора просядет.", _cut.AirFocus);
             if (cutTeach.Count > 0)
@@ -848,11 +860,11 @@ namespace RealityDirector.UI.Hub
             BossCoach.Line(airTeach, BossMood.Stern, "Просмотры. Сколько ад открыл серию. Растут вместе с оценкой: выше рейтинг — больше пришло.", _cut.ViewsFocus);
             BossCoach.Line(airTeach, BossMood.Grin, "Нравится — та же оценка, только в процентах. Десять из десяти это сто. Это не отдельная кнопка и не деньги.", _cut.LikesFocus);
             BossCoach.Line(airTeach, BossMood.Mad, "Рейтинг. Среднее их оценок из десяти. Вот эта цифра кормит чек. Пустой угол и реклама в кадре роняют оценки.", _cut.RatingFocus);
-            BossCoach.Line(airTeach, BossMood.Think, "Связность монтажа. Соседние кадры про одно — выше, про разное — каша. Сама на деньги не умножается, но они пишут, история это или нарезка.", _cut.AirCoherenceFocus);
+            BossCoach.Line(airTeach, BossMood.Think, "Связность монтажа. Соседние кадры про одно — выше, про разное — каша. Связность и комбо двигают оценку, а зрители пишут, история это или нарезка.", _cut.AirCoherenceFocus);
             BossCoach.Line(airTeach, BossMood.Annoyed, "Комментарии — это и есть оценки. Каждый со своим баллом, злость тоже считается. Увидели скрытую черту — напишут прямо здесь.", _cut.CommentsFocus);
             BossCoach.Line(airTeach, BossMood.Smug, "Звезда и «взять» — заказ зрителей. Слёзы, если в кате кто-то плакал. Объятия — семейный кадр с человеком. Драка — если подрались. Держать тон — кадр в том тоне, который уже ведёт сезон.", _cut.TaskFocus);
             BossCoach.Line(airTeach, BossMood.Grin, "Жми «взять». Задача встанет на хаб и на карту следующего выпуска. Закроешь её кадром в эфире — чек ×1.3. Мимо — деньги есть, бонуса нет. Такой же заказ второй раз не берётся, мест четыре.", _cut.TaskFocus);
-            BossCoach.Line(airTeach, BossMood.Sigh, "Доход. Считается от рейтинга, кастинг добавляет процент. Закрытая задача множит всё на 1.3. Реклама в кате докидывает кр спонсора и роняет оценки. Выкинул её из монтажа — выплаты нет, репутация падает. Дальше хаб.", _cut.IncomeFocus);
+            BossCoach.Line(airTeach, BossMood.Sigh, "Доход. Считается от рейтинга. Закрытая задача множит всё на 1.3. Реклама в кате докидывает кр спонсора и роняет оценки. Выкинул её из монтажа — выплаты нет, репутация падает. Дальше хаб.", _cut.IncomeFocus);
             if (airTeach.Count > 0)
                 BossCoach.Play(5, 6, airTeach.ToArray());
         }

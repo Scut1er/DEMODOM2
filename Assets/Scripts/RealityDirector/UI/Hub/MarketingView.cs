@@ -23,6 +23,8 @@ namespace RealityDirector.UI.Hub
         float _noticeUntil;
 
         public RectTransform Focus => _root;
+        public RectTransform BuysFocus => _buys;
+        public RectTransform DealsFocus => _deals;
 
         public static MarketingView Create(Transform canvas)
         {

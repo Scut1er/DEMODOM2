@@ -90,6 +90,34 @@ namespace RealityDirector.EditorTools
             UnityEditor.EditorApplication.update += tick;
         }
 
+        // Жать кнопку раз в interval секунд, пока она есть (до times раз) — пролистать реплики босса.
+        public static void ClickRepeat(string key, int times, float interval)
+        {
+            int done = 0;
+            double next = UnityEditor.EditorApplication.timeSinceStartup + interval;
+            UnityEditor.EditorApplication.CallbackFunction tick = null;
+            tick = () =>
+            {
+                if (!Application.isPlaying || done >= times)
+                {
+                    UnityEditor.EditorApplication.update -= tick;
+                    return;
+                }
+
+                if (UnityEditor.EditorApplication.timeSinceStartup < next)
+                    return;
+                next = UnityEditor.EditorApplication.timeSinceStartup + interval;
+                if (Click(key).StartsWith("not found"))
+                {
+                    UnityEditor.EditorApplication.update -= tick;
+                    return;
+                }
+
+                done++;
+            };
+            UnityEditor.EditorApplication.update += tick;
+        }
+
         // Клик по кнопке, чей путь заканчивается на key или чья подпись содержит key.
         public static string Click(string key)
         {

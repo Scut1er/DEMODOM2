@@ -290,7 +290,7 @@ namespace RealityDirector.Meta
             f.tags.Remove("Editing");
             if (n >= 2 && r.coherence >= 70)
                 f.tags.Add("EditingGood");
-            if (n >= 2 && r.coherence <= 35)
+            if (n >= 2 && (r.coherence <= 35 || r.backwards))
                 f.tags.Add("EditingBad");
             if (r.repetition >= 2)
                 f.tags.Add("Repetition");

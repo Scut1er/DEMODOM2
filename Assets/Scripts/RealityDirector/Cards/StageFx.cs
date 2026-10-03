@@ -126,6 +126,8 @@ namespace RealityDirector.Cards
             var rect = go.GetComponent<RectTransform>();
             rect.SetParent(_canvas, false);
             rect.anchorMin = rect.anchorMax = new Vector2(0.5f, 0.5f);
+            // До первого кадра слежения — за экраном, а не посреди него.
+            rect.anchoredPosition = new Vector2(-10000f, -10000f);
             var group = go.GetComponent<CanvasGroup>();
             if (group == null)
                 group = go.AddComponent<CanvasGroup>();
