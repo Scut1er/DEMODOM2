@@ -116,7 +116,7 @@ namespace RealityDirector.UI.Hub
         }
 
         // Выбор каста: карточки участников (портрет, имя, черты, скрытая черта), счётчик мест и кнопка «Утвердить».
-        public void PickCast(CastMember[] all, List<string> current, int min, int max, bool reveal, Action<List<string>> done)
+        public void PickCast(CastMember[] all, List<string> current, int min, int max, bool reveal, Action<List<string>> done, Action back = null)
         {
             Open();
             var picked = new List<string>();
@@ -269,6 +269,23 @@ namespace RealityDirector.UI.Hub
                 Hide();
                 done?.Invoke(picked);
             });
+
+            // «← В хаб» — передумал запускать выпуск.
+            if (back != null)
+            {
+                var backBox = Box(_page.transform, "back", CastChip);
+                Pin(backBox.rectTransform, 1440f, Top + Height + 40f, 400f, 64f);
+                var backButton = backBox.gameObject.AddComponent<Button>();
+                var backText = Label(backBox.transform, "←  В ХАБ", 20, CastLight);
+                UiTypography.Apply(backText, TextRole.Button);
+                backText.alignment = TextAnchor.MiddleCenter;
+                Stretch(backText.rectTransform);
+                backButton.onClick.AddListener(() =>
+                {
+                    Hide();
+                    back();
+                });
+            }
 
             var focusGo = new GameObject("focus", typeof(RectTransform));
             focusGo.transform.SetParent(_page.transform, false);

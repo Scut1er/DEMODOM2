@@ -28,6 +28,26 @@ namespace RealityDirector.Meta
             _catalog = catalog;
         }
 
+        // Ник «dev» (без учёта регистра): в колоде все карты магазина хаба, категории открыты без Сценаристов.
+        public bool Dev => _state.producerName != null && _state.producerName.Trim().ToLowerInvariant() == "dev";
+
+        public int GrantDevDeck()
+        {
+            if (!Dev || _catalog == null)
+                return 0;
+            int added = 0;
+            for (int i = 0; i < _catalog.Count; i++)
+            {
+                var def = _catalog[i];
+                if (def == null || def.sponsor || def.price <= 0 || _state.Owns(def.id))
+                    continue;
+                _state.owned.Add(def.id);
+                added++;
+            }
+
+            return added;
+        }
+
         public int SlotsNow()
         {
             return Progression.EventSlots(_state.writerLevel, _state.episodeIndex);
@@ -470,7 +490,7 @@ namespace RealityDirector.Meta
                 if (def == null)
                     continue;
                 bool owned = _state.Owns(def.id);
-                if (!Progression.CategoryOpen(def.category, _state.writerLevel))
+                if (!Dev && !Progression.CategoryOpen(def.category, _state.writerLevel))
                     continue;
                 if (shop)
                 {

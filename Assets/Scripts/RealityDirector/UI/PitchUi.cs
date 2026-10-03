@@ -116,32 +116,29 @@ namespace RealityDirector.UI
         int _offerRow = -1;
 
         public bool TaskTaken => _taskTaken;
-        public int UsedCount
-        {
-            get
-            {
-                int n = 0;
-                for (int i = 0; i < _cards.Count; i++)
-                {
-                    if (_cards[i].Used)
-                        n++;
-                }
-
-                return n;
-            }
-        }
         Text _episodeTitle;
         Text _footage;
-        Text _libraryCount;
-        Text _usedCount;
-        Text _handCount;
-        Text _cash;
-        RectTransform _hellFill;
+        // Бюджет HellToken рядом с рукой и подсказка карты под курсором.
+        const float HandHeight = 252f;
+        const float BudgetWidth = 172f;
+        static readonly Color Gold = new Color(0.95f, 0.82f, 0.28f, 1f);
+        Text _budgetValue;
+        Text _budgetNote;
+        RectTransform _budgetFill;
+        RectTransform _budgetSpend;
+        Image _budgetSpendImage;
         float _hell = 10f;
+        float _hellMax = 10f;
+        EventDefinition _armedDef;
+        Card _hoverCard;
+        GameObject _tip;
+        RectTransform _tipRect;
+        Text _tipTitle;
+        Text _tipBody;
+        RectTransform _castPlate;
         bool _handLocked;
         Text _frameBody;
         GameObject _framePlate;
-        Button _pauseButton;
         RectTransform _castRoot;
         readonly List<Text> _castMood = new List<Text>();
         readonly List<RectTransform> _stressFill = new List<RectTransform>();
@@ -189,6 +186,29 @@ namespace RealityDirector.UI
             public bool Used;
             public Button Button;
             public CanvasGroup Group;
+            public Image Pill;
+        }
+
+        // Наведение мыши на карту: показать подсказку и цену в бюджете.
+        class CardHover : MonoBehaviour, UnityEngine.EventSystems.IPointerEnterHandler, UnityEngine.EventSystems.IPointerExitHandler
+        {
+            public Action Enter;
+            public Action Exit;
+
+            public void OnPointerEnter(UnityEngine.EventSystems.PointerEventData eventData)
+            {
+                Enter?.Invoke();
+            }
+
+            public void OnPointerExit(UnityEngine.EventSystems.PointerEventData eventData)
+            {
+                Exit?.Invoke();
+            }
+
+            void OnDisable()
+            {
+                Exit?.Invoke();
+            }
         }
 
         class Slot
@@ -450,6 +470,7 @@ namespace RealityDirector.UI
                     card.Button.interactable = !locked && !card.Used && !poor;
                 if (card.Group != null)
                     card.Group.alpha = (locked || poor) && !card.Used ? 0.45f : 1f;
+                PaintPrice(card, poor);
             }
 
             ApplyGates();
@@ -458,6 +479,13 @@ namespace RealityDirector.UI
         bool Poor(Card card)
         {
             return card.Def != null && card.Def.cost > _hell + 0.001f;
+        }
+
+        // Не хватает бюджета — цена на карте красная.
+        static void PaintPrice(Card card, bool poor)
+        {
+            if (card.Pill != null)
+                card.Pill.color = poor ? new Color(0.62f, 0.12f, 0.1f, 0.95f) : new Color(0.14f, 0.09f, 0.08f, 0.92f);
         }
 
         // Урок: жива только та кнопка, которую босс только что потребовал.
@@ -500,6 +528,7 @@ namespace RealityDirector.UI
                 card.Button.interactable = _gateCards && mine && !card.Used && !poor;
                 if (card.Group != null && !card.Used)
                     card.Group.alpha = poor || _handLocked ? 0.45f : 1f;
+                PaintPrice(card, poor);
             }
 
             if (_camButton != null)
@@ -512,6 +541,8 @@ namespace RealityDirector.UI
 
         public void SetArmed(EventDefinition def)
         {
+            _armedDef = def;
+            RefreshBudget();
             for (int i = 0; i < _cards.Count; i++)
             {
                 bool on = def != null && _cards[i].Def == def;
@@ -533,6 +564,8 @@ namespace RealityDirector.UI
                     continue;
                 var card = _cards[i];
                 _cards.RemoveAt(i);
+                if (_hoverCard == card)
+                    HideTip();
                 StartCoroutine(FlyOut(card));
                 return;
             }
@@ -686,6 +719,8 @@ namespace RealityDirector.UI
                 _angerFill.Clear();
                 for (int i = 0; i < n; i++)
                     BuildCastRow(i);
+                if (_castPlate != null)
+                    _castPlate.sizeDelta = new Vector2(268f, 150f + n * 102f);
             }
 
             for (int i = 0; i < n; i++)
@@ -716,25 +751,18 @@ namespace RealityDirector.UI
                 _frameBody.text = "В кадре:\n" + body;
         }
 
-        public void SetHandMeta(int hand, int handMax, int library, int used)
-        {
-            if (_handCount != null)
-                _handCount.text = "РУКА  " + hand + " / " + handMax;
-            if (_libraryCount != null)
-                _libraryCount.text = library.ToString();
-            if (_usedCount != null)
-                _usedCount.text = used.ToString();
-        }
-
         public void SetHell(float current, float max)
         {
+            bool changed = !Mathf.Approximately(_hell, current) || !Mathf.Approximately(_hellMax, Mathf.Max(1f, max));
             _hell = current;
-            if (max < 1f)
-                max = 1f;
-            if (_cash != null)
-                _cash.text = "HELL  " + HellToken.Format(current) + " / " + HellToken.Format(max);
-            if (_hellFill != null)
-                _hellFill.sizeDelta = new Vector2(160f * Mathf.Clamp01(current / max), 8f);
+            _hellMax = Mathf.Max(1f, max);
+            if (changed)
+            {
+                RefreshBudget();
+                if (_hoverCard != null)
+                    ShowTip(_hoverCard);
+            }
+
             if (!_gated)
                 SetHandLocked(_handLocked);
             else
@@ -745,21 +773,6 @@ namespace RealityDirector.UI
         {
             if (_footage != null)
                 _footage.text = "ФУТАЖ  " + count + " / " + capacity;
-        }
-
-        public void SetPauseEnabled(bool on)
-        {
-            if (_pauseButton != null)
-                _pauseButton.interactable = on;
-        }
-
-        public void SetPaused(bool on)
-        {
-            if (_pauseButton == null)
-                return;
-            var label = _pauseButton.GetComponentInChildren<Text>();
-            if (label != null)
-                label.text = on ? "ПАУЗА" : "ПАУЗА  ESC";
         }
 
         public void SetSlots(IReadOnlyList<CapturedMoment> moments, int capacity)
@@ -1089,7 +1102,6 @@ namespace RealityDirector.UI
         Action _onCamera;
         Action _onReplay;
         Action _onHub;
-        Action _onPause;
 
         public void BindFlow(Action onStart, Action onEnd, Action onCamera, Action onReplay)
         {
@@ -1102,11 +1114,6 @@ namespace RealityDirector.UI
         public void BindExit(Action onHub)
         {
             _onHub = onHub;
-        }
-
-        public void BindPause(Action onPause)
-        {
-            _onPause = onPause;
         }
 
         void Construct()
@@ -1136,11 +1143,12 @@ namespace RealityDirector.UI
         {
             var left = Panel("cast", _hud.transform, new Color(0.05f, 0.04f, 0.07f, 0.94f));
             var leftRect = left.rectTransform;
-            leftRect.anchorMin = new Vector2(0f, 0f);
-            leftRect.anchorMax = new Vector2(0f, 1f);
-            leftRect.pivot = new Vector2(0f, 0.5f);
-            leftRect.offsetMin = new Vector2(0f, 332f);
-            leftRect.offsetMax = new Vector2(268f, 0f);
+            // Плашка по высоте каста (растёт в SetCast), а не тёмная колонна до самой руки.
+            leftRect.anchorMin = leftRect.anchorMax = new Vector2(0f, 1f);
+            leftRect.pivot = new Vector2(0f, 1f);
+            leftRect.anchoredPosition = Vector2.zero;
+            leftRect.sizeDelta = new Vector2(268f, 150f);
+            _castPlate = leftRect;
 
             _episodeTitle = MakeText(left.transform, "СЕРИЯ 1\nты режиссёр, не участник", 20, Paper, TextAnchor.UpperLeft);
             var titleRect = _episodeTitle.rectTransform;
@@ -1185,15 +1193,11 @@ namespace RealityDirector.UI
                 _slots[i] = new Slot { Root = slotImg.gameObject, Well = well.GetComponent<RectTransform>(), Placeholder = placeholder };
             }
 
-            var pause = MakeButton(_hud.transform, "ПАУЗА  ESC", new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0.5f, 1f),
-                new Vector2(210f, -18f), new Vector2(150f, 44f), new Color(0.16f, 0.14f, 0.18f, 1f), () => _onPause?.Invoke());
-            _pauseButton = pause;
-
             var end = MakeButton(_hud.transform, "СНЯТО!", new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0.5f, 1f),
-                new Vector2(390f, -18f), new Vector2(160f, 44f), new Color(0.75f, 0.16f, 0.18f, 1f), () => _onEnd?.Invoke());
+                new Vector2(230f, -18f), new Vector2(160f, 44f), new Color(0.75f, 0.16f, 0.18f, 1f), () => _onEnd?.Invoke());
             _doneButton = end;
             var leave = MakeButton(_hud.transform, "ХАБ", new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0.5f, 1f),
-                new Vector2(560f, -18f), new Vector2(90f, 44f), new Color(0.16f, 0.14f, 0.18f, 1f), () => _onHub?.Invoke());
+                new Vector2(400f, -18f), new Vector2(90f, 44f), new Color(0.16f, 0.14f, 0.18f, 1f), () => _onHub?.Invoke());
             _hubButton = leave;
             _hubRect = leave.transform as RectTransform;
             _endPlate = end.GetComponent<Image>();
@@ -1239,89 +1243,29 @@ namespace RealityDirector.UI
             frameBody.offsetMax = new Vector2(-12f, -10f);
             _framePlate.SetActive(false);
 
-            var deck = Panel("deck", _hud.transform, new Color(0.05f, 0.04f, 0.07f, 0.96f));
-            var deckRect = deck.rectTransform;
-            deckRect.anchorMin = new Vector2(0f, 0f);
-            deckRect.anchorMax = new Vector2(1f, 0f);
-            deckRect.pivot = new Vector2(0.5f, 0f);
-            deckRect.sizeDelta = new Vector2(0f, 332f);
+            // Рука без фоновой плашки: мир под ней виден. Слева от карт — бюджет на карты.
+            var deck = NewRect("deck", _hud.transform).GetComponent<RectTransform>();
+            deck.anchorMin = new Vector2(0f, 0f);
+            deck.anchorMax = new Vector2(1f, 0f);
+            deck.pivot = new Vector2(0.5f, 0f);
+            deck.sizeDelta = new Vector2(0f, HandHeight);
 
-            _handCount = MakeText(deck.transform, "РУКА  0 / 0", 16, Paper, TextAnchor.MiddleCenter);
-            var handRect = _handCount.rectTransform;
-            handRect.anchorMin = handRect.anchorMax = new Vector2(0.5f, 1f);
-            handRect.pivot = new Vector2(0.5f, 1f);
-            handRect.anchoredPosition = new Vector2(0f, -6f);
-            handRect.sizeDelta = new Vector2(240f, 24f);
-
-            _cash = MakeText(deck.transform, "HELL  10 / 10", 16, new Color(0.95f, 0.82f, 0.28f, 1f), TextAnchor.MiddleRight);
-            var cashRect = _cash.rectTransform;
-            cashRect.anchorMin = cashRect.anchorMax = new Vector2(1f, 1f);
-            cashRect.pivot = new Vector2(1f, 1f);
-            cashRect.anchoredPosition = new Vector2(-24f, -4f);
-            cashRect.sizeDelta = new Vector2(220f, 22f);
-            var hellTrack = Panel("hell", deck.transform, new Color(0.15f, 0.1f, 0.08f, 1f));
-            var hellRect = hellTrack.rectTransform;
-            hellRect.anchorMin = hellRect.anchorMax = new Vector2(1f, 1f);
-            hellRect.pivot = new Vector2(1f, 1f);
-            hellRect.anchoredPosition = new Vector2(-24f, -28f);
-            hellRect.sizeDelta = new Vector2(160f, 8f);
-            hellTrack.raycastTarget = false;
-            var hellFill = Panel("fill", hellTrack.transform, new Color(0.95f, 0.72f, 0.18f, 1f));
-            _hellFill = hellFill.rectTransform;
-            _hellFill.anchorMin = new Vector2(0f, 0.5f);
-            _hellFill.anchorMax = new Vector2(0f, 0.5f);
-            _hellFill.pivot = new Vector2(0f, 0.5f);
-            _hellFill.anchoredPosition = Vector2.zero;
-            _hellFill.sizeDelta = new Vector2(160f, 8f);
-            hellFill.raycastTarget = false;
-
-            var library = MakeText(deck.transform, "БИБЛИОТЕКА", 13, Muted, TextAnchor.UpperCenter);
-            var libRect = library.rectTransform;
-            libRect.anchorMin = libRect.anchorMax = new Vector2(0f, 1f);
-            libRect.pivot = new Vector2(0f, 1f);
-            libRect.anchoredPosition = new Vector2(16f, -36f);
-            libRect.sizeDelta = new Vector2(120f, 20f);
-            _libraryCount = MakeText(deck.transform, "0", 28, Paper, TextAnchor.MiddleCenter);
-            var libNum = _libraryCount.rectTransform;
-            libNum.anchorMin = libNum.anchorMax = new Vector2(0f, 1f);
-            libNum.pivot = new Vector2(0f, 1f);
-            libNum.anchoredPosition = new Vector2(16f, -58f);
-            libNum.sizeDelta = new Vector2(120f, 40f);
-            var libHint = MakeText(deck.transform, "карт осталось", 12, Muted, TextAnchor.UpperCenter);
-            var libHintRect = libHint.rectTransform;
-            libHintRect.anchorMin = libHintRect.anchorMax = new Vector2(0f, 1f);
-            libHintRect.pivot = new Vector2(0f, 1f);
-            libHintRect.anchoredPosition = new Vector2(16f, -100f);
-            libHintRect.sizeDelta = new Vector2(120f, 18f);
-
-            var used = MakeText(deck.transform, "ИСПОЛЬЗОВАНО", 13, Muted, TextAnchor.UpperCenter);
-            var usedRect = used.rectTransform;
-            usedRect.anchorMin = usedRect.anchorMax = new Vector2(1f, 1f);
-            usedRect.pivot = new Vector2(1f, 1f);
-            usedRect.anchoredPosition = new Vector2(-16f, -36f);
-            usedRect.sizeDelta = new Vector2(130f, 20f);
-            _usedCount = MakeText(deck.transform, "0", 28, Paper, TextAnchor.MiddleCenter);
-            var usedNum = _usedCount.rectTransform;
-            usedNum.anchorMin = usedNum.anchorMax = new Vector2(1f, 1f);
-            usedNum.pivot = new Vector2(1f, 1f);
-            usedNum.anchoredPosition = new Vector2(-16f, -58f);
-            usedNum.sizeDelta = new Vector2(130f, 40f);
-
-            var bar = Panel("bar", deck.transform, new Color(0f, 0f, 0f, 0f));
+            var bar = NewRect("bar", deck);
             _cardBar = bar.transform;
-            var barRect = bar.rectTransform;
+            var barRect = bar.GetComponent<RectTransform>();
             barRect.anchorMin = Vector2.zero;
             barRect.anchorMax = Vector2.one;
-            barRect.offsetMin = new Vector2(150f, 8f);
-            barRect.offsetMax = new Vector2(-150f, -28f);
-            var layout = bar.gameObject.AddComponent<HorizontalLayoutGroup>();
-            layout.spacing = 16f;
-            layout.padding = new RectOffset(14, 14, 10, 10);
-            layout.childAlignment = TextAnchor.MiddleCenter;
+            barRect.offsetMin = new Vector2(280f, 12f);
+            barRect.offsetMax = new Vector2(-280f, -4f);
+            var layout = bar.AddComponent<HorizontalLayoutGroup>();
+            layout.spacing = 12f;
+            layout.childAlignment = TextAnchor.LowerCenter;
             layout.childControlWidth = true;
             layout.childControlHeight = true;
             layout.childForceExpandWidth = false;
-            layout.childForceExpandHeight = true;
+            layout.childForceExpandHeight = false;
+
+            BuildBudget(_cardBar);
 
             _hint = MakeText(_hud.transform, "", 22, Paper, TextAnchor.MiddleCenter);
             var hintRect = _hint.rectTransform;
@@ -1329,7 +1273,7 @@ namespace RealityDirector.UI
             hintRect.anchorMax = new Vector2(0.5f, 0f);
             hintRect.pivot = new Vector2(0.5f, 0f);
             hintRect.sizeDelta = new Vector2(1100f, 36f);
-            hintRect.anchoredPosition = new Vector2(0f, 340f);
+            hintRect.anchoredPosition = new Vector2(0f, HandHeight + 12f);
 
             _toast = MakeText(_hud.transform, "", 22, new Color(1f, 0.82f, 0.45f, 1f), TextAnchor.MiddleCenter);
             var toastRect = _toast.rectTransform;
@@ -1337,7 +1281,7 @@ namespace RealityDirector.UI
             toastRect.anchorMax = new Vector2(0.5f, 0f);
             toastRect.pivot = new Vector2(0.5f, 0f);
             toastRect.sizeDelta = new Vector2(900f, 32f);
-            toastRect.anchoredPosition = new Vector2(0f, 372f);
+            toastRect.anchoredPosition = new Vector2(0f, HandHeight + 48f);
             _toast.gameObject.SetActive(false);
             SetCaptureCapacity(1);
         }
@@ -1346,8 +1290,8 @@ namespace RealityDirector.UI
         {
             var frame = Panel("card" + index, _cardBar, def.cardColor);
             var element = frame.gameObject.AddComponent<LayoutElement>();
-            element.preferredWidth = 176f;
-            element.preferredHeight = 308f;
+            element.preferredWidth = 156f;
+            element.preferredHeight = 226f;
             var group = frame.gameObject.AddComponent<CanvasGroup>();
             var button = frame.gameObject.AddComponent<Button>();
             button.targetGraphic = frame;
@@ -1364,35 +1308,34 @@ namespace RealityDirector.UI
             var innerRect = inner.rectTransform;
             innerRect.anchorMin = Vector2.zero;
             innerRect.anchorMax = Vector2.one;
-            innerRect.offsetMin = new Vector2(8f, 8f);
-            innerRect.offsetMax = new Vector2(-8f, -8f);
+            innerRect.offsetMin = new Vector2(6f, 6f);
+            innerRect.offsetMax = new Vector2(-6f, -6f);
             inner.raycastTarget = false;
 
-
+            // Номер — горячая клавиша карты (1–5).
             var badge = Panel("badge", frame.transform, new Color(0.14f, 0.09f, 0.08f, 1f));
             var badgeRect = badge.rectTransform;
             badgeRect.anchorMin = new Vector2(0f, 1f);
             badgeRect.anchorMax = new Vector2(0f, 1f);
             badgeRect.pivot = new Vector2(0f, 1f);
-            badgeRect.anchoredPosition = new Vector2(12f, -12f);
-            badgeRect.sizeDelta = new Vector2(32f, 32f);
+            badgeRect.anchoredPosition = new Vector2(8f, -8f);
+            badgeRect.sizeDelta = new Vector2(24f, 24f);
             badge.raycastTarget = false;
-            var number = MakeText(badge.transform, (index + 1).ToString(), 18, Paper, TextAnchor.MiddleCenter);
+            var number = MakeText(badge.transform, (index + 1).ToString(), 15, Paper, TextAnchor.MiddleCenter);
             Stretch(number.rectTransform);
 
-            var title = MakeText(inner.transform, def.displayName.ToUpperInvariant(), 18, new Color(0.18f, 0.12f, 0.1f), TextAnchor.MiddleCenter);
+            var title = MakeText(inner.transform, def.displayName.ToUpperInvariant(), 16, new Color(0.18f, 0.12f, 0.1f), TextAnchor.MiddleCenter);
             var titleRect = title.rectTransform;
             titleRect.anchorMin = new Vector2(0f, 1f);
             titleRect.anchorMax = new Vector2(1f, 1f);
             titleRect.pivot = new Vector2(0.5f, 1f);
-            // Название — своей строкой под номером и значками тона.
-            titleRect.anchoredPosition = new Vector2(0f, -34f);
+            titleRect.anchoredPosition = new Vector2(0f, -26f);
+            titleRect.sizeDelta = new Vector2(-6f, 34f);
             // Длинные названия из таблицы карт: шрифт уменьшается, чтобы влезть в две строки.
             title.resizeTextForBestFit = true;
             title.resizeTextMinSize = 10;
-            title.resizeTextMaxSize = 18;
+            title.resizeTextMaxSize = 16;
             title.verticalOverflow = VerticalWrapMode.Truncate;
-            titleRect.sizeDelta = new Vector2(-8f, 36f);
             StampMoods(frame.transform, def);
 
             var art = Panel("art", inner.transform, new Color(0.9f, 0.86f, 0.78f, 1f));
@@ -1400,44 +1343,44 @@ namespace RealityDirector.UI
             artRect.anchorMin = new Vector2(0f, 1f);
             artRect.anchorMax = new Vector2(1f, 1f);
             artRect.pivot = new Vector2(0.5f, 1f);
-            artRect.anchoredPosition = new Vector2(0f, -72f);
-            artRect.sizeDelta = new Vector2(-16f, 122f);
+            artRect.anchoredPosition = new Vector2(0f, -62f);
+            artRect.sizeDelta = new Vector2(-12f, 96f);
             art.raycastTarget = false;
             art.preserveAspect = true;
             art.color = Color.white;
             if (def.cardArt != null)
                 art.sprite = def.cardArt;
 
-            // Цена в HellToken — плашкой в углу арта (верхний угол карты заняли значки тона).
+            // Цена в HellToken — плашкой в углу арта; не хватает бюджета — плашка красная.
             var pill = Panel("cost", art.transform, new Color(0.14f, 0.09f, 0.08f, 0.92f));
             var pillRect = pill.rectTransform;
             pillRect.anchorMin = new Vector2(1f, 0f);
             pillRect.anchorMax = new Vector2(1f, 0f);
             pillRect.pivot = new Vector2(1f, 0f);
-            pillRect.anchoredPosition = new Vector2(-4f, 4f);
-            pillRect.sizeDelta = new Vector2(62f, 26f);
+            pillRect.anchoredPosition = new Vector2(-3f, 3f);
+            pillRect.sizeDelta = new Vector2(56f, 22f);
             pill.raycastTarget = false;
-            var price = MakeText(pill.transform, HellToken.Format(def.cost), 18, new Color(0.95f, 0.82f, 0.28f, 1f), TextAnchor.MiddleCenter);
+            var price = MakeText(pill.transform, HellToken.Format(def.cost), 15, Gold, TextAnchor.MiddleCenter);
             Stretch(price.rectTransform);
 
-            var body = MakeText(inner.transform, def.hint, 15, new Color(0.35f, 0.26f, 0.2f), TextAnchor.MiddleCenter);
+            var body = MakeText(inner.transform, def.hint, 13, new Color(0.35f, 0.26f, 0.2f), TextAnchor.MiddleCenter);
             var bodyRect = body.rectTransform;
             bodyRect.anchorMin = new Vector2(0f, 0f);
             bodyRect.anchorMax = new Vector2(1f, 0f);
             bodyRect.pivot = new Vector2(0.5f, 0f);
-            bodyRect.anchoredPosition = new Vector2(0f, 8f);
-            bodyRect.sizeDelta = new Vector2(-12f, 64f);
+            bodyRect.anchoredPosition = new Vector2(0f, 4f);
+            bodyRect.sizeDelta = new Vector2(-10f, 44f);
 
-            var status = MakeText(frame.transform, "сыграно", 16, new Color(0.55f, 0.32f, 0.08f), TextAnchor.MiddleCenter);
+            var status = MakeText(frame.transform, "сыграно", 15, new Color(0.55f, 0.32f, 0.08f), TextAnchor.MiddleCenter);
             var statusRect = status.rectTransform;
             statusRect.anchorMin = new Vector2(0f, 0f);
             statusRect.anchorMax = new Vector2(1f, 0f);
             statusRect.pivot = new Vector2(0.5f, 0f);
-            statusRect.anchoredPosition = new Vector2(0f, 14f);
-            statusRect.sizeDelta = new Vector2(-16f, 24f);
+            statusRect.anchoredPosition = new Vector2(0f, 12f);
+            statusRect.sizeDelta = new Vector2(-14f, 22f);
             status.gameObject.SetActive(false);
 
-            return new Card
+            var card = new Card
             {
                 Def = def,
                 Frame = frame,
@@ -1445,8 +1388,185 @@ namespace RealityDirector.UI
                 Root = frame.rectTransform,
                 Base = def.cardColor,
                 Button = button,
-                Group = group
+                Group = group,
+                Pill = pill
             };
+            var hover = frame.gameObject.AddComponent<CardHover>();
+            hover.Enter = () => ShowTip(card);
+            hover.Exit = () =>
+            {
+                if (_hoverCard == card)
+                    HideTip();
+            };
+            return card;
+        }
+
+        // ---------- Бюджет на карты ----------
+
+        // Плашка слева от руки: сколько осталось и сколько съест карта под курсором или выбранная.
+        void BuildBudget(Transform parent)
+        {
+            var plate = Panel("budget", parent, new Color(0.07f, 0.055f, 0.08f, 0.9f));
+            plate.raycastTarget = false;
+            var element = plate.gameObject.AddComponent<LayoutElement>();
+            element.preferredWidth = BudgetWidth + 24f;
+            element.preferredHeight = 120f;
+
+            var caption = MakeText(plate.transform, "БЮДЖЕТ НА КАРТЫ", 13, Muted, TextAnchor.UpperLeft);
+            TopLeft(caption.rectTransform, 12f, -10f, BudgetWidth, 18f);
+            _budgetValue = MakeText(plate.transform, "", 30, Gold, TextAnchor.UpperLeft);
+            TopLeft(_budgetValue.rectTransform, 12f, -28f, BudgetWidth, 38f);
+
+            var track = Panel("track", plate.transform, new Color(0f, 0f, 0f, 0.55f));
+            track.raycastTarget = false;
+            TopLeft(track.rectTransform, 12f, -70f, BudgetWidth, 10f);
+            var fill = Panel("fill", track.transform, Gold);
+            fill.raycastTarget = false;
+            _budgetFill = fill.rectTransform;
+            TopLeft(_budgetFill, 0f, 0f, BudgetWidth, 10f);
+            _budgetSpendImage = Panel("spend", track.transform, new Color(1f, 0.45f, 0.25f, 0.95f));
+            _budgetSpendImage.raycastTarget = false;
+            _budgetSpend = _budgetSpendImage.rectTransform;
+            TopLeft(_budgetSpend, 0f, 0f, 0f, 10f);
+
+            _budgetNote = MakeText(plate.transform, "", 13, Muted, TextAnchor.UpperLeft);
+            TopLeft(_budgetNote.rectTransform, 12f, -86f, BudgetWidth, 32f);
+            RefreshBudget();
+        }
+
+        void RefreshBudget()
+        {
+            if (_budgetValue == null)
+                return;
+            float max = Mathf.Max(1f, _hellMax);
+            float left = Mathf.Clamp(_hell, 0f, max);
+            _budgetValue.text = HellToken.Format(left) + "<size=16><color=#9E8F85>  из " + HellToken.Format(max) + "</color></size>";
+
+            var focus = _hoverCard != null ? _hoverCard.Def : _armedDef;
+            if (focus == null || focus.cost <= 0f)
+            {
+                _budgetFill.sizeDelta = new Vector2(BudgetWidth * left / max, 10f);
+                _budgetSpend.sizeDelta = new Vector2(0f, 10f);
+                _budgetNote.color = Muted;
+                _budgetNote.text = focus != null ? "эта карта бесплатная" : "карты стоят денег —\nнаведи на карту";
+                return;
+            }
+
+            bool afford = focus.cost <= left + 0.001f;
+            float spend = Mathf.Min(focus.cost, left);
+            // Жёлтое — останется, оранжевое — уйдёт на эту карту. Не хватает — весь остаток красный.
+            _budgetFill.sizeDelta = new Vector2(BudgetWidth * (left - (afford ? spend : 0f)) / max, 10f);
+            _budgetSpend.anchoredPosition = new Vector2(afford ? BudgetWidth * (left - spend) / max : 0f, 0f);
+            _budgetSpend.sizeDelta = new Vector2(BudgetWidth * spend / max, 10f);
+            _budgetSpendImage.color = afford ? new Color(1f, 0.45f, 0.25f, 0.95f) : new Color(0.85f, 0.15f, 0.12f, 0.95f);
+            _budgetNote.color = afford ? Paper : Accent;
+            _budgetNote.text = afford
+                ? "−" + HellToken.Format(focus.cost) + "  →  останется " + HellToken.Format(left - focus.cost)
+                : "не хватает " + HellToken.Format(focus.cost - left);
+        }
+
+        // ---------- Подсказка карты ----------
+
+        void BuildTip()
+        {
+            var plate = Panel("cardTip", _hud.transform, new Color(0.07f, 0.055f, 0.08f, 0.97f));
+            plate.raycastTarget = false;
+            _tip = plate.gameObject;
+            _tipRect = plate.rectTransform;
+            _tipRect.anchorMin = _tipRect.anchorMax = new Vector2(0.5f, 0.5f);
+            _tipRect.pivot = new Vector2(0.5f, 0f);
+            _tipRect.sizeDelta = new Vector2(340f, 10f);
+            var layout = _tip.AddComponent<VerticalLayoutGroup>();
+            layout.padding = new RectOffset(16, 16, 12, 14);
+            layout.spacing = 6f;
+            layout.childControlWidth = true;
+            layout.childControlHeight = true;
+            layout.childForceExpandWidth = true;
+            layout.childForceExpandHeight = false;
+            _tip.AddComponent<ContentSizeFitter>().verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+            _tipTitle = MakeText(_tip.transform, "", 20, Paper, TextAnchor.UpperLeft);
+            _tipTitle.fontStyle = FontStyle.Bold;
+            _tipBody = MakeText(_tip.transform, "", 16, new Color(0.86f, 0.82f, 0.78f, 1f), TextAnchor.UpperLeft);
+            _tipBody.lineSpacing = 1.1f;
+            _tip.SetActive(false);
+        }
+
+        void ShowTip(Card card)
+        {
+            if (card == null || card.Def == null || card.Root == null)
+                return;
+            if (_tip == null)
+                BuildTip();
+            _hoverCard = card;
+            _tipTitle.text = card.Def.displayName;
+            _tipBody.text = TipText(card.Def);
+            _tip.SetActive(true);
+            _tip.transform.SetAsLastSibling();
+            PlaceTip();
+            RefreshBudget();
+        }
+
+        // Над картой, по её центру; не вылезает за край экрана. Каждый кадр — раскладка руки могла сдвинуться.
+        void PlaceTip()
+        {
+            if (_hoverCard == null || _hoverCard.Root == null || _tip == null || !_tip.activeSelf)
+                return;
+            var corners = new Vector3[4];
+            _hoverCard.Root.GetWorldCorners(corners);
+            var parent = (RectTransform)_tipRect.parent;
+            Vector2 top = parent.InverseTransformPoint((corners[1] + corners[2]) * 0.5f);
+            float half = _tipRect.rect.width * 0.5f;
+            float x = Mathf.Clamp(top.x, parent.rect.xMin + half + 8f, parent.rect.xMax - half - 8f);
+            _tipRect.anchorMin = _tipRect.anchorMax = new Vector2(0.5f, 0.5f);
+            _tipRect.anchoredPosition = new Vector2(x, top.y + 14f);
+        }
+
+        void HideTip()
+        {
+            _hoverCard = null;
+            if (_tip != null)
+                _tip.SetActive(false);
+            RefreshBudget();
+        }
+
+        // Что делает карта и что изменится — простыми словами.
+        string TipText(EventDefinition def)
+        {
+            const string Key = "<color=#F2D14A>";
+            var lines = new List<string>();
+            string target = string.IsNullOrEmpty(def.hint) || !def.hint.StartsWith("клик")
+                ? (def.PlayTarget == TargetType.Actor ? "кликни по участнику" : "кликни по предмету")
+                : def.hint.Replace("клик по", "кликни по");
+            string how = def.PlayTarget == TargetType.Global ? "нажми на карту — сработает сразу." : "нажми на карту, потом " + target + ".";
+            lines.Add(Key + "Как сыграть:</color> " + how);
+            if (!string.IsNullOrEmpty(def.description) && def.description != def.hint)
+                lines.Add(def.description);
+            if (def.moods != null && def.moods.Count > 0)
+            {
+                var tone = new List<string>();
+                for (int i = 0; i < def.moods.Count && i < 2; i++)
+                    tone.Add("+" + SeasonTone.CardGain + " " + MoodStyle.Short(def.moods[i]));
+                lines.Add(Key + "Тон шоу:</color> " + string.Join(", ", tone));
+            }
+
+            if (def.sponsor)
+                lines.Add(Key + "Спонсор:</color> платит, если кадр с рекламой попадёт в эфир.");
+            float left = Mathf.Max(0f, _hell);
+            if (def.cost <= 0f)
+                lines.Add(Key + "Цена:</color> бесплатно");
+            else if (def.cost <= left + 0.001f)
+                lines.Add(Key + "Цена:</color> " + HellToken.Format(def.cost) + " — в бюджете останется " + HellToken.Format(left - def.cost));
+            else
+                lines.Add("<color=#E8553A>Не хватает " + HellToken.Format(def.cost - left) + "</color> — в бюджете " + HellToken.Format(left));
+            return string.Join("\n", lines);
+        }
+
+        static void TopLeft(RectTransform rect, float x, float y, float width, float height)
+        {
+            rect.anchorMin = rect.anchorMax = new Vector2(0f, 1f);
+            rect.pivot = new Vector2(0f, 1f);
+            rect.anchoredPosition = new Vector2(x, y);
+            rect.sizeDelta = new Vector2(width, height);
         }
 
         void StampMoods(Transform frame, EventDefinition def)
@@ -1462,8 +1582,8 @@ namespace RealityDirector.UI
                 rect.anchorMin = new Vector2(1f, 1f);
                 rect.anchorMax = new Vector2(1f, 1f);
                 rect.pivot = new Vector2(1f, 1f);
-                rect.sizeDelta = new Vector2(26f, 26f);
-                rect.anchoredPosition = new Vector2(-8f - (count - 1 - i) * 30f, -8f);
+                rect.sizeDelta = new Vector2(22f, 22f);
+                rect.anchoredPosition = new Vector2(-8f - (count - 1 - i) * 25f, -8f);
                 stamp.sprite = MoodIcon(def.moods[i]);
                 stamp.preserveAspect = true;
                 stamp.raycastTarget = false;
@@ -2133,6 +2253,7 @@ namespace RealityDirector.UI
         {
             if (_toast.gameObject.activeSelf && Time.unscaledTime > _toastUntil)
                 _toast.gameObject.SetActive(false);
+            PlaceTip();
 
             for (int i = 0; i < _toneRows.Length; i++)
             {

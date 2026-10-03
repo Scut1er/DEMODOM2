@@ -82,7 +82,20 @@ namespace RealityDirector.UI.Hub
             hub.OpenSettings += () => { Click(); ShowSettings(hub.gameObject); };
             hub.Menu += () => { Click(); GameSession.Save(); ShowMenu(); };
 
-            map.Select += id => { Click(); _selected = _episode.Map.Map.Find(id); RefreshMap(); };
+            map.Select += id =>
+            {
+                Click();
+                var node = _episode.Map.Map.Find(id);
+                // Второй клик по уже выбранной доступной комнате — войти.
+                if (node != null && node == _selected && _episode.Map.CanEnter(node))
+                {
+                    Shoot();
+                    return;
+                }
+
+                _selected = node;
+                RefreshMap();
+            };
             // Выбор карт для съёмки — прямо на карте сезона.
             map.Deck.Toggle += id =>
             {
@@ -121,9 +134,15 @@ namespace RealityDirector.UI.Hub
                     GameSession.Save();
                 map.Deck.Show(_meta.BuildRunShop());
             };
-            map.Random += PickRandom;
-            // Выпуск уже идёт — в хаб только после эфира.
-            map.Back += () => { };
+            // В хаб посреди выпуска: выпуск не прерывается, «Начать съёмку» в хабе вернёт на карту.
+            map.Back += () =>
+            {
+                Click();
+                map.Deck.Hide();
+                _runShop = false;
+                GameSession.Save();
+                ShowHub();
+            };
             map.Shoot += Shoot;
             _cut = CutFlowUi.Create();
             _screens = HubOverlays.Create();
@@ -189,25 +208,29 @@ namespace RealityDirector.UI.Hub
 
             Bind();
             GameSession.ReturnToMap = false;
-            if (GameSession.ExitToHub)
-            {
-                GameSession.ExitToHub = false;
-                GameSession.RoomNodeId = null;
-                ShowHub();
-                return;
-            }
+            bool toHub = GameSession.ExitToHub;
+            GameSession.ExitToHub = false;
             // Квартира закрыла сцену. Карту выпуска открывает Resume (выпуск идёт), комнату закрывает RoomNodeId.
-            // Вернулись со съёмки — комната пройдена, дальше по карте выпуска.
+            // Вернулись со съёмки — комната пройдена (и по «Снято!», и по «Хаб»), дальше по карте выпуска.
             if (!string.IsNullOrEmpty(GameSession.RoomNodeId) && _episode.Active)
             {
                 GameSession.RoomNodeId = null;
                 _episode.FinishSceneRoom();
                 GameSession.Save();
-                AfterStep();
+                if (toHub && !_episode.Current.Finished)
+                    ShowHub();
+                else
+                    AfterStep();
                 return;
             }
 
             GameSession.RoomNodeId = null;
+            if (toHub)
+            {
+                ShowHub();
+                return;
+            }
+
             Resume();
         }
 
@@ -289,6 +312,8 @@ namespace RealityDirector.UI.Hub
 
         void ShowHub()
         {
+            if (_meta.GrantDevDeck() > 0)
+                GameSession.Save();
             _meta.TrimPicked();
             _meta.ClearReject();
             Show(hub.gameObject);
@@ -363,6 +388,13 @@ namespace RealityDirector.UI.Hub
                 if (state.wantsTutorial && state.tutorialBeat < 1)
                     state.tutorialBeat = 1;
                 BossCoach.Ensure().Hide();
+                // «← В хаб» — передумал запускать выпуск. В обучении кнопки нет: босс ведёт по шагам.
+                System.Action backToHub = state.wantsTutorial && state.tutorialBeat < 6 ? null : (System.Action)(() =>
+                {
+                    Click();
+                    BossCoach.Ensure().Hide();
+                    ShowHub();
+                });
                 _screens.PickCast(_cast, state.castPick, min, seats, state.castLevel >= 3, ids =>
                 {
                     state.castPick.Clear();
@@ -378,7 +410,7 @@ namespace RealityDirector.UI.Hub
                         _hubNotice = null;
                         OpenMap();
                     });
-                });
+                }, backToHub);
                 var castTeach = new List<CoachStep>();
                 BossCoach.Line(castTeach, "Двое. Минимум. Из одного человека шоу не соберёшь, это уже исповедь.", _screens.Focus);
                 BossCoach.Line(castTeach, "Черта под именем. Вот так они и сломаются, когда ты начнёшь.", _screens.Focus);
@@ -409,23 +441,15 @@ namespace RealityDirector.UI.Hub
 
         void RefreshMap()
         {
-            map.Show(_episode.Map, _selected, _meta.Stats(), _episode.Current.Number, GameSession.State.seasonLength, _meta.TaskLines());
-        }
-
-        void PickRandom()
-        {
-            if (GameSession.State != null && GameSession.State.wantsTutorial && GameSession.State.tutorialBeat < 6)
-                return;
-            var open = _episode.Map.Available();
-            if (open.Count == 0)
+            // Если идти можно только в одну комнату — она сразу выбрана, кнопка действия активна.
+            if (_selected == null)
             {
-                Sfx.Play(Cue.Miss, 0.4f);
-                return;
+                var open = _episode.Map.Available();
+                if (open.Count == 1)
+                    _selected = open[0];
             }
 
-            Sfx.Play(Cue.Blip, 0.5f);
-            _selected = open[Random.Range(0, open.Count)];
-            RefreshMap();
+            map.Show(_episode.Map, _selected, _meta.Stats(), _episode.Current.Number, GameSession.State.seasonLength, _meta.TaskLines());
         }
 
         // Кнопка действия на карте: зайти в выбранный узел по его типу.

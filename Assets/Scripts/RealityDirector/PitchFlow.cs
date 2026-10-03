@@ -34,7 +34,6 @@ namespace RealityDirector
 
         Lesson _lesson;
         bool _frozen;
-        bool _paused;
         readonly List<string> _frameNames = new List<string>();
         PitchUi.CastFace[] _faces;
         PitchPhase _phase = PitchPhase.Prep;
@@ -80,7 +79,6 @@ namespace RealityDirector
             EnsureSession();
             _ui.BindFlow(BackToHub, EndEpisode, ToggleCamera, BackToHub);
             _ui.BindExit(ExitToHub);
-            _ui.BindPause(TogglePause);
             BuildApartment();
             WireTags();
             _executor = gameObject.AddComponent<EventExecutor>();
@@ -187,15 +185,6 @@ namespace RealityDirector
             if (_phase != PitchPhase.Play)
                 return;
             PushBoard();
-            if (_paused)
-            {
-                var keyboard = Keyboard.current;
-                if (keyboard != null && keyboard.escapeKey.wasPressedThisFrame)
-                    TogglePause();
-                _ui.SetHint(Coach());
-                return;
-            }
-
             if (_frozen || Time.timeScale < 0.05f)
             {
                 _ui.SetHint(Coach());
@@ -300,7 +289,9 @@ namespace RealityDirector
             WallH(root, -1.55f, 4.95f, 1.9f);
             WallH(root, 1.65f, 4.95f, 1.9f);
 
-            Place(root, "Rug", IllustratedArt.Rug, new Vector3(-5.45f, 3.15f, 0f), new Vector2(2.1f, 1.25f), 1);
+            // Ковёр — пара к рисованной заглушке дивана. Под артом дивана он торчал красным прямоугольником.
+            if (GameArt.Sofa == null)
+                Place(root, "Rug", IllustratedArt.Rug, new Vector3(-5.45f, 3.15f, 0f), new Vector2(2.1f, 1.25f), 1);
             PlaceArt(root, "Sofa", GameArt.Sofa, IllustratedArt.Sofa, new Vector3(-5.45f, 3.35f, 0f), new Vector2(2.2f, 1.5f), new Vector2(2.15f, 1.15f), 4);
             Place(root, "Table", IllustratedArt.Table, new Vector3(-0.55f, 2.9f, 0f), new Vector2(1.45f, 0.95f), 4);
             Place(root, "Stove", IllustratedArt.Stove, new Vector3(2.05f, 3.55f, 0f), new Vector2(0.85f, 0.85f), 4);
@@ -325,12 +316,13 @@ namespace RealityDirector
             dSpawn.SetParent(root, false);
             dSpawn.position = DobryakHome;
 
-            RoomTag(root, new Vector3(-5.35f, 4.7f, 0f), "ГОСТИНАЯ");
-            RoomTag(root, new Vector3(-1.7f, 4.15f, 0f), "КУХНЯ");
+            // Подписи комнат — над верхней стеной, а не поверх окон и мебели.
+            RoomTag(root, new Vector3(-5.35f, 5.55f, 0f), "ГОСТИНАЯ");
+            RoomTag(root, new Vector3(-1.45f, 5.55f, 0f), "КУХНЯ");
             var bedLabel = new GameObject("BedLabel").transform;
             bedLabel.SetParent(root, false);
-            bedLabel.position = new Vector3(5.5f, 4.7f, 0f);
-            _ui.AddTag(bedLabel, () => _bedOpen ? "СПАЛЬНЯ" : "", new Color(0.42f, 0.28f, 0.22f), Vector2.zero, 16, false);
+            bedLabel.position = new Vector3(5.5f, 5.55f, 0f);
+            _ui.AddTag(bedLabel, () => _bedOpen ? "СПАЛЬНЯ" : "", new Color(0.78f, 0.7f, 0.62f), Vector2.zero, 16, false);
             var bathLabel = new GameObject("BathLabel").transform;
             bathLabel.SetParent(root, false);
             bathLabel.position = new Vector3(0.05f, 7.9f, 0f);
@@ -684,7 +676,7 @@ namespace RealityDirector
             var anchor = new GameObject(text).transform;
             anchor.SetParent(root, false);
             anchor.position = position;
-            var muted = new Color(0.28f, 0.2f, 0.18f, 1f);
+            var muted = new Color(0.78f, 0.7f, 0.62f, 1f);
             _ui.AddTag(anchor, () => text, muted, Vector2.zero, 16, false);
         }
 
@@ -754,8 +746,6 @@ namespace RealityDirector
             }
 
             Time.timeScale = 1f;
-            _paused = false;
-            _ui.SetPaused(false);
             _frozen = false;
             if (_state.wantsTutorial && _state.tutorialBeat < 4)
                 _state.tutorialBeat = 4;
@@ -832,17 +822,20 @@ namespace RealityDirector
             SceneFlow.ToHub();
         }
 
-        // Съёмка брошена. Комната карты остаётся текущей, хаб не засчитывает её.
+        // «Хаб» посреди съёмки = «Снято!», только после — хаб, а не карта: футаж сохраняется, комната карты
+        // засчитана. Раньше комната оставалась текущей, и игрок крутился в одной комнате карты.
         void ExitToHub()
         {
             if (_phase != PitchPhase.Play || _lesson != Lesson.None)
                 return;
             StopAllCoroutines();
+            Time.timeScale = 1f;
+            _frozen = false;
+            PersistMood();
+            DepositFootage();
+            ClearSet();
             GameSession.Hand.Clear();
             GameSession.Embarked = false;
-            PersistMood();
-            StampSet();
-            GameSession.RoomNodeId = null;
             GameSession.ExitToHub = true;
             GameSession.ReturnToMap = false;
             GameSession.Save();
@@ -1006,18 +999,14 @@ namespace RealityDirector
             if (cameraOpen && keyboard.cKey.wasPressedThisFrame)
                 ToggleCamera();
 
-            if (_lesson == Lesson.None && keyboard.escapeKey.wasPressedThisFrame)
+            // Esc — отмена выбранной карты или записи. Пауза есть только в обучении (заморозка босса).
+            if (_lesson == Lesson.None && keyboard.escapeKey.wasPressedThisFrame && (_armed != null || _capture.Recording || _capture.Mode))
             {
-                if (_armed != null || _capture.Recording || _capture.Mode)
-                {
-                    _armed = null;
-                    _ui.SetArmed(null);
-                    if (_capture.Recording)
-                        _capture.CancelRecord();
-                    _capture.SetSticky(false);
-                }
-                else
-                    TogglePause();
+                _armed = null;
+                _ui.SetArmed(null);
+                if (_capture.Recording)
+                    _capture.CancelRecord();
+                _capture.SetSticky(false);
             }
 
             if (_lesson == Lesson.None && mouse.rightButton.wasPressedThisFrame && _armed != null)
@@ -1603,12 +1592,12 @@ namespace RealityDirector
 
         IEnumerator HitStop()
         {
-            if (_inputLock || _frozen || _paused)
+            if (_inputLock || _frozen)
                 yield break;
             _inputLock = true;
             Time.timeScale = 0.02f;
             yield return new WaitForSecondsRealtime(0.16f);
-            if (_phase == PitchPhase.Play && !_frozen && !_paused)
+            if (_phase == PitchPhase.Play && !_frozen)
                 Time.timeScale = 1f;
             _inputLock = false;
         }
@@ -1738,15 +1727,6 @@ namespace RealityDirector
             return false;
         }
 
-        void TogglePause()
-        {
-            if (_lesson != Lesson.None || _frozen || _phase != PitchPhase.Play)
-                return;
-            _paused = !_paused;
-            Time.timeScale = _paused ? 0f : 1f;
-            _ui.SetPaused(_paused);
-        }
-
         void PushBoard()
         {
             if (_ui == null)
@@ -1772,19 +1752,6 @@ namespace RealityDirector
             _ui.SetCast(_faces);
             _capture.Peek(_frameNames);
             _ui.SetFrame(string.Join("\n", _frameNames), _capture.Mode);
-            int library = 0;
-            if (_state != null)
-            {
-                for (int i = 0; i < _state.owned.Count; i++)
-                {
-                    if (!_state.IsPlayed(_state.owned[i]))
-                        library++;
-                }
-            }
-
-            int hand = _hand != null ? _hand.Length : 0;
-            int used = _ui.UsedCount;
-            _ui.SetHandMeta(Mathf.Max(0, hand - used), hand, library, used);
             var ep = _state != null ? _state.episode : null;
             if (ep == null)
                 _ui.SetHell(EpisodeState.HellCap, EpisodeState.HellCap);
@@ -1810,7 +1777,6 @@ namespace RealityDirector
         {
             if (_ui == null)
                 return;
-            _ui.SetPauseEnabled(_lesson == Lesson.None);
             if (_lesson == Lesson.None)
             {
                 _ui.ClearActionGates();

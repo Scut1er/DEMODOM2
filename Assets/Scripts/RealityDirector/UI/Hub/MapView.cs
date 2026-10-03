@@ -40,8 +40,8 @@ namespace RealityDirector.UI.Hub
         [SerializeField] Text infoBody;
         [SerializeField] Button shoot;
         [SerializeField] Text shootLabel;
+        [Tooltip("«← В хаб»: выпуск не прерывается, вернуться — кнопкой старта в хабе.")]
         [SerializeField] Button back;
-        [SerializeField] Button random;
         [Tooltip("Выбор карт перед съёмкой — прямо на карте, без возврата в хаб.")]
         [SerializeField] DeckPanelView deck;
 
@@ -50,16 +50,18 @@ namespace RealityDirector.UI.Hub
         public event Action<string> Select;
         public event Action Shoot;
         public event Action Back;
-        public event Action Random;
 
         void Awake()
         {
             if (shoot != null)
                 shoot.onClick.AddListener(() => Shoot?.Invoke());
             if (back != null)
+            {
                 back.onClick.AddListener(() => Back?.Invoke());
-            if (random != null)
-                random.onClick.AddListener(() => Random?.Invoke());
+                var label = back.GetComponentInChildren<Text>(true);
+                if (label != null)
+                    label.text = "←  В ХАБ";
+            }
         }
 
         readonly List<MapNodeView> _spawned = new List<MapNodeView>();
@@ -78,7 +80,7 @@ namespace RealityDirector.UI.Hub
         public void Show(MapService map, MapNode selected, StatsModel statsModel, int episodeNumber, int seasonLength, IList<string> tasks)
         {
             if (back != null)
-                back.gameObject.SetActive(false);
+                back.gameObject.SetActive(true);
             if (subtitle != null)
                 subtitle.text = "Выпуск " + episodeNumber + " из " + seasonLength + "  ·  сцена " + Mathf.Min(map.Step + 1, map.Map.Layers)
                                 + " из " + map.Map.Layers + "  ·  в конце — монтаж";
@@ -87,14 +89,15 @@ namespace RealityDirector.UI.Hub
                 stats.Show(statsModel);
 
             var focus = selected ?? map.CurrentChoice;
+            string goalText = focus != null && !string.IsNullOrEmpty(focus.goal)
+                ? focus.goal
+                : "Пройти выпуск до монтажа и набрать материала на сильный эфир.";
             if (goal != null)
-                goal.text = focus != null && !string.IsNullOrEmpty(focus.goal)
-                    ? focus.goal
-                    : "Пройти выпуск до монтажа и набрать материала на сильный эфир.";
+                goal.text = goalText;
 
             DrawEdges(map);
             DrawNodes(map, selected);
-            ShowPlan(map, tasks);
+            ShowPlan(goalText, tasks);
             ShowInfo(map, selected);
         }
 
@@ -191,20 +194,15 @@ namespace RealityDirector.UI.Hub
             image.raycastTarget = false;
         }
 
-        void ShowPlan(MapService map, IList<string> tasks)
+        // Цель выпуска и задачи зрителей. Пройденный путь видно на самой карте.
+        void ShowPlan(string goalText, IList<string> tasks)
         {
             if (plan == null)
                 return;
-            var body = "СЪЁМОЧНЫЙ ПЛАН";
-            var nodes = map.Map.nodes;
-            for (int i = 0; i < nodes.Count; i++)
+            var body = "<color=#F2C94C><b>ЦЕЛЬ ВЫПУСКА</b></color>\n" + goalText;
+            if (tasks != null && tasks.Count > 0)
             {
-                if (map.StateOf(nodes[i]) == MapNodeState.Done)
-                    body += "\n●  " + Capital(nodes[i].title);
-            }
-
-            if (tasks != null)
-            {
+                body += "\n\n<color=#F2C94C><b>ЗАДАЧИ ЗРИТЕЛЕЙ</b></color>";
                 for (int i = 0; i < tasks.Count; i++)
                     body += "\n○  " + tasks[i];
             }
@@ -218,13 +216,13 @@ namespace RealityDirector.UI.Hub
             if (selected == null)
             {
                 if (infoTitle != null)
-                    infoTitle.text = "Выберите следующую комнату";
+                    infoTitle.text = "Выбери следующую комнату";
                 if (infoBody != null)
-                    infoBody.text = "Карта эпизода. Комната двигает "
+                    infoBody.text = "Нажми на светящуюся комнату — здесь появится, что в ней будет. Комната двигает "
                         + MoodStyle.Paint("драму", ShowMood.Drama) + ", "
                         + MoodStyle.Paint("трэш", ShowMood.Trash) + " или "
-                        + MoodStyle.Paint("семью", ShowMood.Family)
-                        + ". Пройденный путь не переснять, в конце — монтаж.";
+                        + MoodStyle.Paint("семью", ShowMood.Family) + ".\n"
+                        + "<color=#FA6199>■</color> можно идти   <color=#7DDB9E>✓</color> снято   <color=#9E8F85>□</color> впереди   <color=#5A5560>■</color> путь закрыт   ·   в конце — монтаж";
             }
             else
             {
@@ -252,14 +250,14 @@ namespace RealityDirector.UI.Hub
             if (shoot != null)
                 shoot.interactable = can;
             if (shootLabel != null)
-                shootLabel.text = !can ? (selected == null ? "ВЫБОР" : "НЕДОСТУПНО") : ActionLabel(selected.type);
+                shootLabel.text = !can ? (selected == null ? "ВЫБЕРИ КОМНАТУ" : "НЕДОСТУПНО") : ActionLabel(selected.type);
         }
 
         // Сообщение в инфо-панели поверх обычного текста (например, «событие пока не реализовано»).
         public void ApplyTutorial(bool teach, bool talking)
         {
-            if (random != null)
-                random.interactable = !teach;
+            if (back != null)
+                back.interactable = !teach;
             for (int i = 0; i < _spawned.Count; i++)
             {
                 if (_spawned[i] == null)

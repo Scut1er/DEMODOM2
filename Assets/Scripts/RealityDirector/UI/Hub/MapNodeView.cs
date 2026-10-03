@@ -26,11 +26,43 @@ namespace RealityDirector.UI.Hub
         [SerializeField] Color lockedColor = new Color(0.3f, 0.3f, 0.33f, 1f);
 
         Action _onClick;
+        Image _shadeImage;
+        Image _openImage;
+        bool _pulse;
 
         void Awake()
         {
             if (button != null)
                 button.onClick.AddListener(() => _onClick?.Invoke());
+            if (dimShade != null)
+                _shadeImage = dimShade.GetComponent<Image>();
+            if (openRing != null)
+                _openImage = openRing.GetComponent<Image>();
+            // Подзаголовок с тоном не переносится на арт: шрифт ужимается под ширину.
+            if (subtitle != null)
+            {
+                subtitle.resizeTextForBestFit = true;
+                subtitle.resizeTextMinSize = 11;
+                subtitle.resizeTextMaxSize = subtitle.fontSize;
+                subtitle.verticalOverflow = VerticalWrapMode.Truncate;
+            }
+
+            if (title != null)
+            {
+                title.resizeTextForBestFit = true;
+                title.resizeTextMinSize = 12;
+                title.resizeTextMaxSize = title.fontSize;
+            }
+        }
+
+        // Доступная комната мягко «дышит» рамкой — видно, куда можно идти.
+        void Update()
+        {
+            if (!_pulse || _openImage == null)
+                return;
+            var c = _openImage.color;
+            c.a = 0.55f + 0.45f * Mathf.Sin(Time.unscaledTime * 4f);
+            _openImage.color = c;
         }
 
         public void SetEnabled(bool on)
@@ -43,10 +75,10 @@ namespace RealityDirector.UI.Hub
         {
             _onClick = onClick;
             if (title != null)
-                title.text = node.title;
+                title.text = (node.title ?? "").ToUpperInvariant();
             if (subtitle != null)
             {
-                string line = node.subtitle ?? "";
+                string line = Capital(node.subtitle ?? "");
                 if (node.toneGain > 0)
                     line += "  ·  " + MoodStyle.Paint(MoodStyle.Short(node.mood) + " +" + node.toneGain, node.mood);
                 subtitle.text = line;
@@ -56,14 +88,31 @@ namespace RealityDirector.UI.Hub
             if (art != null)
                 art.sprite = node.art != null ? node.art : Icon(node.kind);
 
-            bool live = state == MapNodeState.Available || state == MapNodeState.Current || state == MapNodeState.Done
-                        || state == MapNodeState.Locked;
+            // Состояние читается с первого взгляда: можно идти — ярко и «дышит», впереди — приглушено,
+            // путь закрыт — почти не видно, снято — с галочкой. Затемнение — непрозрачной накладкой,
+            // чтобы линии маршрута не просвечивали сквозь карточку.
+            float shade;
+            switch (state)
+            {
+                case MapNodeState.Available:
+                case MapNodeState.Current: shade = 0f; break;
+                case MapNodeState.Done: shade = 0.35f; break;
+                case MapNodeState.Locked: shade = 0.35f; break;
+                case MapNodeState.Future: shade = 0.6f; break;
+                default: shade = 0.82f; break;
+            }
+
             if (dimShade != null)
-                dimShade.SetActive(!live);
+            {
+                dimShade.SetActive(shade > 0f);
+                if (_shadeImage != null)
+                    _shadeImage.color = new Color(0.05f, 0.04f, 0.07f, shade);
+            }
             if (selectedRing != null)
                 selectedRing.SetActive(selected);
+            _pulse = state == MapNodeState.Available && !selected;
             if (openRing != null)
-                openRing.SetActive(state == MapNodeState.Available && !selected);
+                openRing.SetActive(_pulse);
             if (doneBadge != null)
                 doneBadge.SetActive(state == MapNodeState.Done);
             if (currentBadge != null)
@@ -72,6 +121,13 @@ namespace RealityDirector.UI.Hub
                 lockBadge.SetActive(state == MapNodeState.Locked);
             if (lockLabel != null)
                 lockLabel.text = lockReason ?? "";
+        }
+
+        static string Capital(string s)
+        {
+            if (string.IsNullOrEmpty(s))
+                return s;
+            return s.Substring(0, 1).ToUpperInvariant() + s.Substring(1).ToLowerInvariant();
         }
 
         public static Sprite Icon(MapNodeKind kind)
