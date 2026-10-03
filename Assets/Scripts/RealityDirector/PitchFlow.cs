@@ -102,7 +102,10 @@ namespace RealityDirector
         void EnsureSession()
         {
             if (!GameSession.Active && !GameSession.Continue())
+            {
                 GameSession.NewSeason(_content.StarterIds());
+                GameSession.Commit();
+            }
             if (GameSession.Embarked)
                 return;
             var meta = new MetaService(_state, _tone, _content.All);
@@ -692,7 +695,8 @@ namespace RealityDirector
             Sfx.Play(Cue.Card, 0.45f, 0.8f);
             ResetSet();
             RestoreMood();
-            if (ShootLesson())
+            RestoreSet();
+            if (ShootLesson() && !_state.played.Contains("fridge_fire"))
             {
                 GameSession.Hand.Remove("fridge_fire");
                 GameSession.Hand.Insert(0, "fridge_fire");
@@ -704,6 +708,11 @@ namespace RealityDirector
             _ui.ClearHand();
             _ui.BindCards(_hand, Arm);
             _ui.ClearUsed();
+            for (int i = 0; i < _hand.Length; i++)
+            {
+                if (_hand[i] != null && _state.played.Contains(_hand[i].id))
+                    _ui.MarkUsed(_hand[i].id);
+            }
             _ui.SetArmed(null);
             _capture.Capacity = Progression.CaptureSlots(_state.operatorLevel);
             _ui.SetCaptureCapacity(_capture.Capacity);
@@ -716,8 +725,16 @@ namespace RealityDirector
             {
                 _state.tutorialBeat = 3;
                 BossCoach.Ensure().Hide();
-                _lesson = Lesson.Take;
-                StartCoroutine(OpenLesson());
+                if (_state.played.Contains("fridge_fire"))
+                {
+                    _lesson = Lesson.Camera;
+                    BossCoach.Ensure().Order("Жми C. Зажми левую и веди рамку по людям. Три секунды — и отпусти.", _ui.CameraRect);
+                }
+                else
+                {
+                    _lesson = Lesson.Take;
+                    StartCoroutine(OpenLesson());
+                }
             }
             _ui.RefreshTone(_tone);
             _ui.SetSlots(_capture.Moments, _capture.Capacity);
@@ -807,6 +824,7 @@ namespace RealityDirector
         void BackToHub()
         {
             StopAllCoroutines();
+            ClearSet();
             GameSession.Hand.Clear();
             GameSession.Embarked = false;
             GameSession.Save();
@@ -822,6 +840,7 @@ namespace RealityDirector
             GameSession.Hand.Clear();
             GameSession.Embarked = false;
             PersistMood();
+            StampSet();
             GameSession.RoomNodeId = null;
             GameSession.ExitToHub = true;
             GameSession.ReturnToMap = false;
@@ -1382,6 +1401,70 @@ namespace RealityDirector
             }
         }
 
+        void Checkpoint()
+        {
+            PersistMood();
+            StampSet();
+            GameSession.Save();
+        }
+
+        void StampSet()
+        {
+            var episode = _state.episode;
+            if (episode == null)
+                return;
+            episode.setRoom = GameSession.RoomNodeId ?? "";
+            episode.setOnFire = _fridge != null && _fridge.IsOnFire;
+            episode.setBathOpen = _bathOpen;
+            episode.setBedOpen = _bedOpen;
+        }
+
+        void ClearSet()
+        {
+            var episode = _state.episode;
+            if (episode == null)
+                return;
+            episode.setRoom = "";
+            episode.setOnFire = false;
+            episode.setBathOpen = false;
+            episode.setBedOpen = false;
+        }
+
+        void RestoreSet()
+        {
+            var episode = _state.episode;
+            if (episode == null || episode.setRoom != (GameSession.RoomNodeId ?? ""))
+                return;
+            if (episode.setOnFire && _fridge != null)
+                _fridge.Ignite();
+            if (episode.setBathOpen)
+                SnapBathroom();
+            if (episode.setBedOpen)
+                SnapBedroom();
+        }
+
+        void SnapBathroom()
+        {
+            if (_bathOpen || _bathroom == null)
+                return;
+            _bathOpen = true;
+            if (_boards != null)
+                _boards.SetActive(false);
+            _bathroom.SetActive(true);
+        }
+
+        void SnapBedroom()
+        {
+            if (_bedOpen || _bedroom == null)
+                return;
+            _bedOpen = true;
+            if (_bedBoards != null)
+                _bedBoards.SetActive(false);
+            _bedroom.SetActive(true);
+            ApplyBedroomGate();
+            RegisterHangouts();
+        }
+
         void PersistMood()
         {
             var episode = _state.episode;
@@ -1457,6 +1540,7 @@ namespace RealityDirector
             _armed = null;
             _ui.SetArmed(null);
             _ui.SetHandLocked(true);
+            Checkpoint();
             if (def.moods == null)
                 return;
 

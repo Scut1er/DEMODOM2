@@ -78,7 +78,7 @@ namespace RealityDirector.UI.Hub
             };
             hub.StartShoot += () => { Click(); StartOrResumeEpisode(); };
             hub.OpenSettings += () => { Click(); ShowSettings(hub.gameObject); };
-            hub.Menu += () => { Click(); ShowMenu(); };
+            hub.Menu += () => { Click(); GameSession.Save(); ShowMenu(); };
 
             map.Select += id => { Click(); _selected = _episode.Map.Map.Find(id); RefreshMap(); };
             // Выбор карт для съёмки — прямо на карте сезона.
@@ -224,7 +224,7 @@ namespace RealityDirector.UI.Hub
                 GameSession.State.producerName = name;
                 GameSession.State.wantsTutorial = teach;
                 GameSession.State.tutorialBeat = 0;
-                GameSession.Save();
+                GameSession.Commit();
                 Show(intro.gameObject);
             });
         }
@@ -238,6 +238,12 @@ namespace RealityDirector.UI.Hub
             }
 
             Bind();
+            if (GameSession.Embarked && GameSession.InEpisode && !string.IsNullOrEmpty(GameSession.RoomNodeId))
+            {
+                SceneFlow.ToScene(string.IsNullOrEmpty(GameSession.SceneId) ? SceneFlow.Episode : GameSession.SceneId);
+                return;
+            }
+
             Resume();
         }
 
@@ -440,14 +446,15 @@ namespace RealityDirector.UI.Hub
             }
 
             Sfx.Play(Cue.Card, 0.45f, 0.8f);
+            var situation = node.room as SituationRoomDefinition;
             GameSession.Embarked = true;
             GameSession.SceneTitle = node.title;
+            GameSession.SceneId = situation != null && !string.IsNullOrEmpty(situation.scene) ? situation.scene : SceneFlow.Episode;
             GameSession.RoomNodeId = node.id;
-            GameSession.Save();
-            var situation = node.room as SituationRoomDefinition;
             if (situation != null && _episode.Current != null)
                 _episode.Current.roleBrief = situation.roleBrief;
-            SceneFlow.ToScene(situation != null && !string.IsNullOrEmpty(situation.scene) ? situation.scene : SceneFlow.Episode);
+            GameSession.Save();
+            SceneFlow.ToScene(GameSession.SceneId);
         }
 
         // Покупка за нал или контракт без денег. Выплата контракта ждёт монтаж.

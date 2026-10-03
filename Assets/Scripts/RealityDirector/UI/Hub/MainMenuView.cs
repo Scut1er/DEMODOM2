@@ -26,12 +26,17 @@ namespace RealityDirector.UI.Hub
                 settings.onClick.AddListener(() => Settings?.Invoke());
             if (quit != null)
                 quit.onClick.AddListener(() => Quit?.Invoke());
+            Show(false);
         }
 
         public void Show(bool canContinue)
         {
-            if (continueSeason != null)
-                continueSeason.interactable = canContinue;
+            if (continueSeason == null)
+                return;
+            continueSeason.interactable = canContinue;
+            var colors = continueSeason.colors;
+            colors.disabledColor = new Color(1f, 1f, 1f, 0.28f);
+            continueSeason.colors = colors;
         }
     }
 }
