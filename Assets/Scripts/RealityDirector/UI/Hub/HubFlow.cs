@@ -863,6 +863,7 @@ namespace RealityDirector.UI.Hub
                     {
                         state.tutorialBeat = 6;
                         state.wantsTutorial = false;
+                        GameSession.MarkTutorialDone();
                         GameSession.Save();
                     }),
                 _cut.LikesFocus);
