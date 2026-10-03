@@ -152,6 +152,8 @@ namespace RealityDirector.UI.Hub
                 _screens.SetPageLocked(talking);
             if (_cut != null)
                 _cut.SetLocked(talking);
+            if (_eventView != null)
+                _eventView.SetChoicesLocked(talking);
             if (_teachWas && !teach)
             {
                 RefreshHub();
@@ -846,13 +848,22 @@ namespace RealityDirector.UI.Hub
         // Обучение: кадры в слотах — связи, порядок, прогноз аудитории, затем эфир.
         void OnCutEdited()
         {
-            if (_montageCoach != 1 || _cut == null || _cut.CutCount < MontageNeed())
+            if (_cut == null || _montageCoach == 0)
                 return;
             var state = GameSession.State;
             if (state == null || !state.wantsTutorial || state.tutorialBeat != 4)
                 return;
-            _montageCoach = 2;
+            // Вынул кадр — «В ЭФИР» снова погашена, пока в слотах меньше, чем просил босс.
+            if (_cut.CutCount < MontageNeed())
+            {
+                _cut.HoldAir(true);
+                return;
+            }
+
             _cut.HoldAir(false);
+            if (_montageCoach != 1)
+                return;
+            _montageCoach = 2;
             var coach = BossCoach.Ensure();
             var steps = new List<CoachStep>();
             if (_cut.CutCount >= 2)
@@ -870,8 +881,15 @@ namespace RealityDirector.UI.Hub
         {
             if (!_episode.Active)
                 return;
-            _episode.Current.finalCut = ids != null ? new List<string>(ids) : new List<string>();
+            int count = ids != null ? ids.Count : 0;
             var state = GameSession.State;
+            if (state != null && state.wantsTutorial && state.tutorialBeat == 4 && _montageCoach != 0 && count < MontageNeed())
+            {
+                _cut.HoldAir(true);
+                return;
+            }
+
+            _episode.Current.finalCut = ids != null ? new List<string>(ids) : new List<string>();
             if (state != null && state.wantsTutorial && state.tutorialBeat < 5)
                 state.tutorialBeat = 5;
             _montageCoach = 0;

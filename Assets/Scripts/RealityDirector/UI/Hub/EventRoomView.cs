@@ -34,6 +34,7 @@ namespace RealityDirector.UI.Hub
         Text _body;
         RectTransform _stakes;
         RectTransform _choices;
+        CanvasGroup _choiceGroup;
         RectTransform _result;
         Image _stampPlate;
         Text _stamp;
@@ -49,6 +50,13 @@ namespace RealityDirector.UI.Hub
         public RectTransform Focus => _choices;
         public RectTransform BodyFocus => _body != null ? _body.rectTransform : _choices;
         public RectTransform ResultFocus => _result;
+
+        // Лекция босса: кнопки вариантов не жмутся, пока он не договорил и не отдал ход.
+        public void SetChoicesLocked(bool locked)
+        {
+            if (_choiceGroup != null)
+                _choiceGroup.interactable = !locked;
+        }
 
         public static EventRoomView Create(Transform canvas, Font titleFont)
         {
@@ -143,6 +151,7 @@ namespace RealityDirector.UI.Hub
 
             // ---------- карточки выбора / результат ----------
             _choices = UiKit.Rect("Choices", _panel);
+            _choiceGroup = _choices.gameObject.AddComponent<CanvasGroup>();
             Place(_choices, 0f, 0f, 1f, 0f, new Vector2(630f, 0f), new Vector2(0f, 302f));
             var layout = _choices.gameObject.AddComponent<HorizontalLayoutGroup>();
             layout.spacing = 18f;
