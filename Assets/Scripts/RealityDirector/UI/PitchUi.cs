@@ -136,6 +136,9 @@ namespace RealityDirector.UI
         Text _usedCount;
         Text _handCount;
         Text _cash;
+        RectTransform _hellFill;
+        int _hell = 10;
+        bool _handLocked;
         Text _frameBody;
         GameObject _framePlate;
         Button _pauseButton;
@@ -438,16 +441,23 @@ namespace RealityDirector.UI
 
         public void SetHandLocked(bool locked)
         {
+            _handLocked = locked;
             for (int i = 0; i < _cards.Count; i++)
             {
                 var card = _cards[i];
+                bool poor = Poor(card);
                 if (card.Button != null)
-                    card.Button.interactable = !locked && !card.Used;
+                    card.Button.interactable = !locked && !card.Used && !poor;
                 if (card.Group != null)
-                    card.Group.alpha = locked && !card.Used ? 0.45f : 1f;
+                    card.Group.alpha = (locked || poor) && !card.Used ? 0.45f : 1f;
             }
 
             ApplyGates();
+        }
+
+        bool Poor(Card card)
+        {
+            return card.Def != null && card.Def.cost > _hell;
         }
 
         // Урок: жива только та кнопка, которую босс только что потребовал.
@@ -486,7 +496,10 @@ namespace RealityDirector.UI
                 if (card.Button == null)
                     continue;
                 bool mine = string.IsNullOrEmpty(_gateCard) || (card.Def != null && card.Def.id == _gateCard);
-                card.Button.interactable = _gateCards && mine && !card.Used;
+                bool poor = Poor(card);
+                card.Button.interactable = _gateCards && mine && !card.Used && !poor;
+                if (card.Group != null && !card.Used)
+                    card.Group.alpha = poor || _handLocked ? 0.45f : 1f;
             }
 
             if (_camButton != null)
@@ -713,10 +726,19 @@ namespace RealityDirector.UI
                 _usedCount.text = used.ToString();
         }
 
-        public void SetCash(int cash)
+        public void SetHell(int current, int max)
         {
+            _hell = current;
+            if (max < 1)
+                max = 1;
             if (_cash != null)
-                _cash.text = "нал  " + cash;
+                _cash.text = "HELL  " + current + " / " + max;
+            if (_hellFill != null)
+                _hellFill.sizeDelta = new Vector2(160f * Mathf.Clamp01(current / (float)max), 8f);
+            if (!_gated)
+                SetHandLocked(_handLocked);
+            else
+                ApplyGates();
         }
 
         public void SetFootage(int count, int capacity)
@@ -1231,12 +1253,27 @@ namespace RealityDirector.UI
             handRect.anchoredPosition = new Vector2(0f, -6f);
             handRect.sizeDelta = new Vector2(240f, 24f);
 
-            _cash = MakeText(deck.transform, "нал  0", 16, new Color(0.95f, 0.82f, 0.28f, 1f), TextAnchor.MiddleRight);
+            _cash = MakeText(deck.transform, "HELL  10 / 10", 16, new Color(0.95f, 0.82f, 0.28f, 1f), TextAnchor.MiddleRight);
             var cashRect = _cash.rectTransform;
             cashRect.anchorMin = cashRect.anchorMax = new Vector2(1f, 1f);
             cashRect.pivot = new Vector2(1f, 1f);
-            cashRect.anchoredPosition = new Vector2(-24f, -6f);
-            cashRect.sizeDelta = new Vector2(220f, 24f);
+            cashRect.anchoredPosition = new Vector2(-24f, -4f);
+            cashRect.sizeDelta = new Vector2(220f, 22f);
+            var hellTrack = Panel("hell", deck.transform, new Color(0.15f, 0.1f, 0.08f, 1f));
+            var hellRect = hellTrack.rectTransform;
+            hellRect.anchorMin = hellRect.anchorMax = new Vector2(1f, 1f);
+            hellRect.pivot = new Vector2(1f, 1f);
+            hellRect.anchoredPosition = new Vector2(-24f, -28f);
+            hellRect.sizeDelta = new Vector2(160f, 8f);
+            hellTrack.raycastTarget = false;
+            var hellFill = Panel("fill", hellTrack.transform, new Color(0.95f, 0.72f, 0.18f, 1f));
+            _hellFill = hellFill.rectTransform;
+            _hellFill.anchorMin = new Vector2(0f, 0.5f);
+            _hellFill.anchorMax = new Vector2(0f, 0.5f);
+            _hellFill.pivot = new Vector2(0f, 0.5f);
+            _hellFill.anchoredPosition = Vector2.zero;
+            _hellFill.sizeDelta = new Vector2(160f, 8f);
+            hellFill.raycastTarget = false;
 
             var library = MakeText(deck.transform, "БИБЛИОТЕКА", 13, Muted, TextAnchor.UpperCenter);
             var libRect = library.rectTransform;
@@ -1330,6 +1367,15 @@ namespace RealityDirector.UI
             innerRect.offsetMin = new Vector2(8f, 8f);
             innerRect.offsetMax = new Vector2(-8f, -8f);
             inner.raycastTarget = false;
+
+            var price = MakeText(frame.transform, def.cost.ToString(), 18, new Color(0.95f, 0.82f, 0.28f, 1f), TextAnchor.MiddleRight);
+            var priceRect = price.rectTransform;
+            priceRect.anchorMin = new Vector2(1f, 1f);
+            priceRect.anchorMax = new Vector2(1f, 1f);
+            priceRect.pivot = new Vector2(1f, 1f);
+            priceRect.anchoredPosition = new Vector2(-10f, -8f);
+            priceRect.sizeDelta = new Vector2(48f, 24f);
+            price.raycastTarget = false;
 
             var badge = Panel("badge", frame.transform, new Color(0.14f, 0.09f, 0.08f, 1f));
             var badgeRect = badge.rectTransform;

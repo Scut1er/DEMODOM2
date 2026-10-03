@@ -152,6 +152,26 @@ namespace RealityDirector
             Cat(content.All, "invite_guest", "Social");
             Cat(content.All, "confession_cam", "Confession");
             Cat(content.All, "night_vote", "Reveal");
+            KeepCost(content.All, "provoke", 2);
+            KeepCost(content.All, "fridge_fire", 2);
+            KeepCost(content.All, "no_hot_water", 1);
+            KeepCost(content.All, "open_bathroom", 1);
+            KeepCost(content.All, "open_bedroom", 1);
+            KeepCost(content.All, "spoiled_food", 1);
+            KeepCost(content.All, "cut_wifi", 2);
+            KeepCost(content.All, "meditation_bell", 2);
+            KeepCost(content.All, "confession_cam", 3);
+            KeepCost(content.All, "invite_guest", 3);
+            KeepCost(content.All, "night_vote", 3);
+            KeepCost(content.All, "sponsor_energy", 1);
+            KeepCost(content.All, "sponsor_cola", 2);
+            KeepCost(content.All, "sponsor_ship", 3);
+            for (int i = 0; i < content.All.Length; i++)
+            {
+                if (content.All[i] != null && content.All[i].cost <= 0)
+                    content.All[i].cost = 1;
+            }
+
             return content;
         }
 
@@ -331,6 +351,13 @@ namespace RealityDirector
                 def.sponsorPay = pay;
             if (def.sponsorScoreHit <= 0)
                 def.sponsorScoreHit = hit;
+        }
+
+        static void KeepCost(EventDefinition[] all, string id, int cost)
+        {
+            var def = Find(all, id);
+            if (def != null && def.cost <= 0)
+                def.cost = cost;
         }
 
         static void Cat(EventDefinition[] all, string id, string category)

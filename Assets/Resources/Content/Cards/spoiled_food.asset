@@ -24,6 +24,7 @@ MonoBehaviour:
   moods: 00000000i
   rageSeconds: 0
   ignite: 0
+  cost: 1
   price: 120
   runPrice: 35
   sponsor: 0
@@ -36,7 +37,6 @@ MonoBehaviour:
   category: Environment
   tier: 0
   rarity: 0
-  hellTokenCost: 1
   targetFilters: []
   description: "\u0441\u0440\u0430\u0437\u0443 \u043D\u0430 \u0432\u0435\u0441\u044C \u0434\u043E\u043C"
   effects: []

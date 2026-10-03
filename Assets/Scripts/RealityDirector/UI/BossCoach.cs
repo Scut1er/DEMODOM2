@@ -48,10 +48,19 @@ namespace RealityDirector.UI
         {
             if (_instance != null)
                 return _instance;
+            if (!Application.isPlaying)
+                return null;
             var go = new GameObject("BossCoach");
             DontDestroyOnLoad(go);
             _instance = go.AddComponent<BossCoach>();
             return _instance;
+        }
+
+        public static void Dismiss()
+        {
+            if (_instance == null)
+                return;
+            _instance.Hide();
         }
 
         public static void Line(List<CoachStep> steps, string line, params RectTransform[] targets)
@@ -72,7 +81,10 @@ namespace RealityDirector.UI
             var state = GameSession.State;
             if (state == null || !state.wantsTutorial || state.tutorialBeat != beat || steps == null || steps.Length == 0)
                 return;
-            Ensure().Chain(steps, () =>
+            var coach = Ensure();
+            if (coach == null)
+                return;
+            coach.Chain(steps, () =>
             {
                 state.tutorialBeat = next;
                 if (next >= DoneBeat)
@@ -114,6 +126,12 @@ namespace RealityDirector.UI
             _portrait = Sprite.Create(tex, new Rect(0f, 0f, tex.width, tex.height), new Vector2(0.5f, 0.5f), 100f);
             _portrait.hideFlags = HideFlags.HideAndDontSave;
             return _portrait;
+        }
+
+        void OnDestroy()
+        {
+            if (_instance == this)
+                _instance = null;
         }
 
         void Awake()

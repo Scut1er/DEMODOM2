@@ -32,7 +32,7 @@ namespace RealityDirector.EditorTools
             DrawMoods();
             Field("tier", "Tier ◇", "Ступень улучшения. Улучшенные версии — отдельные карты (блок «Улучшения»).");
             Field("rarity", "Редкость ◇", "");
-            Number("hellTokenCost", "HellToken $ ◇", "Цена розыгрыша в HellToken (бюджет съёмки, по GDD $10). Например 0.75, 1.25, 2.50.");
+            Number("cost", "HellToken", "Сколько HellToken съедает розыгрыш на съёмке. Не хватает — карту не сыграть.");
 
             Section("Цель", false);
             var targetType = serializedObject.FindProperty("targetType");

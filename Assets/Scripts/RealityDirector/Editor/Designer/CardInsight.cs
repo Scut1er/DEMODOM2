@@ -90,7 +90,7 @@ namespace RealityDirector.EditorTools
 
         public static string Passport(EventDefinition c)
         {
-            return "$" + c.hellTokenCost.ToString("0.00") + "  ·  " + CategoryName(c.category) + "  ·  Tier " + c.tier + "  ·  " + Enum(c.rarity) + "  ·  " + Enum(c.status);
+            return c.cost + " HellToken  ·  " + CategoryName(c.category) + "  ·  Tier " + c.tier + "  ·  " + Enum(c.rarity) + "  ·  " + Enum(c.status);
         }
 
         // Категории карт — те, что понимает игра (Progression.CategoryOpen): по ним карты открываются уровнем Сценаристов.
