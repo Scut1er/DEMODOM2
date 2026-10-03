@@ -91,6 +91,11 @@ namespace RealityDirector.Meta
         public int budgetAtStart;
         [Tooltip("Нал выпуска. Тратится в магазине на карте, в хаб не переносится.")]
         public int cash;
+        public const int HellCap = 10;
+        [Tooltip("Мана съёмки. Тратится на cost карт. Новый заход в комнату заливает пул заново.")]
+        public int hell;
+        public int hellMax;
+        public string hellRoom;
         [Tooltip("Сыгранные спонсорские карты, которым ещё нужен кадр.")]
         public List<string> pendingSponsors = new List<string>();
         public int footageLimit = 5;
@@ -119,6 +124,28 @@ namespace RealityDirector.Meta
         public List<Modifier> nextRoomModifiers = new List<Modifier>();
         public List<Modifier> broadcastModifiers = new List<Modifier>();
         public List<ActorRuntime> actors = new List<ActorRuntime>();
+
+        public void OpenHell(string roomId)
+        {
+            if (hellMax <= 0)
+                hellMax = HellCap;
+            string room = roomId ?? "";
+            if (hellRoom != room)
+            {
+                hellRoom = room;
+                hell = hellMax;
+            }
+        }
+
+        public bool SpendHell(int cost)
+        {
+            if (cost <= 0)
+                return true;
+            if (hell < cost)
+                return false;
+            hell -= cost;
+            return true;
+        }
 
         public void EnsureLists()
         {

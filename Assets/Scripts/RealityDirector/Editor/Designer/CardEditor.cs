@@ -50,6 +50,7 @@ namespace RealityDirector.EditorTools
             Field("ignite", "Поджигает", "Цель загорается (как «Поджог» холодильника).");
 
             Header("Экономика");
+            Field("cost", "Hell Token", "Сколько маны съедает розыгрыш на съёмке.");
             Field("price", "Цена в магазине", "Кредиты. 0 — карта не продаётся.");
             Field("starter", "В стартовой колоде", "Есть у игрока с начала сезона.");
 
@@ -78,7 +79,7 @@ namespace RealityDirector.EditorTools
             GUI.Label(new Rect(text.x, text.y + 22, text.width, 18), card.hint, EditorStyles.label);
             string moods = card.moods != null && card.moods.Count > 0 ? string.Join(", ", card.moods) : "без тона";
             string economy = card.starter ? "стартовая" : card.price > 0 ? "в магазине за " + card.price + " кр" : "нигде не выдаётся";
-            GUI.Label(new Rect(text.x, text.y + 42, text.width, 18), moods + "   ·   " + economy, EditorStyles.miniLabel);
+            GUI.Label(new Rect(text.x, text.y + 42, text.width, 18), moods + "   ·   " + card.cost + " hell   ·   " + economy, EditorStyles.miniLabel);
             GUI.Label(new Rect(text.x, text.y + 60, text.width, 18), "теги: " + (card.tags != null && card.tags.Count > 0 ? string.Join(", ", card.tags) : "—"), EditorStyles.miniLabel);
         }
 

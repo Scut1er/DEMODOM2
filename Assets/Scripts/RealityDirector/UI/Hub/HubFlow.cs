@@ -129,7 +129,8 @@ namespace RealityDirector.UI.Hub
             if (_cut == null || !_cut.AirVisible)
                 return;
             var state = GameSession.State;
-            if (state != null && state.wantsTutorial && state.tutorialBeat < 6 && BossCoach.Ensure().IsOpen)
+            var coach = BossCoach.Ensure();
+            if (state != null && state.wantsTutorial && state.tutorialBeat < 6 && coach != null && coach.IsOpen)
                 return;
             var keyboard = Keyboard.current;
             if (keyboard != null && (keyboard.spaceKey.wasPressedThisFrame || keyboard.enterKey.wasPressedThisFrame))
@@ -146,7 +147,7 @@ namespace RealityDirector.UI.Hub
             if (teach)
             {
                 var coach = BossCoach.Ensure();
-                talking = coach.IsOpen && !coach.Ordering;
+                talking = coach != null && coach.IsOpen && !coach.Ordering;
             }
             if (hub != null)
                 hub.ApplyTutorial(teach, talking, state != null && state.tutorialBeat >= 1);
@@ -198,7 +199,7 @@ namespace RealityDirector.UI.Hub
             if (_content != null)
                 _content.DestroyAssets();
             _episode?.Dispose();
-            BossCoach.Ensure().Hide();
+            BossCoach.Dismiss();
         }
 
         void BeginSeason()

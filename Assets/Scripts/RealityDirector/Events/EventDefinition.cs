@@ -28,6 +28,8 @@ namespace RealityDirector.Events
         public List<ShowMood> moods = new List<ShowMood>();
         public float rageSeconds;
         public bool ignite;
+        [Tooltip("Hell Token, чтобы сыграть карту на съёмке.")]
+        public int cost;
         public int price;
         [Tooltip("Цена в магазине выпуска (нал). 0 — в этот магазин не попадает. Карта живёт только до эфира выпуска.")]
         public int runPrice;

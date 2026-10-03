@@ -118,7 +118,7 @@ namespace RealityDirector
                 _content.DestroyAssets();
             _frozen = false;
             Time.timeScale = 1f;
-            BossCoach.Ensure().Hide();
+            BossCoach.Dismiss();
         }
 
         void Update()
@@ -690,6 +690,8 @@ namespace RealityDirector
                 GameSession.Hand.Insert(0, "fridge_fire");
             }
 
+            if (_state.episode != null)
+                _state.episode.OpenHell(GameSession.RoomNodeId);
             _hand = SelectedHand();
             _ui.ClearHand();
             _ui.BindCards(_hand, Arm);
@@ -904,6 +906,9 @@ namespace RealityDirector
                 return;
             }
 
+            if (!CanPay(def))
+                return;
+
             _capture.SetSticky(false);
             if (def.id == "open_bedroom" && _bedOpen)
             {
@@ -927,6 +932,8 @@ namespace RealityDirector
 
             if (def.targetType == TargetType.Global)
             {
+                if (!Pay(def))
+                    return;
                 _armed = null;
                 _ui.SetArmed(null);
                 _executor.Play(def, null, null);
@@ -1037,6 +1044,8 @@ namespace RealityDirector
                     return;
                 }
 
+                if (!Pay(_armed))
+                    return;
                 JuiceCard(_armed, npc.transform.position);
                 _executor.Play(_armed, null, npc);
                 _ui.MarkUsed(_armed.id);
@@ -1063,6 +1072,8 @@ namespace RealityDirector
 
             bool openBath = _armed.id == "open_bathroom";
             bool openBed = _armed.id == "open_bedroom";
+            if (!Pay(_armed))
+                return;
             EventDefinition played = _armed;
             JuiceCard(played, obj.transform.position);
             _executor.Play(played, obj, null);
@@ -1541,6 +1552,32 @@ namespace RealityDirector
             show?.Invoke();
         }
 
+        bool CanPay(EventDefinition def)
+        {
+            if (def == null || def.cost <= 0)
+                return true;
+            var ep = _state != null ? _state.episode : null;
+            if (ep == null || ep.hell >= def.cost)
+                return true;
+            _ui.Toast("Мало Hell Token. Нужно " + def.cost + ".");
+            Sfx.Play(Cue.Miss, 0.4f);
+            return false;
+        }
+
+        bool Pay(EventDefinition def)
+        {
+            if (def == null || def.cost <= 0)
+                return true;
+            var ep = _state != null ? _state.episode : null;
+            if (ep == null)
+                return true;
+            if (ep.SpendHell(def.cost))
+                return true;
+            _ui.Toast("Мало Hell Token. Нужно " + def.cost + ".");
+            Sfx.Play(Cue.Miss, 0.4f);
+            return false;
+        }
+
         void TogglePause()
         {
             if (_lesson != Lesson.None || _frozen || _phase != PitchPhase.Play)
@@ -1588,7 +1625,11 @@ namespace RealityDirector
             int hand = _hand != null ? _hand.Length : 0;
             int used = _ui.UsedCount;
             _ui.SetHandMeta(Mathf.Max(0, hand - used), hand, library, used);
-            _ui.SetCash(_state != null && _state.episode != null ? _state.episode.cash : 0);
+            var ep = _state != null ? _state.episode : null;
+            if (ep == null)
+                _ui.SetHell(EpisodeState.HellCap, EpisodeState.HellCap);
+            else
+                _ui.SetHell(ep.hell, ep.hellMax > 0 ? ep.hellMax : EpisodeState.HellCap);
             _ui.SetFootage(_capture.Moments.Count, _capture.Capacity);
         }
 
