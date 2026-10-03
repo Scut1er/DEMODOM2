@@ -14,7 +14,7 @@ namespace RealityDirector.Cards
     // карта влетает в точку, кубики решают силу, эффекты карты (данные из таблицы) превращаются
     // в действия людей, реквизит, связи, запертые двери. Работает по данным карты — новые карты дизайнера
     // оживают без кода; старые карты без эффектов получили свою постановку.
-    public class CardStage : MonoBehaviour
+    public partial class CardStage : MonoBehaviour
     {
         // Сила эмоции из кубика: грань × множитель (d6 → до 30 пунктов из 100).
         public const int DiePoints = 5;
@@ -27,6 +27,7 @@ namespace RealityDirector.Cards
         Transform _fridge;
         StageFx _fx;
         readonly List<StageProp> _props = new List<StageProp>();
+        public IReadOnlyList<StageProp> Props => _props;
         readonly List<GameObject> _junk = new List<GameObject>();
         readonly List<Guest> _guests = new List<Guest>();
 
@@ -118,7 +119,7 @@ namespace RealityDirector.Cards
                 int used = 0;
                 foreach (var prop in _props)
                 {
-                    if (prop != null && UsesSlot(prop.Def))
+                    if (prop != null && !prop.Dressing && UsesSlot(prop.Def))
                         used++;
                 }
 
@@ -653,6 +654,7 @@ namespace RealityDirector.Cards
                         Outcome(c.point, c.room, Take(c, DiceSubject.Check, null, UnityEngine.Random.Range(1, 11)));
                     break;
                 case CardEffectType.NextCaptureBonus:
+                    Capture.CaptureSystem.BonusUntil = Time.unscaledTime + (e.seconds > 0f ? e.seconds : 10f);
                     _fx.Banner(() => (Vector3)HouseMap.Center(c.room) + Vector3.up * 1.5f, "НУЖНЫЙ МОМЕНТ", "камера: качество кадра выше " + Mathf.RoundToInt(e.seconds > 0f ? e.seconds : 10f) + " с", new Color(0.55f, 0.9f, 1f), 3f);
                     break;
                 default:

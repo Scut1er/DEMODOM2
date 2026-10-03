@@ -862,9 +862,23 @@ namespace RealityDirector.UI
             }
         }
 
+        // Компактный «В кадре» живёт у края рамки (CaptureHud): старая плашка в центре и баннер REC не показываются.
+        bool _compactCapture;
+
+        public void UseCompactCapture()
+        {
+            _compactCapture = true;
+            if (_framePlate != null)
+                _framePlate.SetActive(false);
+            if (_captureBanner != null)
+                _captureBanner.SetActive(false);
+            if (_captureFrame != null)
+                _captureFrame.SetActive(false);
+        }
+
         public void SetFrame(string body, bool on)
         {
-            if (_framePlate == null)
+            if (_framePlate == null || _compactCapture)
                 return;
             bool show = on && !string.IsNullOrEmpty(body);
             _framePlate.SetActive(show);
@@ -1069,9 +1083,9 @@ namespace RealityDirector.UI
 
         public void SetCaptureMode(bool on)
         {
-            _captureBanner.SetActive(on);
+            _captureBanner.SetActive(on && !_compactCapture);
             if (_captureFrame != null)
-                _captureFrame.SetActive(on);
+                _captureFrame.SetActive(on && !_compactCapture);
             _camLabel.text = on ? "КАМЕРА ВКЛ" : "КАМЕРА   C";
             if (_bannerText != null && on)
                 _bannerText.text = "REC  00 / 03";
@@ -1079,7 +1093,7 @@ namespace RealityDirector.UI
 
         public void SetRecord(float seconds, bool on)
         {
-            if (_bannerText == null || !on)
+            if (_bannerText == null || !on || _compactCapture)
                 return;
             _captureBanner.SetActive(true);
             if (_captureFrame != null)

@@ -531,7 +531,10 @@ namespace RealityDirector.UI.Hub
             GameSession.SceneId = situation != null && !string.IsNullOrEmpty(situation.scene) ? situation.scene : SceneFlow.Episode;
             GameSession.RoomNodeId = node.id;
             if (situation != null && _episode.Current != null)
+            {
                 _episode.Current.roleBrief = situation.roleBrief;
+                _episode.Current.situationId = situation.Id;
+            }
             BossCoach.Ensure().Hide();
             GameSession.Save();
             MusicBed.Play(MusicBed.Scene);

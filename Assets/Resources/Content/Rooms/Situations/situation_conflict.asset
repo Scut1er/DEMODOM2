@@ -16,7 +16,7 @@ MonoBehaviour:
   title: "\u041A\u041E\u041D\u0424\u041B\u0418\u041A\u0422"
   subtitle: "\u0421\u0441\u043E\u0440\u0430 \u0432 \u0434\u043E\u043C\u0435"
   description: "\u0418\u0441\u043A\u0440\u044B \u043B\u0435\u0442\u044F\u0442 \u2014 \u0438\u0434\u0435\u0430\u043B\u044C\u043D\u044B\u0439 \u043C\u043E\u043C\u0435\u043D\u0442 \u0434\u043B\u044F \u0434\u0440\u0430\u043A\u0438 \u0432 \u043A\u0430\u0434\u0440\u0435."
-  goal: "\u0421\u043D\u044F\u0442\u044C \u0434\u0440\u0430\u043A\u0443 \u0438\u043B\u0438 \u0433\u0440\u043E\u043C\u043A\u0443\u044E \u0441\u0441\u043E\u0440\u0443."
+  goal: "\u041E\u043D\u0438 \u0443\u0436\u0435 \u043D\u0430 \u0432\u0437\u0432\u043E\u0434\u0435: \u0434\u043E\u0432\u0435\u0434\u0438\u0442\u0435 \u0434\u043E \u0433\u0440\u043E\u043C\u043A\u043E\u0439 \u0441\u0441\u043E\u0440\u044B \u0432 \u043A\u0430\u0434\u0440\u0435 \u2014 \u0438\u043B\u0438 \u043F\u043E\u043C\u0438\u0440\u0438\u0442\u0435."
   icon: 3
   color: {r: 0.82, g: 0.28, b: 0.24, a: 1}
   art: {fileID: 0}
@@ -29,3 +29,35 @@ MonoBehaviour:
     value: 8
     mood: 1
   scene: Apartment_Pitch
+  roleBrief: 
+  actors:
+  - castSlot: 0
+    room: 1
+    stress: 0
+    anger: 35
+    sadness: 0
+    attraction: 0
+    confidence: 0
+    selfControl: -10
+    states: []
+  - castSlot: 1
+    room: 1
+    stress: 10
+    anger: 10
+    sadness: 0
+    attraction: 0
+    confidence: 0
+    selfControl: 0
+    states: []
+  hostility: 35
+  trust: 0
+  startEvents:
+  - Conflict
+  props: []
+  openBedroom: 0
+  openBathroom: 0
+  privateRooms: 
+  pressureRooms: 01000000i
+  allowedCategories: []
+  blockedCategories: []
+  hellTokenBudget: 0

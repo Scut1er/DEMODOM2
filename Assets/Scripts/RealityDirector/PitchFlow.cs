@@ -88,11 +88,14 @@ namespace RealityDirector
             // Карты играют на площадке по своим данным: кубики, реквизит, действия людей.
             _stage = gameObject.AddComponent<CardStage>();
             _stage.Init(_cast, () => _bedOpen, () => _bathOpen, _ui.Toast, _shake, _fridge.transform);
-            _ui.Explain = (def, hell) => CardBrief.Tooltip(def, _cast, hell, Cost(def));
+            _ui.Explain = (def, hell) => CardBrief.Tooltip(def, _cast, hell, Cost(def))
+                                         + (Blocked(def) ? "\n<color=#FF6A4A>В этой съёмке карта не играется: " + _situation.title + "</color>" : "");
             _executor.Stage = _stage;
             _capture = gameObject.AddComponent<CaptureSystem>();
             _capture.Init(_context, _cast, () => _fridge != null && _fridge.IsOnFire, _fridge.transform, _bathroom.transform, () => _bathOpen);
             _capture.Captured += OnCaptured;
+            CaptureHud.Create(_capture, _stage, () => _state != null && _state.episode != null && _state.episode.ContractActive(null));
+            _ui.UseCompactCapture();
             _capture.Missed += () =>
             {
                 _ui.Toast("Кадр не вышел.");
@@ -734,6 +737,7 @@ namespace RealityDirector
 
             if (_state.episode != null)
                 _state.episode.OpenHell(GameSession.RoomNodeId);
+            ApplySituation();
             _hand = SelectedHand();
             _ui.ClearHand();
             _ui.BindCards(_hand, Arm);
@@ -783,6 +787,43 @@ namespace RealityDirector
             _ui.RefreshTone(_tone);
             _ui.SetSlots(_capture.Moments, _capture.Capacity);
             RefreshTasks(true);
+        }
+
+        // ---------- Постановка съёмки (SituationRoomDefinition) ----------
+
+        SituationRoomDefinition _situation;
+
+        // Один раз на узел карты: позиции, эмоции, отношения, реквизит, приватные комнаты, стартовые события, бюджет.
+        // Повторный вход в ту же комнату (выход в хаб и назад) постановку не повторяет.
+        void ApplySituation()
+        {
+            var ep = _state.episode;
+            _situation = null;
+            if (ep == null || string.IsNullOrEmpty(ep.situationId))
+                return;
+            foreach (var s in ContentLibrary.All<SituationRoomDefinition>())
+            {
+                if (s != null && s.Id == ep.situationId)
+                    _situation = s;
+            }
+
+            string node = GameSession.RoomNodeId ?? "";
+            if (_situation == null || ep.setupNode == node)
+                return;
+            ep.setupNode = node;
+            _stage.ApplySetup(_situation, _content.Find, SnapBedroom, SnapBathroom);
+            if (_situation.hellTokenBudget > 0f)
+            {
+                ep.hell = _situation.hellTokenBudget;
+                ep.hellRoomMax = _situation.hellTokenBudget;
+            }
+
+            PersistMood();
+        }
+
+        bool Blocked(EventDefinition def)
+        {
+            return _situation != null && def != null && !_situation.Allows(def.category);
         }
 
         // Съёмка — комната карты. Клипы в библиотеку выпуска, эфир и деньги после монтажа.
@@ -970,6 +1011,13 @@ namespace RealityDirector
                 Sfx.Play(Cue.Miss, 0.35f);
                 return;
             }
+            if (Blocked(def))
+            {
+                _ui.Toast("В этой съёмке («" + _situation.title + "») такие карты не играются.");
+                Sfx.Play(Cue.Miss, 0.4f);
+                return;
+            }
+
             if (_state.played.Contains(def.id))
             {
                 _ui.Toast("Уже сыграно в этой съёмке.");
@@ -1912,7 +1960,7 @@ namespace RealityDirector
             if (ep == null)
                 _ui.SetHell(EpisodeState.HellCap, EpisodeState.HellCap);
             else
-                _ui.SetHell(ep.hell, ep.hellMax > 0 ? ep.hellMax : EpisodeState.HellCap);
+                _ui.SetHell(ep.hell, ep.hellRoomMax > 0f ? ep.hellRoomMax : ep.hellMax > 0 ? ep.hellMax : EpisodeState.HellCap);
             _ui.SetFootage(_capture.Moments.Count, _capture.Capacity);
         }
 

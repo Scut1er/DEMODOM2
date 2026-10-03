@@ -25,3 +25,25 @@ MonoBehaviour:
   uniquePerEpisode: 1
   onEnter: []
   scene: Apartment_Pitch
+  roleBrief: 
+  actors:
+  - castSlot: -1
+    room: 1
+    stress: 0
+    anger: 0
+    sadness: 0
+    attraction: 0
+    confidence: 0
+    selfControl: 0
+    states: []
+  hostility: 0
+  trust: 0
+  startEvents: []
+  props: []
+  openBedroom: 0
+  openBathroom: 0
+  privateRooms: 
+  pressureRooms: 
+  allowedCategories: []
+  blockedCategories: []
+  hellTokenBudget: 0

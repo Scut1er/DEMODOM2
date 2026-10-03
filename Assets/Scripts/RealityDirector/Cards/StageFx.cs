@@ -222,6 +222,57 @@ namespace RealityDirector.Cards
             StartCoroutine(Punch(go.transform, 1.25f, 0.25f));
         }
 
+        // Плашка постановки съёмки: по центру сверху, несколько строк, сама гаснет. Не привязана к людям.
+        public void Slate(string title, IList<string> lines, Color color, float life = 6f)
+        {
+            var go = new GameObject("slate", typeof(RectTransform), typeof(Image), typeof(CanvasGroup));
+            go.transform.SetParent(_canvas, false);
+            var plate = go.GetComponent<Image>();
+            UiKit.Dress(plate, UiKit.Frame.Dialog, 1.4f);
+            plate.raycastTarget = false;
+            var rect = (RectTransform)go.transform;
+            rect.anchorMin = rect.anchorMax = new Vector2(0.5f, 1f);
+            rect.pivot = new Vector2(0.5f, 1f);
+            var head = MakeText(go.transform, title, 26, color);
+            float w = head.preferredWidth;
+            var texts = new List<Text>();
+            if (lines != null)
+            {
+                foreach (var line in lines)
+                {
+                    if (string.IsNullOrEmpty(line))
+                        continue;
+                    var t = MakeText(go.transform, line, 17, texts.Count == 0 ? UiKit.Paper : UiKit.Muted);
+                    texts.Add(t);
+                    w = Mathf.Max(w, t.preferredWidth);
+                }
+            }
+
+            float width = Mathf.Min(980f, w + 70f);
+            float height = 54f + texts.Count * 24f;
+            rect.sizeDelta = new Vector2(width, height);
+            rect.anchoredPosition = new Vector2(0f, -150f);
+            ((RectTransform)head.transform).anchoredPosition = new Vector2(0f, height * 0.5f - 28f);
+            for (int i = 0; i < texts.Count; i++)
+                ((RectTransform)texts[i].transform).anchoredPosition = new Vector2(0f, height * 0.5f - 58f - i * 24f);
+            StartCoroutine(Punch(go.transform, 1.15f, 0.25f));
+            StartCoroutine(FadeOut(go.GetComponent<CanvasGroup>(), life));
+        }
+
+        static IEnumerator FadeOut(CanvasGroup group, float life)
+        {
+            float t = 0f;
+            while (t < life && group != null)
+            {
+                t += Time.deltaTime;
+                group.alpha = Mathf.Clamp01((life - t) / 0.8f);
+                yield return null;
+            }
+
+            if (group != null)
+                Destroy(group.gameObject);
+        }
+
         // Метка реквизита под ним — живёт, пока жив реквизит.
         public void Label(Transform target, string text, Color color, Vector2 offset)
         {

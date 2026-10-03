@@ -16,6 +16,8 @@ namespace RealityDirector.Cards
         public EventDefinition Def { get; private set; }
         public Room Room { get; private set; }
         public bool Sponsor;
+        // Декорация съёмки (стоит с начала по постановке) — не занимает Production Slot.
+        public bool Dressing;
 
         CardStage _stage;
         SpriteRenderer _body;
