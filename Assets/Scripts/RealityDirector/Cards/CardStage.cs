@@ -151,7 +151,7 @@ namespace RealityDirector.Cards
             var f = CardBrief.Predict(def, npc);
             string text = f.level == CardBrief.Level.None
                 ? npc.DisplayName
-                : "РЕАКЦИЯ: <color=" + CardBrief.LevelColor(f.level) + ">" + CardBrief.LevelName(f.level) + "</color>";
+                : "<color=" + CardBrief.LevelColor(f.level) + ">" + CardBrief.ReactionLine(f) + "</color>";
             if (f.reasons.Count > 0)
                 text += "\n<size=13>" + string.Join(" · ", f.reasons) + "</size>";
             _fx.Hint(npc.transform, text);

@@ -310,19 +310,19 @@ namespace RealityDirector.Cards
                 case CardEffectType.NextCaptureBonus:
                     return "Кадр, начатый в ближайшие 10 с, — качественнее";
                 case CardEffectType.ReturnHandCardToLibrary:
-                    return "Рука → Библиотека: " + Cards(n) + " из руки";
+                    return n == 1 ? "Одну из руки обратно в колоду." : Cards(n) + " из руки обратно в колоду.";
                 case CardEffectType.MoveHandCardToUsed:
-                    return "Рука → Использовано: " + Cards(n) + " из руки";
+                    return n == 1 ? "Одну из руки в отбой." : Cards(n) + " из руки в отбой.";
                 case CardEffectType.DrawRandom:
-                    return "Библиотека → Рука: +" + Cards(n) + " наугад";
+                    return n == 1 ? "Случайная карта из колоды в руку." : Cards(n) + " наугад из колоды в руку.";
                 case CardEffectType.PeekLibrary:
-                    return "Смотрит " + Cards(n) + " из Библиотеки";
+                    return n == 1 ? "Смотришь одну карту из колоды." : "Смотришь " + Cards(n) + " из колоды.";
                 case CardEffectType.SearchLibrary:
                 case CardEffectType.ChooseOneToHand:
                 case CardEffectType.TakeSelectedIntoHand:
-                    return "Библиотека → Рука: самая сильная найденная карта";
+                    return "В руку берёшь самую сильную из найденных.";
                 case CardEffectType.RecoverUsedCard:
-                    return "Использовано → Библиотека (наверх): самая сильная сыгранная";
+                    return "Самая сильная сыгранная карта возвращается на верх колоды.";
                 case CardEffectType.ReduceCost:
                     return "Следующая карта дешевле на " + HellToken.Format(e.amount > 0f ? e.amount : 1f);
                 case CardEffectType.DuplicateEffect:
@@ -721,6 +721,19 @@ namespace RealityDirector.Cards
             return def == null || npc == null || !def.limitTrait || (npc.Trait != null && npc.Trait.traitId == def.targetTrait);
         }
 
+        public static string ReactionLine(Forecast f)
+        {
+            if (f == null || f.actor == null)
+                return "";
+            switch (f.level)
+            {
+                case Level.High: return f.actor.DisplayName + " сорвётся.";
+                case Level.Medium: return f.actor.DisplayName + " заведётся.";
+                case Level.Low: return f.actor.DisplayName + " скорее стерпит.";
+                default: return f.actor.DisplayName;
+            }
+        }
+
         public static string LevelName(Level level)
         {
             switch (level)
@@ -792,15 +805,7 @@ namespace RealityDirector.Cards
                     for (int i = 0; i < list.Count && i < 3; i++)
                     {
                         var f = list[i];
-                        if (f.level == Level.High)
-                        {
-                            sb.Append("\n<color=").Append(LevelColor(f.level)).Append(">").Append(f.actor.DisplayName).Append(" сорвётся.</color>");
-                            continue;
-                        }
-
-                        sb.Append("\n").Append(f.actor.DisplayName).Append(" — <color=").Append(LevelColor(f.level)).Append(">").Append(LevelName(f.level)).Append("</color>");
-                        if (f.reasons.Count > 0)
-                            sb.Append(": ").Append(string.Join(", ", f.reasons));
+                        sb.Append("\n<color=").Append(LevelColor(f.level)).Append(">").Append(ReactionLine(f)).Append("</color>");
                     }
                 }
             }
