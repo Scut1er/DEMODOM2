@@ -42,7 +42,15 @@ MonoBehaviour:
     costMoney: 0
     costCash: 0
     chance: 100
-    effects: []
+    effects:
+    - type: 1
+      key: 
+      value: 2
+      mood: 1
+    - type: 9
+      key: stress
+      value: 5
+      mood: 0
     resultText: 
     resultTags: []
     failEffects: []
@@ -85,6 +93,10 @@ MonoBehaviour:
       mood: 0
     - type: 6
       key: Comedy
+      value: 0
+      mood: 0
+    - type: 2
+      key: TechPenalty
       value: 0
       mood: 0
     resultText: 

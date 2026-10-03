@@ -177,6 +177,14 @@ namespace RealityDirector.UI.Hub
                 return;
             }
 
+            // Пауза съёмки → «В главное меню»: съёмка осталась открытой в сейве, комнату не закрываем.
+            if (GameSession.ToMenu)
+            {
+                GameSession.ToMenu = false;
+                ShowMenu();
+                return;
+            }
+
             Bind();
             GameSession.ReturnToMap = false;
             bool toHub = GameSession.ExitToHub;
@@ -847,6 +855,7 @@ namespace RealityDirector.UI.Hub
             var result = FeedbackGenerator.BuildCut(moments, GameSession.Tone, coherence, hit > 0, report, Brand(episode));
             if (hit > 0)
                 result = FeedbackGenerator.ApplySponsor(result, hit);
+            result = AirRating(result, episode, cut.Count);
             _airWish = result.nextWish;
             _airWishLabel = result.wish;
             int scene = episode.Number;
@@ -952,11 +961,16 @@ namespace RealityDirector.UI.Hub
             var result = FeedbackGenerator.BuildCut(moments, GameSession.Tone, coherence, hit > 0, CutAnalysis.Analyze(cut), Brand(episode));
             if (hit > 0)
                 result = FeedbackGenerator.ApplySponsor(result, hit);
+            result = AirRating(result, episode, cut.Count);
             bool hadTasks = GameSession.State.tasks.Count > 0;
             bool wishDone = GameSession.State.Resolve(moments, GameSession.Tone);
             // Пустой эфир не оплачивается: зрителю нечего было смотреть.
             bool empty = cut.Count == 0;
-            int pay = empty ? 0 : Progression.Payout(result.score, GameSession.State.castLevel, wishDone) + sponsorMoney;
+            // Модификаторы эфира из событий: доплата спонсора — только если реклама вышла, выплата за эфир — всегда.
+            int bonus = empty ? 0 : EpisodeState.Sum(episode.broadcastModifiers, EpisodeState.AirPay);
+            if (sponsorMoney > 0)
+                sponsorMoney = Mathf.Max(0, sponsorMoney + EpisodeState.Sum(episode.broadcastModifiers, EpisodeState.AirSponsorPay));
+            int pay = empty ? 0 : Mathf.Max(0, Progression.Payout(result.score, GameSession.State.castLevel, wishDone) + sponsorMoney + bonus);
             GameSession.State.money += pay;
             GameSession.State.ratingSum += result.score;
             GameSession.State.rated++;
@@ -965,11 +979,23 @@ namespace RealityDirector.UI.Hub
                 line += "   ·   спонсор +" + sponsorMoney + " кр, отзывы −" + hit;
             else if (playedAd)
                 line += "   ·   реклама не в эфире, выплаты нет";
+            if (bonus != 0)
+                line += "   ·   события выпуска " + (bonus > 0 ? "+" : "−") + Mathf.Abs(bonus) + " кр";
             episode.settled = true;
             episode.settledPay = pay;
             episode.settledSponsor = sponsorMoney;
             episode.settledLine = line;
             GameSession.Save();
+        }
+
+        // Модификатор эфира «оценка» из событий выпуска (в десятых балла). Пустой эфир не двигает: смотреть нечего.
+        static FeedbackResult AirRating(FeedbackResult result, EpisodeState episode, int clips)
+        {
+            int tenths = episode != null ? EpisodeState.Sum(episode.broadcastModifiers, EpisodeState.AirRating) : 0;
+            if (tenths == 0 || clips <= 0 || result.score <= 0f)
+                return result;
+            result.score = Mathf.Clamp(Mathf.Round((result.score + tenths / 10f) * 10f) / 10f, 1f, 10f);
+            return result;
         }
 
         // Бренд спонсора в эфире (для комментариев): из названия карты контракта «Hell Cola — Холодильник».
@@ -1021,7 +1047,7 @@ namespace RealityDirector.UI.Hub
             if (ep.HasFlag("ToneForecast") && chosen.Count > 0)
             {
                 var report = CutAnalysis.Analyze(chosen);
-                var forecast = FeedbackGenerator.BuildCut(moments, GameSession.Tone, report.coherence, false, report, null);
+                var forecast = AirRating(FeedbackGenerator.BuildCut(moments, GameSession.Tone, report.coherence, false, report, null), ep, chosen.Count);
                 lines.Add("<color=#8FE3FF>Мониторинг HellTube: прогноз оценки ≈ " + forecast.score.ToString("0.0") + "</color>");
             }
 

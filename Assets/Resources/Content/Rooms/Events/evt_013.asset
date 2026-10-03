@@ -89,7 +89,11 @@ MonoBehaviour:
     costMoney: 0
     costCash: 0
     chance: 50
-    effects: []
+    effects:
+    - type: 10
+      key: rating
+      value: 5
+      mood: 0
     resultText: 
     resultTags: []
     failEffects:

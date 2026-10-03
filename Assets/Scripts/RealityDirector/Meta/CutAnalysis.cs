@@ -124,6 +124,7 @@ namespace RealityDirector.Meta
             }
 
             bool qualityBonus = false;
+            bool qualityPenalty = false;
             if (clip.cues != null)
             {
                 foreach (var cue in clip.cues)
@@ -133,7 +134,13 @@ namespace RealityDirector.Meta
                         continue;
                     string tag = cue.Substring(0, bar);
                     if (tag == "Quality")
-                        qualityBonus = true;
+                    {
+                        // «Quality|+1» — «нужный момент», «Quality|-1» — плохой звук (события выпуска).
+                        if (cue.Substring(bar + 1).StartsWith("-"))
+                            qualityPenalty = true;
+                        else
+                            qualityBonus = true;
+                    }
                     else
                         f.tags.Add(tag);
                 }
@@ -166,10 +173,14 @@ namespace RealityDirector.Meta
             }
 
             f.quality = f.blank ? 0 : (f.intensity >= 4 || qualityBonus) ? 2 : 1;
+            if (qualityPenalty && !f.blank)
+                f.quality = Mathf.Max(0, f.quality - 1);
             Roles(f);
             Tone(f);
             f.what = !string.IsNullOrEmpty(clip.title) && clip.title != "КАДР" ? Cap(clip.title) : Cap(RoleWord(f.main));
             Why(f, qualityBonus);
+            if (qualityPenalty && !f.blank)
+                f.why.Add("техника: плохой звук — качество ниже");
             return f;
         }
 

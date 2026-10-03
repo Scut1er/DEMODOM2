@@ -100,6 +100,14 @@ MonoBehaviour:
       key: GroomingRoomConflict
       value: 0
       mood: 0
+    - type: 9
+      key: hostility
+      value: 15
+      mood: 0
+    - type: 9
+      key: anger
+      value: 10
+      mood: 0
     resultText: 
     resultTags: []
     failEffects: []

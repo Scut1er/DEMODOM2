@@ -86,7 +86,15 @@ MonoBehaviour:
     costMoney: 0
     costCash: 0
     chance: 65
-    effects: []
+    effects:
+    - type: 9
+      key: attraction
+      value: 10
+      mood: 0
+    - type: 6
+      key: Romance
+      value: 0
+      mood: 0
     resultText: 
     resultTags: []
     failEffects:

@@ -86,7 +86,11 @@ MonoBehaviour:
     costMoney: 0
     costCash: 0
     chance: 100
-    effects: []
+    effects:
+    - type: 2
+      key: TechPenalty
+      value: 0
+      mood: 0
     resultText: 
     resultTags: []
     failEffects: []

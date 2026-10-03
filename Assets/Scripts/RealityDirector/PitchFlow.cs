@@ -73,6 +73,11 @@ namespace RealityDirector
         EventDefinition[] _hand = new EventDefinition[0];
         // Слотов футажа у этой съёмки целиком (часть могла уйти в библиотеку до выхода из игры).
         int _roomCapacity;
+        // Провокации дешевле на $0.25 всю эту съёмку (событие «Совет директоров хочет больше огня»).
+        bool _provocationDiscount;
+        // Пауза (Esc): время стоит, поверх всего меню. До паузы — прежний темп (0 в заморозке урока, 0.02 в стоп-кадре).
+        bool _paused;
+        float _pauseScale = 1f;
 
         void Awake()
         {
@@ -87,6 +92,7 @@ namespace RealityDirector
             EnsureSession();
             _ui.BindFlow(BackToHub, EndEpisode, ToggleCamera, BackToHub);
             _ui.BindExit(ExitToHub);
+            _ui.BindPause(Resume, PauseToMenu, PauseQuit);
             BuildApartment();
             WireTags();
             _executor = gameObject.AddComponent<EventExecutor>();
@@ -141,6 +147,8 @@ namespace RealityDirector
 
         void Update()
         {
+            if (PauseKey() || _paused)
+                return;
             TickCamera();
             if (_handUntil > 0f && Time.unscaledTime >= _handUntil)
             {
@@ -196,6 +204,8 @@ namespace RealityDirector
 
         void LateUpdate()
         {
+            if (_paused)
+                return;
             if (_lesson != Lesson.None && !_state.wantsTutorial)
             {
                 _lesson = Lesson.None;
@@ -752,6 +762,11 @@ namespace RealityDirector
                 CaptureSystem.BonusUntil = float.MaxValue;
             }
 
+            // Событие «снимать на запасной / как есть»: первый кадр этой съёмки хуже. Флаг снимается, когда кадр снят.
+            CaptureSystem.PenaltyNext = _state.episode != null && _state.episode.HasFlag("TechPenalty");
+            // Событие «эмоциональный огонь»: провокации дешевле всю эту съёмку. Флаг снимается при сдаче комнаты.
+            _provocationDiscount = _state.episode != null && _state.episode.HasFlag("ProvocationDiscount");
+
             _hand = SelectedHand();
             _ui.ClearHand();
             _ui.BindCards(_hand, Arm);
@@ -852,6 +867,69 @@ namespace RealityDirector
         bool Blocked(EventDefinition def)
         {
             return _situation != null && def != null && !_situation.Allows(def.category);
+        }
+
+        // ---------- Пауза ----------
+
+        // Esc сперва отменяет карту, запись или камеру (ReadPlayInput); когда отменять нечего — пауза.
+        bool PauseKey()
+        {
+            var keyboard = Keyboard.current;
+            if (keyboard == null || !keyboard.escapeKey.wasPressedThisFrame)
+                return false;
+            if (_paused)
+            {
+                Resume();
+                return true;
+            }
+
+            if (_phase != PitchPhase.Play || _armed != null || _capture.Recording || _capture.Mode)
+                return false;
+            Pause();
+            return true;
+        }
+
+        void Pause()
+        {
+            _paused = true;
+            _pauseScale = Time.timeScale;
+            Time.timeScale = 0f;
+            _panning = false;
+            Checkpoint();
+            _ui.ShowPause(true);
+        }
+
+        void Resume()
+        {
+            if (!_paused)
+                return;
+            _paused = false;
+            Time.timeScale = _pauseScale;
+            _ui.ShowPause(false);
+        }
+
+        // В главное меню посреди съёмки: комната не сдаётся, сейв держит съёмку открытой — «Продолжить» вернёт сюда.
+        void PauseToMenu()
+        {
+            StopAllCoroutines();
+            _paused = false;
+            _frozen = false;
+            Time.timeScale = 1f;
+            Checkpoint();
+            BossCoach.Dismiss();
+            GameSession.ToMenu = true;
+            SceneFlow.ToHub();
+        }
+
+        void PauseQuit()
+        {
+            Checkpoint();
+            Time.timeScale = 1f;
+#if UNITY_EDITOR
+            UnityEditor.EditorApplication.isPlaying = false;
+#else
+            Application.Quit();
+#endif
         }
 
         // Съёмка — комната карты. Клипы в библиотеку выпуска, эфир и деньги после монтажа.
@@ -1488,7 +1566,7 @@ namespace RealityDirector
                 return "Нужен ещё один ролик. Потом «СНЯТО!».";
             if (_capture.Moments.Count > 0)
                 return "Можно снять ещё или жми «СНЯТО!». Эфир будет после монтажа.";
-            return "Карты внизу. C — камера, зажми ЛКМ — ролик до 3 секунд.";
+            return "Карты внизу. C — камера, зажми ЛКМ — ролик до 3 секунд. Esc — пауза.";
         }
 
         bool Approaching()
@@ -1531,10 +1609,14 @@ namespace RealityDirector
             int anger = EpisodeState.Sum(episode.nextRoomModifiers, "anger");
             int sadness = EpisodeState.Sum(episode.nextRoomModifiers, "sadness");
             int hostility = EpisodeState.Sum(episode.nextRoomModifiers, "hostility");
+            int attraction = EpisodeState.Sum(episode.nextRoomModifiers, "attraction");
+            int confidence = EpisodeState.Sum(episode.nextRoomModifiers, "confidence");
             PullModifier(episode, "stress");
             PullModifier(episode, "anger");
             PullModifier(episode, "sadness");
             PullModifier(episode, "hostility");
+            PullModifier(episode, "attraction");
+            PullModifier(episode, "confidence");
             for (int i = 0; i < _cast.Count; i++)
             {
                 var npc = _cast[i];
@@ -1551,6 +1633,8 @@ namespace RealityDirector
                 runtime.anger = Mathf.Clamp(runtime.anger + anger, 0, 100);
                 runtime.sadness = Mathf.Clamp(runtime.sadness + sadness, 0, 100);
                 runtime.hostility = Mathf.Clamp(runtime.hostility + hostility, 0, 100);
+                runtime.attraction = Mathf.Clamp(runtime.attraction + attraction, 0, 100);
+                runtime.confidence = Mathf.Clamp(runtime.confidence + confidence, 0, 100);
                 npc.LoadMood(runtime);
             }
         }
@@ -1615,6 +1699,8 @@ namespace RealityDirector
             episode.setBathOpen = false;
             episode.setBedOpen = false;
             episode.setCapacity = 0;
+            if (_provocationDiscount)
+                episode.flags.Remove("ProvocationDiscount");
         }
 
         void RestoreSet()
@@ -1780,6 +1866,8 @@ namespace RealityDirector
 
             int index = _capture.Moments.Count - 1;
             _ui.FlyPhoto(moment.photo, index, moment.screenPoint, moment.Framed);
+            if (_state.episode != null && moment.cues != null && moment.cues.Contains(CapturedMoment.Cue("Quality", "-1")))
+                _state.episode.flags.Remove("TechPenalty");
             Bank(moment);
             Checkpoint();
             _ui.Pulse(new Color(1f, 1f, 1f, 0.72f));
@@ -1828,7 +1916,14 @@ namespace RealityDirector
             yield return new WaitForSecondsRealtime(0.16f);
             // Ролик, дописанный на «СНЯТО!», ловит стоп-кадр уже после смены фазы — время всё равно вернуть.
             if (!_frozen)
-                Time.timeScale = 1f;
+            {
+                // Пауза открылась посреди стоп-кадра: после неё — обычное время.
+                if (_paused)
+                    _pauseScale = 1f;
+                else
+                    Time.timeScale = 1f;
+            }
+
             _inputLock = false;
         }
 
@@ -1915,6 +2010,8 @@ namespace RealityDirector
         IEnumerator OpenLesson()
         {
             yield return null;
+            while (_paused)
+                yield return null;
             Canvas.ForceUpdateCanvases();
             if (_lesson != Lesson.Take)
                 yield break;
@@ -1931,6 +2028,8 @@ namespace RealityDirector
         IEnumerator FreezeSoon(float wait, System.Action show)
         {
             yield return new WaitForSecondsRealtime(wait);
+            while (_paused)
+                yield return null;
             if (_lesson == Lesson.None)
                 yield break;
             _frozen = true;
@@ -1959,6 +2058,11 @@ namespace RealityDirector
             var ep = _state != null ? _state.episode : null;
             if (ep != null && ep.HasFlag("EnvDiscount") && def.category == "Environment")
                 cost = Mathf.Max(0f, cost - 0.75f);
+            // Скидки из событий выпуска: «спрятать письмо» — следующее разоблачение, «эмоциональный огонь» — провокации.
+            if (ep != null && ep.HasFlag("RevealDiscount") && def.category == "Reveal")
+                cost = Mathf.Max(0f, cost - 1f);
+            if (_provocationDiscount && def.category == "Provocation")
+                cost = Mathf.Max(0f, cost - 0.25f);
             return cost;
         }
 
@@ -1971,12 +2075,15 @@ namespace RealityDirector
                 return true;
             float cost = Cost(def);
             bool env = ep.HasFlag("EnvDiscount") && def.category == "Environment";
+            bool reveal = ep.HasFlag("RevealDiscount") && def.category == "Reveal";
             if (cost <= 0f || ep.SpendHell(cost))
             {
                 if (_discount > 0f && !HasDeckEffect(def, CardEffectType.ReduceCost))
                     _discount = 0f;
                 if (env)
                     ep.flags.Remove("EnvDiscount");
+                if (reveal)
+                    ep.flags.Remove("RevealDiscount");
                 return true;
             }
 

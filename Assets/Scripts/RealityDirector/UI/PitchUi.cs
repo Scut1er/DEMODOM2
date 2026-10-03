@@ -1259,6 +1259,71 @@ namespace RealityDirector.UI
             _onHub = onHub;
         }
 
+        // ---------- Пауза (Esc на съёмке) ----------
+
+        GameObject _pause;
+        Action _onResume;
+        Action _onMenu;
+        Action _onQuit;
+
+        public bool PauseOpen => _pause != null && _pause.activeSelf;
+
+        public void BindPause(Action onResume, Action onMenu, Action onQuit)
+        {
+            _onResume = onResume;
+            _onMenu = onMenu;
+            _onQuit = onQuit;
+        }
+
+        public void ShowPause(bool on)
+        {
+            if (on && _pause == null)
+                BuildPause();
+            if (_pause != null)
+            {
+                _pause.SetActive(on);
+                if (on)
+                    _pause.transform.SetAsLastSibling();
+            }
+        }
+
+        // Свой холст поверх подсказок босса (BossCoach — 520): в паузе их кнопки не нажать.
+        void BuildPause()
+        {
+            _pause = new GameObject("Pause", typeof(RectTransform), typeof(Canvas), typeof(GraphicRaycaster));
+            _pause.transform.SetParent(transform, false);
+            Stretch(_pause.GetComponent<RectTransform>());
+            var canvas = _pause.GetComponent<Canvas>();
+            canvas.overrideSorting = true;
+            canvas.sortingOrder = 600;
+
+            var dim = Panel("dim", _pause.transform, new Color(0.02f, 0.01f, 0.03f, 0.8f));
+            Stretch(dim.rectTransform);
+
+            var panel = Panel("panel", _pause.transform, UiKit.Panel);
+            UiKit.DressSolid(panel, UiKit.Frame.Gold, 10f);
+            Place(panel.rectTransform, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(620f, 520f));
+
+            var title = MakeText(panel.transform, "ПАУЗА", 44, UiKit.Gold, TextAnchor.MiddleCenter);
+            title.fontStyle = FontStyle.Bold;
+            Place(title.rectTransform, new Vector2(0.5f, 1f), new Vector2(0f, -64f), new Vector2(560f, 60f));
+
+            var note = MakeText(panel.transform, "Съёмка сохранена: снятые кадры уже в библиотеке выпуска, сыгранные карты и Hell Token на месте. "
+                                                 + "«Продолжить» в главном меню вернёт на эту съёмку.", 18, UiKit.Muted, TextAnchor.UpperCenter);
+            Place(note.rectTransform, new Vector2(0.5f, 1f), new Vector2(0f, -150f), new Vector2(540f, 84f));
+
+            var center = new Vector2(0.5f, 0.5f);
+            var resume = MakeButton(panel.transform, "ПРОДОЛЖИТЬ  (Esc)", center, center, center, new Vector2(0f, -20f), new Vector2(420f, 64f),
+                UiKit.PanelHi, () => _onResume?.Invoke());
+            UiKit.Primary(resume, 22);
+            var menu = MakeButton(panel.transform, "В ГЛАВНОЕ МЕНЮ", center, center, center, new Vector2(0f, -104f), new Vector2(420f, 56f),
+                UiKit.PanelHi, () => _onMenu?.Invoke());
+            UiKit.Secondary(menu, 20);
+            var quit = MakeButton(panel.transform, "ВЫЙТИ ИЗ ИГРЫ", center, center, center, new Vector2(0f, -180f), new Vector2(420f, 56f),
+                UiKit.PanelHi, () => _onQuit?.Invoke());
+            UiKit.Secondary(quit, 20);
+        }
+
         void Construct()
         {
             _tagsRoot = NewRect("Tags", transform);

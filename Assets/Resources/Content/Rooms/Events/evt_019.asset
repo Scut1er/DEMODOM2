@@ -65,6 +65,10 @@ MonoBehaviour:
       key: VerifiedSecret
       value: 0
       mood: 0
+    - type: 2
+      key: RevealDiscount
+      value: 0
+      mood: 0
     resultText: 
     resultTags: []
     failEffects:

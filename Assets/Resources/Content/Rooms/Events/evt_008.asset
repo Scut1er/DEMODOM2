@@ -65,10 +65,18 @@ MonoBehaviour:
     costMoney: 0
     costCash: 0
     chance: 60
-    effects: []
+    effects:
+    - type: 10
+      key: sponsorPay
+      value: 50
+      mood: 0
     resultText: 
     resultTags: []
-    failEffects: []
+    failEffects:
+    - type: 14
+      key: 
+      value: -5
+      mood: 0
     failText: 
     failTags: []
     designNote: "\u0423\u0441\u043F\u0435\u0445: Payout +50\n\u041F\u0440\u043E\u0432\u0430\u043B: SponsorRep -5"

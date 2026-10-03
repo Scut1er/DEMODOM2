@@ -142,16 +142,20 @@ namespace RealityDirector.EditorTools
     public class EffectDrawer : PropertyDrawer
     {
         // Ключи, которые квартира читает из модификаторов следующей съёмки (PitchFlow).
-        static readonly string[] ModifierKeys = { "stress", "anger", "sadness", "hostility" };
-        static readonly string[] ModifierNames = { "Стресс", "Злость", "Грусть", "Вражда" };
+        static readonly string[] ModifierKeys = { "stress", "anger", "sadness", "hostility", "attraction", "confidence" };
+        static readonly string[] ModifierNames = { "Стресс", "Злость", "Грусть", "Вражда", "Влечение", "Уверенность" };
 
-        // «Модификатор эфира» скрыт: его пока никто не читает.
+        // Ключи модификатора эфира, которые читает эфир (HubFlow).
+        static readonly string[] AirKeys = { EpisodeState.AirRating, EpisodeState.AirPay, EpisodeState.AirSponsorPay };
+        static readonly string[] AirNames = { "Оценка эфира (в десятых балла)", "Кр к выплате за эфир", "Кр к выплате спонсора" };
+
         static readonly EffectType[] Shown =
         {
             EffectType.Budget, EffectType.Cash, EffectType.Tone,
             EffectType.SetEpisodeFlag, EffectType.ClearEpisodeFlag, EffectType.SetSeasonFlag, EffectType.ClearSeasonFlag,
             EffectType.AddNarrativeTag, EffectType.AddTempCard, EffectType.RemoveTempCard,
-            EffectType.AddDeckCard, EffectType.RemoveDeckCard, EffectType.NextRoomModifier
+            EffectType.AddDeckCard, EffectType.RemoveDeckCard, EffectType.NextRoomModifier,
+            EffectType.BroadcastModifier, EffectType.SponsorReputation
         };
 
         static string[] _shownNames;
@@ -186,7 +190,8 @@ namespace RealityDirector.EditorTools
             "Модификатор эфира",
             "Нал +/-",
             "Карта в колоду навсегда",
-            "Убрать карту из колоды навсегда"
+            "Убрать карту из колоды навсегда",
+            "Репутация спонсоров +/-"
         };
 
         const float Line = 18f;
@@ -243,6 +248,14 @@ namespace RealityDirector.EditorTools
                     break;
                 case EffectType.Cash:
                     EditorGUI.PropertyField(r, value, new GUIContent("Нал (минус — списать)"));
+                    break;
+                case EffectType.BroadcastModifier:
+                    ConditionDrawer.Split(r, out var al, out var ar);
+                    DesignerData.PickerField(al, new GUIContent("Что"), key, AirKeys, AirNames);
+                    EditorGUI.PropertyField(ar, value, new GUIContent("Сколько"));
+                    break;
+                case EffectType.SponsorReputation:
+                    EditorGUI.PropertyField(r, value, new GUIContent("Репутация (0–100, минус — уронить)"));
                     break;
             }
 
