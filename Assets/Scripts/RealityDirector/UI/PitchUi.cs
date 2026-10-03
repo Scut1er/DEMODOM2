@@ -929,6 +929,25 @@ namespace RealityDirector.UI
             StartCoroutine(SlateRoutine(scene, onBlack));
         }
 
+        // Надпись мелом в поле хлопушки: прямоугольник в пикселях арта доски (1122×1156, от левого верхнего угла).
+        Text SlateField(Transform board, string value, float x0, float y0, float x1, float y1, int size)
+        {
+            const float W = 1122f;
+            const float H = 1156f;
+            var text = MakeText(board, value, size, new Color(0.96f, 0.93f, 0.88f, 1f), TextAnchor.MiddleLeft);
+            text.fontStyle = FontStyle.Bold;
+            text.resizeTextForBestFit = true;
+            text.resizeTextMinSize = 10;
+            text.resizeTextMaxSize = size;
+            text.horizontalOverflow = HorizontalWrapMode.Wrap;
+            text.verticalOverflow = VerticalWrapMode.Truncate;
+            var rect = text.rectTransform;
+            rect.anchorMin = new Vector2(x0 / W, 1f - y1 / H);
+            rect.anchorMax = new Vector2(x1 / W, 1f - y0 / H);
+            rect.offsetMin = rect.offsetMax = Vector2.zero;
+            return text;
+        }
+
         IEnumerator SlateRoutine(int scene, Action onBlack)
         {
             var root = new GameObject("Slate", typeof(RectTransform), typeof(Image));
@@ -944,9 +963,7 @@ namespace RealityDirector.UI
             var boardRect = board.GetComponent<RectTransform>();
             boardRect.anchorMin = boardRect.anchorMax = new Vector2(0.5f, 0.5f);
             boardRect.pivot = new Vector2(0.5f, 0.5f);
-            boardRect.sizeDelta = new Vector2(980f, 620f);
             var boardImg = board.GetComponent<Image>();
-            boardImg.sprite = IllustratedArt.SlateBoard;
             boardImg.color = Color.white;
             boardImg.type = Image.Type.Simple;
             boardImg.raycastTarget = false;
@@ -955,27 +972,58 @@ namespace RealityDirector.UI
             var stick = new GameObject("stick", typeof(RectTransform), typeof(Image));
             stick.transform.SetParent(board.transform, false);
             var stickRect = stick.GetComponent<RectTransform>();
-            stickRect.anchorMin = stickRect.anchorMax = new Vector2(0f, 1f);
-            stickRect.pivot = new Vector2(0f, 1f);
-            stickRect.anchoredPosition = new Vector2(22f, -18f);
-            stickRect.sizeDelta = new Vector2(936f, 150f);
             var stickImg = stick.GetComponent<Image>();
-            stickImg.sprite = IllustratedArt.SlateStick;
             stickImg.color = Color.white;
             stickImg.raycastTarget = false;
 
-            var caption = MakeText(board.transform, "СЦЕНА", 36, new Color(0.9f, 0.88f, 0.82f, 1f), TextAnchor.MiddleCenter);
-            var capRect = caption.rectTransform;
-            capRect.anchorMin = capRect.anchorMax = new Vector2(0.5f, 0.5f);
-            capRect.sizeDelta = new Vector2(800f, 48f);
-            capRect.anchoredPosition = new Vector2(0f, 20f);
-            var number = MakeText(board.transform, scene.ToString(), 140, Color.white, TextAnchor.MiddleCenter);
-            var numRect = number.rectTransform;
-            numRect.anchorMin = numRect.anchorMax = new Vector2(0.5f, 0.5f);
-            numRect.sizeDelta = new Vector2(800f, 170f);
-            numRect.anchoredPosition = new Vector2(0f, -90f);
+            // Хлопушка художника (montage_png): доска с неподвижной планкой + отдельная полосатая планка на шарнире,
+            // которая хлопает по ней. Поля доски — данными выпуска. Нет арта — рисованная хлопушка.
+            var slateArt = UiKit.Load("Art/UI/Illustrations/clapperboard");
+            var stickArt = UiKit.Load("Art/UI/Illustrations/clapper_stripe");
+            float openAngle = 38f;
+            if (slateArt != null && stickArt != null)
+            {
+                boardImg.sprite = slateArt;
+                boardRect.sizeDelta = new Vector2(700f, 700f * slateArt.rect.height / slateArt.rect.width);
+                // Планка лежит над неподвижной полосой доски; шарнир — у левого края, рядом с уголком.
+                stickRect.anchorMin = new Vector2(0.223f, 0.891f);
+                stickRect.anchorMax = new Vector2(0.97f, 0.992f);
+                stickRect.pivot = new Vector2(0f, 0f);
+                stickRect.offsetMin = stickRect.offsetMax = Vector2.zero;
+                stickImg.sprite = stickArt;
+                openAngle = 28f;
+                var ep = GameSession.State != null ? GameSession.State.episode : null;
+                string director = GameSession.State != null && !string.IsNullOrEmpty(GameSession.State.producerName) ? GameSession.State.producerName : "ты";
+                SlateField(board.transform, "ONLY WHAT MATTERS", 340f, 522f, 1010f, 568f, 30);
+                SlateField(board.transform, Mathf.Max(1, ep != null && ep.history != null ? ep.history.Count : 1).ToString(), 118f, 632f, 400f, 722f, 64);
+                SlateField(board.transform, Mathf.Max(1, ep != null && ep.footage != null ? ep.footage.Count : 1).ToString(), 420f, 632f, 710f, 722f, 64);
+                SlateField(board.transform, scene.ToString(), 730f, 632f, 1005f, 722f, 64);
+                SlateField(board.transform, director, 290f, 752f, 730f, 800f, 30);
+                SlateField(board.transform, "CAM 1", 260f, 828f, 715f, 876f, 30);
+                SlateField(board.transform, DateTime.Now.ToString("dd.MM.yyyy"), 228f, 905f, 670f, 955f, 30);
+            }
+            else
+            {
+                boardImg.sprite = IllustratedArt.SlateBoard;
+                boardRect.sizeDelta = new Vector2(980f, 620f);
+                stickRect.anchorMin = stickRect.anchorMax = new Vector2(0f, 1f);
+                stickRect.pivot = new Vector2(0f, 1f);
+                stickRect.anchoredPosition = new Vector2(22f, -18f);
+                stickRect.sizeDelta = new Vector2(936f, 150f);
+                stickImg.sprite = IllustratedArt.SlateStick;
+                var caption = MakeText(board.transform, "СЦЕНА", 36, new Color(0.9f, 0.88f, 0.82f, 1f), TextAnchor.MiddleCenter);
+                var capRect = caption.rectTransform;
+                capRect.anchorMin = capRect.anchorMax = new Vector2(0.5f, 0.5f);
+                capRect.sizeDelta = new Vector2(800f, 48f);
+                capRect.anchoredPosition = new Vector2(0f, 20f);
+                var number = MakeText(board.transform, scene.ToString(), 140, Color.white, TextAnchor.MiddleCenter);
+                var numRect = number.rectTransform;
+                numRect.anchorMin = numRect.anchorMax = new Vector2(0.5f, 0.5f);
+                numRect.sizeDelta = new Vector2(800f, 170f);
+                numRect.anchoredPosition = new Vector2(0f, -90f);
+            }
 
-            stickRect.localRotation = Quaternion.Euler(0f, 0f, 38f);
+            stickRect.localRotation = Quaternion.Euler(0f, 0f, openAngle);
             float t = 0f;
             const float drop = 0.5f;
             while (t < drop)
@@ -1000,7 +1048,7 @@ namespace RealityDirector.UI
             {
                 t += Time.unscaledDeltaTime;
                 float k = Mathf.Clamp01(t / clap);
-                stickRect.localRotation = Quaternion.Euler(0f, 0f, Mathf.Lerp(38f, 0f, k * k));
+                stickRect.localRotation = Quaternion.Euler(0f, 0f, Mathf.Lerp(openAngle, 0f, k * k));
                 if (!hit && k > 0.86f)
                 {
                     hit = true;
