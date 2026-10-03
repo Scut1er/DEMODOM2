@@ -42,9 +42,15 @@ namespace RealityDirector.UI.Hub
         public event Action<int> OpenDeck;
         public event Action CloseDeck;
 
-        CrewTrack _selected = CrewTrack.Cast;
+        // Пусто, пока игрок сам не выбрал зону: при входе в хаб панель зоны закрыта.
+        CrewTrack? _selected;
 
-        public CrewTrack Selected => _selected;
+        public CrewTrack? Selected => _selected;
+
+        public void ClearSelection()
+        {
+            _selected = null;
+        }
         public DeckPanelView Deck => deck;
 
         void Awake()
@@ -54,7 +60,8 @@ namespace RealityDirector.UI.Hub
                 if (zones[i] != null)
                     zones[i].Clicked += t =>
                     {
-                        _selected = t;
+                        // Повторный клик по той же зоне закрывает панель.
+                        _selected = _selected == t ? (CrewTrack?)null : t;
                         Select?.Invoke();
                     };
             }
@@ -64,7 +71,8 @@ namespace RealityDirector.UI.Hub
             if (roster != null)
                 roster.Invite += () =>
                 {
-                    _selected = CrewTrack.Cast;
+                    // Повторное нажатие закрывает панель кастинга.
+                    _selected = _selected == CrewTrack.Cast ? (CrewTrack?)null : CrewTrack.Cast;
                     Select?.Invoke();
                 };
             if (deck != null)
@@ -101,11 +109,15 @@ namespace RealityDirector.UI.Hub
                 if (zones[i] == null)
                     continue;
                 var info = crew[(int)zones[i].Track];
-                zones[i].Show(info.level, zones[i].Track == _selected);
+                zones[i].Show(info.level, _selected.HasValue && zones[i].Track == _selected.Value);
             }
 
             if (detail != null)
-                detail.Show(crew[(int)_selected]);
+            {
+                detail.gameObject.SetActive(_selected.HasValue);
+                if (_selected.HasValue)
+                    detail.Show(crew[(int)_selected.Value]);
+            }
             if (roster != null)
                 roster.Show(members, castLevel);
 
@@ -125,7 +137,7 @@ namespace RealityDirector.UI.Hub
             }
 
             if (deckButtonLabel != null)
-                deckButtonLabel.text = "Колода " + prep.picked + "/" + prep.slots;
+                deckButtonLabel.text = "Колода  ·  " + prep.available;
             if (shopButton != null)
                 shopButton.gameObject.SetActive(true);
             if (startCaption != null)

@@ -280,6 +280,7 @@ GameObject:
   - component: {fileID: 8241085784681952188}
   - component: {fileID: 4647785374955208163}
   - component: {fileID: 7572520858879054292}
+  - component: {fileID: 5301907241443674751}
   m_Layer: 0
   m_Name: Name
   m_TagString: Untagged
@@ -336,8 +337,8 @@ MonoBehaviour:
       m_Calls: []
   m_FontData:
     m_Font: {fileID: 10102, guid: 0000000000000000e000000000000000, type: 0}
-    m_FontSize: 20
-    m_FontStyle: 1
+    m_FontSize: 19
+    m_FontStyle: 0
     m_BestFit: 0
     m_MinSize: 10
     m_MaxSize: 40
@@ -348,6 +349,19 @@ MonoBehaviour:
     m_VerticalOverflow: 1
     m_LineSpacing: 1
   m_Text: "\u0418\u043C\u044F"
+--- !u!114 &5301907241443674751
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5834111513611129381}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: cf88e201561d8d949b7ab9ebcd99d921, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::RealityDirector.UI.UiText
+  role: 4
 --- !u!1 &7348577372706445206
 GameObject:
   m_ObjectHideFlags: 0
@@ -359,6 +373,7 @@ GameObject:
   - component: {fileID: 9084004731638482507}
   - component: {fileID: 2387844108090337413}
   - component: {fileID: 6422875378480845713}
+  - component: {fileID: 1349065651330018990}
   m_Layer: 0
   m_Name: Traits
   m_TagString: Untagged
@@ -415,7 +430,7 @@ MonoBehaviour:
       m_Calls: []
   m_FontData:
     m_Font: {fileID: 10102, guid: 0000000000000000e000000000000000, type: 0}
-    m_FontSize: 15
+    m_FontSize: 16
     m_FontStyle: 0
     m_BestFit: 0
     m_MinSize: 10
@@ -427,6 +442,19 @@ MonoBehaviour:
     m_VerticalOverflow: 1
     m_LineSpacing: 1
   m_Text: "\u0447\u0435\u0440\u0442\u0430"
+--- !u!114 &1349065651330018990
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7348577372706445206}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: cf88e201561d8d949b7ab9ebcd99d921, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::RealityDirector.UI.UiText
+  role: 5
 --- !u!1 &8359769235134363446
 GameObject:
   m_ObjectHideFlags: 0

@@ -382,6 +382,7 @@ namespace RealityDirector.UI
             label.font = _font;
             label.text = value;
             label.fontSize = size;
+            UiTypography.Apply(label, UiTypography.ForSize(size));
             label.color = color;
             label.alignment = TextAnchor.UpperLeft;
             label.horizontalOverflow = HorizontalWrapMode.Wrap;

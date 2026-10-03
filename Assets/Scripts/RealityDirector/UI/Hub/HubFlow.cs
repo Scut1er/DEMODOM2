@@ -68,7 +68,7 @@ namespace RealityDirector.UI.Hub
                 Click();
                 _meta.ClearReject();
                 bool shop = tab == DeckPanelView.ShopTab;
-                hub.Deck.Open(tab, _meta.BuildPrep(), shop);
+                hub.Deck.Open(tab, _meta.BuildPrep(), shop, true);
             };
             hub.CloseDeck += () =>
             {
@@ -283,6 +283,7 @@ namespace RealityDirector.UI.Hub
             _meta.ClearReject();
             Show(hub.gameObject);
             hub.Deck.Hide();
+            hub.ClearSelection();
             RefreshHub();
             var teach = new List<CoachStep>();
             BossCoach.Line(teach, "Кастинг. Кого пустишь к камере. И когда я разрешу подсмотреть, что они от тебя прячут.", hub.ZoneFocus(CrewTrack.Cast));

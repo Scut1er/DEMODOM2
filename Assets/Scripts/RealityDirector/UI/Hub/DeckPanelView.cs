@@ -5,7 +5,8 @@ using UnityEngine.UI;
 
 namespace RealityDirector.UI.Hub
 {
-    // Окно поверх хаба: «Колода» (карты в серию) и «Магазин».
+    // Окно поверх хаба: «Колода» и «Магазин».
+    // В хабе колода — только просмотр (browse): карты в съёмку выбираются перед съёмкой на карте выпуска.
     public class DeckPanelView : MonoBehaviour
     {
         public const int DeckTab = 0;
@@ -36,6 +37,8 @@ namespace RealityDirector.UI.Hub
         int _tab;
         PrepModel _model;
         bool _shopOpen;
+        bool _browse;
+        string _closeCaption;
 
         public bool IsOpen => gameObject.activeSelf;
         // Магазин доступен только на узле «Магазин» карты сезона.
@@ -56,10 +59,19 @@ namespace RealityDirector.UI.Hub
                 cancel.onClick.AddListener(() => Cancel?.Invoke());
         }
 
-        public void Open(int tab, PrepModel model, bool shopOpen = false)
+        public void Open(int tab, PrepModel model, bool shopOpen = false, bool browse = false)
         {
             gameObject.SetActive(true);
             _shopOpen = shopOpen;
+            _browse = browse;
+            var closeLabel = close != null ? close.GetComponentInChildren<Text>(true) : null;
+            if (closeLabel != null)
+            {
+                if (_closeCaption == null)
+                    _closeCaption = closeLabel.text;
+                closeLabel.text = browse ? "ЗАКРЫТЬ" : _closeCaption;
+            }
+
             if (ShopTab < tabButtons.Length && tabButtons[ShopTab] != null)
                 tabButtons[ShopTab].gameObject.SetActive(shopOpen);
             _tab = shopOpen ? Mathf.Clamp(tab, 0, tabPages.Length - 1) : DeckTab;
@@ -96,8 +108,9 @@ namespace RealityDirector.UI.Hub
         public void Show(PrepModel model)
         {
             _model = model;
+            int owned = model.deck != null ? model.deck.Length : 0;
             if (deckTabLabel != null)
-                deckTabLabel.text = "КОЛОДА  " + model.picked + "/" + model.slots;
+                deckTabLabel.text = _browse ? "КОЛОДА  ·  " + owned : "КОЛОДА  " + model.picked + "/" + model.slots;
             if (money != null)
                 money.text = string.IsNullOrEmpty(model.moneyText) ? model.money + " кр" : model.moneyText;
             for (int i = 0; i < tabPages.Length; i++)
@@ -109,7 +122,9 @@ namespace RealityDirector.UI.Hub
             }
 
             if (deckInfo != null)
-                deckInfo.text = model.slotsLabel;
+                deckInfo.text = _browse
+                    ? "Все твои карты. Какие взять в съёмку — выбираешь перед каждой съёмкой на карте выпуска."
+                    : model.slotsLabel;
             Fill(deckRoot, deckEmpty, model.deck, false);
             Fill(shopRoot, shopEmpty, model.shop, true);
             if (footer != null)
@@ -139,9 +154,22 @@ namespace RealityDirector.UI.Hub
                 var view = Instantiate(cardPrefab, root);
                 view.name = cardPrefab.name + "_" + id;
                 if (shop)
+                {
                     view.Bind(cards[i], true, () => Buy?.Invoke(id));
+                }
+                else if (_browse)
+                {
+                    // Просмотр: без отметки «в серии» и без выбора.
+                    var card = cards[i];
+                    bool picked = card.picked;
+                    card.picked = false;
+                    view.Bind(card, false, null);
+                    card.picked = picked;
+                }
                 else
+                {
                     view.Bind(cards[i], false, () => Toggle?.Invoke(id));
+                }
             }
         }
 
@@ -153,6 +181,10 @@ namespace RealityDirector.UI.Hub
                 return string.IsNullOrEmpty(model.shopFooter)
                     ? "Купленная карта попадает в колоду."
                     : model.shopFooter;
+            if (_browse)
+                return model.available == 0
+                    ? "Колода пуста. Новые карты — в магазине хаба, разовые — у спонсоров выпуска."
+                    : "Карт в колоде: " + model.available + ". В съёмку берётся до " + model.slots + " — выбор перед съёмкой.";
             if (model.available == 0)
                 return "Колода пуста — снимать можно и без карт. Новые карты — в магазине хаба, разовые — у спонсоров выпуска.";
             if (model.picked == 0)

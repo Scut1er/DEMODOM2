@@ -166,6 +166,11 @@ namespace RealityDirector.EditorTools
 
         void ToolsTab()
         {
+            Section("Интерфейс");
+            if (GUILayout.Button("Типографика: размеры групп текста"))
+                Selection.activeObject = TypographyTools.Asset();
+            if (GUILayout.Button("Разметить тексты хаба и применить стили"))
+                TypographyTools.TagAll();
             Section("Контент");
             if (GUILayout.Button("Создать стартовый набор комнат"))
                 ContentMenu.CreateDefaults();

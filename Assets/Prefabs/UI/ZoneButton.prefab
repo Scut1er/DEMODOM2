@@ -11,6 +11,7 @@ GameObject:
   - component: {fileID: 1398689137947634815}
   - component: {fileID: 6296711684668845413}
   - component: {fileID: 3147291333444210388}
+  - component: {fileID: 5011158130685946914}
   m_Layer: 0
   m_Name: Level
   m_TagString: Untagged
@@ -67,7 +68,7 @@ MonoBehaviour:
       m_Calls: []
   m_FontData:
     m_Font: {fileID: 10102, guid: 0000000000000000e000000000000000, type: 0}
-    m_FontSize: 17
+    m_FontSize: 16
     m_FontStyle: 0
     m_BestFit: 0
     m_MinSize: 10
@@ -79,6 +80,19 @@ MonoBehaviour:
     m_VerticalOverflow: 1
     m_LineSpacing: 1
   m_Text: "\u0423\u0440\u043E\u0432\u0435\u043D\u044C 1"
+--- !u!114 &5011158130685946914
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 428407858217410069}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: cf88e201561d8d949b7ab9ebcd99d921, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::RealityDirector.UI.UiText
+  role: 5
 --- !u!1 &998206790368380918
 GameObject:
   m_ObjectHideFlags: 0
@@ -240,6 +254,7 @@ GameObject:
   - component: {fileID: 9041985141318176545}
   - component: {fileID: 1941285579249515477}
   - component: {fileID: 5708176929563673132}
+  - component: {fileID: 6309152013189401227}
   m_Layer: 0
   m_Name: Title
   m_TagString: Untagged
@@ -296,8 +311,8 @@ MonoBehaviour:
       m_Calls: []
   m_FontData:
     m_Font: {fileID: 10102, guid: 0000000000000000e000000000000000, type: 0}
-    m_FontSize: 24
-    m_FontStyle: 1
+    m_FontSize: 22
+    m_FontStyle: 0
     m_BestFit: 0
     m_MinSize: 10
     m_MaxSize: 40
@@ -306,8 +321,21 @@ MonoBehaviour:
     m_RichText: 1
     m_HorizontalOverflow: 0
     m_VerticalOverflow: 1
-    m_LineSpacing: 1
+    m_LineSpacing: 1.1
   m_Text: "\u0417\u041E\u041D\u0410"
+--- !u!114 &6309152013189401227
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3363352469173827968}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: cf88e201561d8d949b7ab9ebcd99d921, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::RealityDirector.UI.UiText
+  role: 2
 --- !u!1 &3709258080282176770
 GameObject:
   m_ObjectHideFlags: 0

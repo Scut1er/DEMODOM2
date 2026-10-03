@@ -83,12 +83,14 @@ namespace RealityDirector.UI.Hub
             _art.preserveAspect = true;
 
             _kicker = Label(_panel, "Kicker", _font, 20, Gold, TextAnchor.UpperLeft);
+            UiTypography.Apply(_kicker, TextRole.Label);
             Place((RectTransform)_kicker.transform, 0f, 1f, 1f, 1f, new Vector2(470f, -80f), new Vector2(-40f, -44f));
             _title = Label(_panel, "Title", _titleFont, 52, Gold, TextAnchor.UpperLeft);
+            UiTypography.Apply(_title, TextRole.Title);
             Place((RectTransform)_title.transform, 0f, 1f, 1f, 1f, new Vector2(470f, -150f), new Vector2(-40f, -78f));
             _body = Label(_panel, "Body", _font, 25, Light, TextAnchor.UpperLeft);
+            UiTypography.Apply(_body, TextRole.Body);
             Place((RectTransform)_body.transform, 0f, 1f, 1f, 1f, new Vector2(470f, -440f), new Vector2(-40f, -160f));
-            _body.lineSpacing = 1.1f;
 
             _choices = new GameObject("Choices", typeof(RectTransform)).GetComponent<RectTransform>();
             _choices.SetParent(_panel, false);
@@ -104,10 +106,13 @@ namespace RealityDirector.UI.Hub
             _result.SetParent(_panel, false);
             Place(_result, 0f, 0f, 1f, 0f, new Vector2(40f, 36f), new Vector2(-40f, 372f));
             _stamp = Label(_result, "Stamp", _titleFont, 40, Good, TextAnchor.UpperLeft);
+            UiTypography.Apply(_stamp, TextRole.Heading);
             Place((RectTransform)_stamp.transform, 0f, 1f, 1f, 1f, new Vector2(0f, -54f), Vector2.zero);
             _resultText = Label(_result, "Text", _font, 26, Light, TextAnchor.UpperLeft);
+            UiTypography.Apply(_resultText, TextRole.Body);
             Place((RectTransform)_resultText.transform, 0f, 0f, 1f, 1f, new Vector2(0f, 130f), new Vector2(0f, -60f));
             _summary = Label(_result, "Summary", _font, 22, Gold, TextAnchor.LowerLeft);
+            UiTypography.Apply(_summary, TextRole.Label);
             Place((RectTransform)_summary.transform, 0f, 0f, 1f, 0f, new Vector2(0f, 84f), new Vector2(-300f, 124f));
             _continue = MakeButton(_result, "Continue", "ДАЛЬШЕ", Gold, Dark, 26);
             Place((RectTransform)_continue.transform, 1f, 0f, 1f, 0f, new Vector2(-280f, 0f), new Vector2(0f, 72f));
@@ -167,10 +172,12 @@ namespace RealityDirector.UI.Hub
             Place((RectTransform)label.transform, 0f, 0f, 1f, 1f, new Vector2(24f, 0f), new Vector2(-260f, -12f));
 
             var sub = Label(rect, "Sub", _font, 18, Muted, TextAnchor.LowerLeft);
+            UiTypography.Apply(sub, TextRole.Caption);
             Place((RectTransform)sub.transform, 0f, 0f, 1f, 1f, new Vector2(24f, 10f), new Vector2(-260f, -48f));
             sub.text = c.available ? c.description : "Закрыто: " + c.reason + (string.IsNullOrEmpty(c.description) ? "" : "   ·   " + c.description);
 
             var side = Label(rect, "Side", _font, 20, c.available ? Gold : Muted, TextAnchor.MiddleRight);
+            UiTypography.Apply(side, TextRole.Label);
             Place((RectTransform)side.transform, 1f, 0f, 1f, 1f, new Vector2(-250f, 0f), new Vector2(-24f, 0f));
             side.text = Join(c.costLabel, c.chanceLabel);
 
@@ -301,6 +308,7 @@ namespace RealityDirector.UI.Hub
             colors.colorMultiplier = 1.4f;
             button.colors = colors;
             var text = Label(rect, "Label", _font, size, fg, TextAnchor.MiddleCenter);
+            UiTypography.Apply(text, TextRole.Button);
             Stretch((RectTransform)text.transform);
             text.text = caption;
             return button;

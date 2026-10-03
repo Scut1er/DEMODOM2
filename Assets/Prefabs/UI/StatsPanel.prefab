@@ -11,6 +11,7 @@ GameObject:
   - component: {fileID: 7491626888983075530}
   - component: {fileID: 8089199764033746190}
   - component: {fileID: 8042489256617075181}
+  - component: {fileID: 8196083341513129447}
   m_Layer: 0
   m_Name: Label2
   m_TagString: Untagged
@@ -79,6 +80,19 @@ MonoBehaviour:
     m_VerticalOverflow: 1
     m_LineSpacing: 1
   m_Text: "\u0412\u044B\u043F\u0443\u0441\u043A"
+--- !u!114 &8196083341513129447
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 134083821356539539}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: cf88e201561d8d949b7ab9ebcd99d921, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::RealityDirector.UI.UiText
+  role: 4
 --- !u!1 &366172366657479949
 GameObject:
   m_ObjectHideFlags: 0
@@ -90,6 +104,7 @@ GameObject:
   - component: {fileID: 3912348555530888017}
   - component: {fileID: 4892662645339371836}
   - component: {fileID: 631199838199117386}
+  - component: {fileID: 402180501599430724}
   m_Layer: 0
   m_Name: Mood1
   m_TagString: Untagged
@@ -146,7 +161,7 @@ MonoBehaviour:
       m_Calls: []
   m_FontData:
     m_Font: {fileID: 10102, guid: 0000000000000000e000000000000000, type: 0}
-    m_FontSize: 17
+    m_FontSize: 16
     m_FontStyle: 0
     m_BestFit: 0
     m_MinSize: 10
@@ -158,6 +173,19 @@ MonoBehaviour:
     m_VerticalOverflow: 1
     m_LineSpacing: 1
   m_Text: "\u0422\u0440\u044D\u0448"
+--- !u!114 &402180501599430724
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 366172366657479949}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: cf88e201561d8d949b7ab9ebcd99d921, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::RealityDirector.UI.UiText
+  role: 5
 --- !u!1 &1579878186840160179
 GameObject:
   m_ObjectHideFlags: 0
@@ -275,6 +303,7 @@ GameObject:
   - component: {fileID: 6744868086925203719}
   - component: {fileID: 2549220017409553546}
   - component: {fileID: 8196281415989098004}
+  - component: {fileID: 1202660848040421896}
   m_Layer: 0
   m_Name: Budget
   m_TagString: Untagged
@@ -331,8 +360,8 @@ MonoBehaviour:
       m_Calls: []
   m_FontData:
     m_Font: {fileID: 10102, guid: 0000000000000000e000000000000000, type: 0}
-    m_FontSize: 20
-    m_FontStyle: 1
+    m_FontSize: 19
+    m_FontStyle: 0
     m_BestFit: 0
     m_MinSize: 10
     m_MaxSize: 40
@@ -343,6 +372,19 @@ MonoBehaviour:
     m_VerticalOverflow: 1
     m_LineSpacing: 1
   m_Text: "\u2014"
+--- !u!114 &1202660848040421896
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1650539180746473216}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: cf88e201561d8d949b7ab9ebcd99d921, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::RealityDirector.UI.UiText
+  role: 4
 --- !u!1 &2198165329942643345
 GameObject:
   m_ObjectHideFlags: 0
@@ -430,6 +472,7 @@ GameObject:
   - component: {fileID: 4308459084065061888}
   - component: {fileID: 427886265868307058}
   - component: {fileID: 6861308783678588071}
+  - component: {fileID: 6446650903866101725}
   m_Layer: 0
   m_Name: Label0
   m_TagString: Untagged
@@ -498,6 +541,19 @@ MonoBehaviour:
     m_VerticalOverflow: 1
     m_LineSpacing: 1
   m_Text: "\u0420\u0435\u0439\u0442\u0438\u043D\u0433"
+--- !u!114 &6446650903866101725
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2262272034902288233}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: cf88e201561d8d949b7ab9ebcd99d921, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::RealityDirector.UI.UiText
+  role: 4
 --- !u!1 &3042605547996598017
 GameObject:
   m_ObjectHideFlags: 0
@@ -585,6 +641,7 @@ GameObject:
   - component: {fileID: 1473441532647051032}
   - component: {fileID: 2339339033970769298}
   - component: {fileID: 18333669434014143}
+  - component: {fileID: 6192335241776408671}
   m_Layer: 0
   m_Name: Label1
   m_TagString: Untagged
@@ -653,6 +710,19 @@ MonoBehaviour:
     m_VerticalOverflow: 1
     m_LineSpacing: 1
   m_Text: "\u0411\u044E\u0434\u0436\u0435\u0442"
+--- !u!114 &6192335241776408671
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3313645734223435726}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: cf88e201561d8d949b7ab9ebcd99d921, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::RealityDirector.UI.UiText
+  role: 4
 --- !u!1 &4402795251332376616
 GameObject:
   m_ObjectHideFlags: 0
@@ -739,6 +809,7 @@ GameObject:
   - component: {fileID: 9029337632803594430}
   - component: {fileID: 7008672348780087915}
   - component: {fileID: 2941118381737074913}
+  - component: {fileID: 6310709728919320512}
   m_Layer: 0
   m_Name: Mood0
   m_TagString: Untagged
@@ -795,7 +866,7 @@ MonoBehaviour:
       m_Calls: []
   m_FontData:
     m_Font: {fileID: 10102, guid: 0000000000000000e000000000000000, type: 0}
-    m_FontSize: 17
+    m_FontSize: 16
     m_FontStyle: 0
     m_BestFit: 0
     m_MinSize: 10
@@ -807,6 +878,19 @@ MonoBehaviour:
     m_VerticalOverflow: 1
     m_LineSpacing: 1
   m_Text: "\u0414\u0440\u0430\u043C\u0430"
+--- !u!114 &6310709728919320512
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6110449830376016180}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: cf88e201561d8d949b7ab9ebcd99d921, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::RealityDirector.UI.UiText
+  role: 5
 --- !u!1 &6217997653365277673
 GameObject:
   m_ObjectHideFlags: 0
@@ -818,6 +902,7 @@ GameObject:
   - component: {fileID: 6147509213641889089}
   - component: {fileID: 1496630641950688089}
   - component: {fileID: 8813634445647591682}
+  - component: {fileID: 5578296022148025698}
   m_Layer: 0
   m_Name: Episode
   m_TagString: Untagged
@@ -874,8 +959,8 @@ MonoBehaviour:
       m_Calls: []
   m_FontData:
     m_Font: {fileID: 10102, guid: 0000000000000000e000000000000000, type: 0}
-    m_FontSize: 20
-    m_FontStyle: 1
+    m_FontSize: 19
+    m_FontStyle: 0
     m_BestFit: 0
     m_MinSize: 10
     m_MaxSize: 40
@@ -886,6 +971,19 @@ MonoBehaviour:
     m_VerticalOverflow: 1
     m_LineSpacing: 1
   m_Text: "\u2014"
+--- !u!114 &5578296022148025698
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6217997653365277673}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: cf88e201561d8d949b7ab9ebcd99d921, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::RealityDirector.UI.UiText
+  role: 4
 --- !u!1 &7407537788896797408
 GameObject:
   m_ObjectHideFlags: 0
@@ -1048,6 +1146,7 @@ GameObject:
   - component: {fileID: 1001105718318140699}
   - component: {fileID: 8716813637195327305}
   - component: {fileID: 7683243478993930918}
+  - component: {fileID: 8909862087990517919}
   m_Layer: 0
   m_Name: Mood2
   m_TagString: Untagged
@@ -1104,7 +1203,7 @@ MonoBehaviour:
       m_Calls: []
   m_FontData:
     m_Font: {fileID: 10102, guid: 0000000000000000e000000000000000, type: 0}
-    m_FontSize: 17
+    m_FontSize: 16
     m_FontStyle: 0
     m_BestFit: 0
     m_MinSize: 10
@@ -1116,6 +1215,19 @@ MonoBehaviour:
     m_VerticalOverflow: 1
     m_LineSpacing: 1
   m_Text: "\u0421\u0435\u043C\u044C\u044F"
+--- !u!114 &8909862087990517919
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7586999546003129252}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: cf88e201561d8d949b7ab9ebcd99d921, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::RealityDirector.UI.UiText
+  role: 5
 --- !u!1 &7915291540525227691
 GameObject:
   m_ObjectHideFlags: 0
@@ -1127,6 +1239,7 @@ GameObject:
   - component: {fileID: 834177623809715912}
   - component: {fileID: 4156587349145102323}
   - component: {fileID: 8099998496041660124}
+  - component: {fileID: 2757549232481078776}
   m_Layer: 0
   m_Name: Rating
   m_TagString: Untagged
@@ -1183,8 +1296,8 @@ MonoBehaviour:
       m_Calls: []
   m_FontData:
     m_Font: {fileID: 10102, guid: 0000000000000000e000000000000000, type: 0}
-    m_FontSize: 20
-    m_FontStyle: 1
+    m_FontSize: 19
+    m_FontStyle: 0
     m_BestFit: 0
     m_MinSize: 10
     m_MaxSize: 40
@@ -1195,6 +1308,19 @@ MonoBehaviour:
     m_VerticalOverflow: 1
     m_LineSpacing: 1
   m_Text: "\u2014"
+--- !u!114 &2757549232481078776
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7915291540525227691}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: cf88e201561d8d949b7ab9ebcd99d921, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::RealityDirector.UI.UiText
+  role: 4
 --- !u!1 &7998873737003772983
 GameObject:
   m_ObjectHideFlags: 0

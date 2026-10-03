@@ -511,6 +511,7 @@ namespace RealityDirector.UI.Hub
             text.font = _font;
             text.text = value;
             text.fontSize = size;
+            UiTypography.Apply(text, UiTypography.ForSize(size));
             text.color = color;
             text.alignment = anchor;
             text.horizontalOverflow = HorizontalWrapMode.Wrap;
