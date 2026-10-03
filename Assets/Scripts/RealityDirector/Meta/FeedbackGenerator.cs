@@ -25,26 +25,13 @@ namespace RealityDirector.Meta
 
     public static class FeedbackGenerator
     {
-        public static FeedbackResult Build(EpisodeContext context, IReadOnlyList<CapturedMoment> moments, IReadOnlyList<NPCController> cast, SeasonTone tone)
+        // Зритель знает только эфир (GDD §28): имена — только тех, кто в показанных роликах сделал то, о чём речь.
+        // Никаких «Злой»/«Добряк» по умолчанию: участника могло не быть в выпуске.
+        public static FeedbackResult Build(EpisodeContext context, IReadOnlyList<CapturedMoment> moments, SeasonTone tone)
         {
-            NPCController aggressive = null;
-            NPCController sentimental = null;
-            if (cast != null)
-            {
-                for (int i = 0; i < cast.Count; i++)
-                {
-                    if (cast[i].Trait == null)
-                        continue;
-                    if (cast[i].Trait.traitId == TraitId.Aggressive)
-                        aggressive = cast[i];
-                    else if (cast[i].Trait.traitId == TraitId.Sentimental || cast[i].Trait.traitId == TraitId.Panicker)
-                        sentimental = cast[i];
-                }
-            }
-
-            string zloi = aggressive != null ? aggressive.DisplayName : "Злой";
-            string victim = sentimental != null ? sentimental.AccusativeName : "Добряку";
-            string soft = sentimental != null ? sentimental.DisplayName : "Добряк";
+            var fighters = Who(moments, MomentTags.Fight);
+            var criers = Who(moments, MomentTags.Crying);
+            var aired = Aired(moments);
 
             bool fightShot = HasTag(moments, MomentTags.Fight);
             bool fightHappened = context != null && context.Had(MomentTags.Fight);
@@ -61,7 +48,11 @@ namespace RealityDirector.Meta
                 {
                     author = "Аня",
                     score = 8,
-                    body = "Понравилось, наконец-то " + zloi + " дал " + MoodStyle.Paint("по роже", ShowMood.Trash) + " " + victim + "!"
+                    body = fighters.Count >= 2
+                        ? "Понравилось, наконец-то " + fighters[0] + " и " + fighters[1] + " " + MoodStyle.Paint("сцепились", ShowMood.Trash) + "!"
+                        : fighters.Count == 1
+                            ? "Понравилось: " + fighters[0] + " — " + MoodStyle.Paint("в драке", ShowMood.Trash) + ". Наконец-то!"
+                            : "Понравилось, наконец-то " + MoodStyle.Paint("драка", ShowMood.Trash) + " в кадре!"
                 });
             }
             else if (fightHappened)
@@ -101,18 +92,18 @@ namespace RealityDirector.Meta
                 author = "Марина",
                 score = crying ? 8 : 6,
                 body = crying
-                    ? soft + " " + MoodStyle.Paint("рыдал", ShowMood.Drama) + " в кадре. Беру салфетки и ещё серию."
-                    : "Хотелось бы увидеть, как " + soft + " " + MoodStyle.Paint("расплакался", ShowMood.Drama) + "."
+                    ? (criers.Count > 0 ? criers[0] + " — " : "") + MoodStyle.Paint(criers.Count > 0 ? "в слезах" : "Слёзы", ShowMood.Drama) + " прямо в кадре. Беру салфетки и ещё серию."
+                    : WantTears(aired)
             });
 
             ViewerWishId id = PickWish(crying, familyShot, trashShot, tone);
             int index = id == ViewerWishId.Fight ? 0 : id == ViewerWishId.Hug ? 1 : 2;
             reviews[index].offer = true;
             reviews[index].wish = id;
-            reviews[index].body = OfferBody(id, soft, tone);
+            reviews[index].body = OfferBody(id, aired, tone);
 
             PunishBlanks(reviews, moments, index);
-            RevealSecrets(reviews, moments, index, zloi, soft);
+            RevealSecrets(reviews, moments, index);
             EnsureUnique(reviews);
 
             int sum = 0;
@@ -124,9 +115,58 @@ namespace RealityDirector.Meta
             {
                 reviews = reviews,
                 score = UnityEngine.Mathf.Round(avg * 10f) / 10f,
-                wish = OfferLabel(id, soft, tone),
+                wish = OfferLabel(id, tone),
                 nextWish = id
             };
+        }
+
+        static string WantTears(List<string> aired)
+        {
+            return aired.Count > 0
+                ? "Хотелось бы увидеть " + MoodStyle.Paint("слёзы", ShowMood.Drama) + ". " + aired[0] + " держится — зря."
+                : "Хотелось бы увидеть " + MoodStyle.Paint("слёзы", ShowMood.Drama) + ". Хоть чьи-нибудь.";
+        }
+
+        // Имена из подсказок показанных роликов (пустые кадры не в счёт).
+        static List<string> Who(IReadOnlyList<CapturedMoment> moments, string tag)
+        {
+            var names = new List<string>();
+            if (moments == null)
+                return names;
+            for (int i = 0; i < moments.Count; i++)
+            {
+                if (moments[i].grade == CaptureGrade.Blank)
+                    continue;
+                var found = CapturedMoment.Who(moments[i].cues, tag);
+                for (int n = 0; n < found.Count; n++)
+                {
+                    if (!names.Contains(found[n]))
+                        names.Add(found[n]);
+                }
+            }
+
+            return names;
+        }
+
+        // Все, кто попал в эфир.
+        static List<string> Aired(IReadOnlyList<CapturedMoment> moments)
+        {
+            var names = new List<string>();
+            if (moments == null)
+                return names;
+            for (int i = 0; i < moments.Count; i++)
+            {
+                if (moments[i].grade != CaptureGrade.Cast || moments[i].actorNames == null)
+                    continue;
+                for (int n = 0; n < moments[i].actorNames.Count; n++)
+                {
+                    string name = moments[i].actorNames[n];
+                    if (!string.IsNullOrEmpty(name) && !names.Contains(name))
+                        names.Add(name);
+                }
+            }
+
+            return names;
         }
 
         // Спонсор уже в кадре: каждый отзыв ниже, оценка серии пересчитывается.
@@ -151,7 +191,7 @@ namespace RealityDirector.Meta
         // Зритель видит только финальный кат. context сюда не передаём — вырезанное он не знает.
         public static FeedbackResult BuildCut(IReadOnlyList<CapturedMoment> cut, SeasonTone tone, int coherence, bool sponsorAired)
         {
-            var result = Build(null, cut, null, tone);
+            var result = Build(null, cut, tone);
             if (result.reviews == null)
                 result.reviews = new List<ViewerReview>();
             var extra = Extras(cut, coherence, sponsorAired);
@@ -360,7 +400,7 @@ namespace RealityDirector.Meta
             return ViewerWishId.HoldTone;
         }
 
-        static string OfferBody(ViewerWishId id, string soft, SeasonTone tone)
+        static string OfferBody(ViewerWishId id, List<string> aired, SeasonTone tone)
         {
             switch (id)
             {
@@ -373,11 +413,11 @@ namespace RealityDirector.Meta
                         return "Выберите один тон и держите его. Не расползайтесь.";
                     return "Держите этот тон: " + MoodStyle.Paint(MoodStyle.Full(lead), lead) + ". Не сливайте.";
                 default:
-                    return "Хотелось бы увидеть, как " + soft + " " + MoodStyle.Paint("расплакался", ShowMood.Drama) + ".";
+                    return WantTears(aired);
             }
         }
 
-        public static string OfferLabel(ViewerWishId id, string soft, SeasonTone tone)
+        public static string OfferLabel(ViewerWishId id, SeasonTone tone)
         {
             switch (id)
             {
@@ -390,17 +430,24 @@ namespace RealityDirector.Meta
                         return "один тон";
                     return MoodStyle.Paint(MoodStyle.Full(lead), lead);
                 default:
-                    return MoodStyle.Paint("слёзы " + soft, ShowMood.Drama);
+                    return MoodStyle.Paint("слёзы в кадре", ShowMood.Drama);
             }
         }
 
-        static void RevealSecrets(List<ViewerReview> reviews, IReadOnlyList<CapturedMoment> moments, int offerIndex, string zloi, string soft)
+        static void RevealSecrets(List<ViewerReview> reviews, IReadOnlyList<CapturedMoment> moments, int offerIndex)
         {
             int cursor = 0;
             if (Saw(moments, HiddenTrait.Kleptomaniac))
-                WriteSecret(reviews, offerIndex, ref cursor, soft + " в кадре шарит по чужому. Клептоман.");
+            {
+                var thief = Who(moments, HiddenTrait.Kleptomaniac.ToString());
+                WriteSecret(reviews, offerIndex, ref cursor, (thief.Count > 0 ? thief[0] : "Кто-то") + " в кадре шарит по чужому. Клептомания.");
+            }
+
             if (Saw(moments, HiddenTrait.Prankster))
-                WriteSecret(reviews, offerIndex, ref cursor, zloi + " это подстроил. В кадре пранк, не случайность.");
+            {
+                var joker = Who(moments, HiddenTrait.Prankster.ToString());
+                WriteSecret(reviews, offerIndex, ref cursor, (joker.Count > 0 ? joker[0] + " — автор пранка" : "Это пранк") + ". В кадре не случайность.");
+            }
         }
 
         static void WriteSecret(List<ViewerReview> reviews, int offerIndex, ref int cursor, string body)

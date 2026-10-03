@@ -14,6 +14,7 @@ namespace RealityDirector.Capture
         public string title;
         public List<string> actorNames = new List<string>();
         public List<string> tags = new List<string>();
+        public List<string> cues = new List<string>();
         public ShowMood mood;
         public CaptureGrade grade;
         public HiddenTrait exposed;
@@ -48,6 +49,7 @@ namespace RealityDirector.Capture
                 title = moment.Title,
                 actorNames = moment.actorNames != null ? new List<string>(moment.actorNames) : new List<string>(),
                 tags = moment.tags != null ? new List<string>(moment.tags) : new List<string>(),
+                cues = moment.cues != null ? new List<string>(moment.cues) : new List<string>(),
                 mood = moment.mood,
                 grade = moment.grade,
                 exposed = moment.exposed,
@@ -83,6 +85,7 @@ namespace RealityDirector.Capture
                 title = string.IsNullOrEmpty(entry.description) ? "КАДР" : entry.description,
                 actorNames = entry.actorIds != null ? new List<string>(entry.actorIds) : new List<string>(),
                 tags = entry.tags != null ? new List<string>(entry.tags) : new List<string>(),
+                cues = entry.cues != null ? new List<string>(entry.cues) : new List<string>(),
                 mood = entry.mood,
                 grade = (CaptureGrade)entry.quality,
                 exposed = (HiddenTrait)entry.exposed,
@@ -100,6 +103,7 @@ namespace RealityDirector.Capture
                 roomId = clip.nodeId,
                 actorIds = new List<string>(clip.actorNames),
                 tags = new List<string>(clip.tags),
+                cues = clip.cues != null ? new List<string>(clip.cues) : new List<string>(),
                 mood = clip.mood,
                 quality = (int)clip.grade,
                 value = clip.grade == CaptureGrade.Cast ? 2 : clip.grade == CaptureGrade.Prop ? 1 : 0,

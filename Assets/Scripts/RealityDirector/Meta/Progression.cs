@@ -23,21 +23,6 @@ namespace RealityDirector.Meta
         static readonly int[] CastCost = { 70, 110, 160, 220 };
         static readonly int[] CrewCost = { 90, 130, 180, 240 };
 
-        public static int EventSlots(int writerLevel, int episodeIndex)
-        {
-            if (episodeIndex <= 0)
-                return 1;
-
-            switch (Mathf.Clamp(writerLevel, 1, MaxLevel))
-            {
-                case 1: return 2;
-                case 2: return 3;
-                case 3: return 3;
-                case 4: return 4;
-                default: return 5;
-            }
-        }
-
         public static int ContractSlots(int writerLevel)
         {
             return writerLevel >= 4 ? 2 : 1;

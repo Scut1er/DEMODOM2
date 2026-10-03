@@ -42,26 +42,13 @@ namespace RealityDirector
         public static PitchContent Create()
         {
             var content = new PitchContent();
-            content.Aggressive = Trait("trait_aggressive", TraitId.Aggressive, "агрессивный");
-            content.Sentimental = Trait("trait_sentimental", TraitId.Sentimental, "сентиментальный");
-            content.Panicker = Trait("trait_panicker", TraitId.Panicker, "паникер");
-
-            content.AggressiveRules = Rules(TraitId.Aggressive,
-                Rule(MomentTags.Fire, TraitId.Aggressive, false, true, NpcActionId.SeekFight, "!!!", 20),
-                Rule(MomentTags.Fire, TraitId.Aggressive, false, false, NpcActionId.Emote, "горит?!", 12),
-                Rule(MomentTags.Conflict, TraitId.Aggressive, true, false, NpcActionId.Emote, "злость", 8),
-                Rule(MomentTags.Conflict, TraitId.Aggressive, false, false, NpcActionId.Emote, "злость", 4));
-
-            content.SentimentalRules = Rules(TraitId.Sentimental,
-                Rule(MomentTags.Fire, TraitId.Sentimental, false, false, NpcActionId.Panic, "слёзы", 20),
-                Rule(MomentTags.Crying, TraitId.Sentimental, true, false, NpcActionId.Panic, "слёзы", 20),
-                Rule(MomentTags.Misery, TraitId.Sentimental, false, false, NpcActionId.Emote, "брр, холодно", 5),
-                Rule(MomentTags.Warmth, TraitId.Sentimental, false, false, NpcActionId.Emote, "уют", 5));
-
-            content.PanickerRules = Rules(TraitId.Panicker,
-                Rule(MomentTags.Fire, TraitId.Panicker, false, false, NpcActionId.Panic, "ааа", 20),
-                Rule(MomentTags.Misery, TraitId.Panicker, false, false, NpcActionId.Emote, "брр, холодно", 5),
-                Rule(MomentTags.Warmth, TraitId.Panicker, false, false, NpcActionId.Emote, "уют", 5));
+            content.LoadAuthored();
+            content.Aggressive = content.TraitOf(TraitId.Aggressive);
+            content.Sentimental = content.TraitOf(TraitId.Sentimental);
+            content.Panicker = content.TraitOf(TraitId.Panicker);
+            content.AggressiveRules = content.RulesFor(TraitId.Aggressive);
+            content.SentimentalRules = content.RulesFor(TraitId.Sentimental);
+            content.PanickerRules = content.RulesFor(TraitId.Panicker);
 
             content.Provoke = Event("provoke", "Разозлить", "клик по Злому", TargetType.Actor, null,
                 new Color(0.62f, 0.16f, 0.16f, 1f), 90f, false, IllustratedArt.IconAnger, MomentTags.Conflict);
@@ -166,77 +153,214 @@ namespace RealityDirector
             return null;
         }
 
+        // Черты и реакции: ассеты дизайнера в Resources/Content (TraitDefinition, ReactionRuleSet) важнее встроенных.
+        readonly List<TraitDefinition> _authoredTraits = new List<TraitDefinition>();
+        readonly List<ReactionRuleSet> _authoredSets = new List<ReactionRuleSet>();
+
+        void LoadAuthored()
+        {
+            _authoredTraits.AddRange(Resources.LoadAll<TraitDefinition>("Content"));
+            _authoredSets.AddRange(Resources.LoadAll<ReactionRuleSet>("Content"));
+        }
+
         public TraitDefinition TraitOf(TraitId id)
         {
-            var known = Known(id);
-            if (known != null)
-                return known;
-            string name = id == TraitId.Jealous ? "ревнивый"
-                : id == TraitId.Cowardly ? "трус"
-                : id == TraitId.Vain ? "тщеславный"
-                : id == TraitId.Opportunist ? "оппортунист"
-                : id == TraitId.Honest ? "честный"
-                : id == TraitId.Shy ? "застенчивый"
-                : id == TraitId.Chaotic ? "хаотичный"
-                : id == TraitId.Timid ? "робкий"
-                : id.ToString();
-            var trait = Trait("trait_" + id, id, name);
-            _traits.Add(trait);
-            return trait;
-        }
-
-        public ReactionRuleSet RulesFor(TraitId id)
-        {
-            if (id == TraitId.Aggressive)
-                return AggressiveRules;
-            if (id == TraitId.Sentimental)
-                return SentimentalRules;
-            if (id == TraitId.Panicker)
-                return PanickerRules;
-            for (int i = 0; i < _sets.Count; i++)
+            for (int i = 0; i < _authoredTraits.Count; i++)
             {
-                if (_sets[i].trait == id)
-                    return _sets[i];
+                if (_authoredTraits[i] != null && _authoredTraits[i].traitId == id)
+                    return _authoredTraits[i];
             }
 
-            bool fight = id == TraitId.Jealous || id == TraitId.Chaotic || id == TraitId.Vain;
-            bool panic = id == TraitId.Cowardly || id == TraitId.Shy || id == TraitId.Timid;
-            var source = fight ? AggressiveRules : panic ? PanickerRules : SentimentalRules;
-            var set = Rules(id);
-            for (int i = 0; i < source.rules.Count; i++)
-            {
-                var rule = source.rules[i];
-                set.rules.Add(new ReactionRule
-                {
-                    eventTag = rule.eventTag,
-                    requiredTrait = id,
-                    requireTargetSelf = rule.requireTargetSelf,
-                    requireRage = rule.requireRage,
-                    action = rule.action,
-                    emote = rule.emote,
-                    priority = rule.priority
-                });
-            }
-
-            _sets.Add(set);
-            return set;
-        }
-
-        TraitDefinition Known(TraitId id)
-        {
-            if (id == TraitId.Aggressive)
-                return Aggressive;
-            if (id == TraitId.Sentimental)
-                return Sentimental;
-            if (id == TraitId.Panicker)
-                return Panicker;
             for (int i = 0; i < _traits.Count; i++)
             {
                 if (_traits[i].traitId == id)
                     return _traits[i];
             }
 
-            return null;
+            var trait = BuiltInTrait(id);
+            _traits.Add(trait);
+            return trait;
+        }
+
+        public ReactionRuleSet RulesFor(TraitId id)
+        {
+            for (int i = 0; i < _authoredSets.Count; i++)
+            {
+                if (_authoredSets[i] != null && _authoredSets[i].trait == id)
+                    return _authoredSets[i];
+            }
+
+            for (int i = 0; i < _sets.Count; i++)
+            {
+                if (_sets[i].trait == id)
+                    return _sets[i];
+            }
+
+            var set = Rules(id, BuiltInRules(id));
+            _sets.Add(set);
+            return set;
+        }
+
+        // Все одиннадцать черт — для редакторских подсказок («кто как отреагирует на карту»).
+        public List<ReactionRuleSet> AllRuleSets()
+        {
+            var list = new List<ReactionRuleSet>();
+            foreach (TraitId id in System.Enum.GetValues(typeof(TraitId)))
+                list.Add(RulesFor(id));
+            return list;
+        }
+
+        // Встроенные черты (GDD §7): чувствительность и склонности. Ассет с тем же traitId их заменяет.
+        static TraitDefinition BuiltInTrait(TraitId id)
+        {
+            switch (id)
+            {
+                case TraitId.Aggressive: return Trait(id, "агрессивный", anger: 1.3f, fight: true);
+                case TraitId.Sentimental: return Trait(id, "сентиментальный", sadness: 1.4f);
+                case TraitId.Timid: return Trait(id, "робкий", stress: 1.3f);
+                case TraitId.Panicker: return Trait(id, "паникер", stress: 1.4f, panic: true);
+                case TraitId.Jealous: return Trait(id, "ревнивый", anger: 1.2f, fight: true);
+                case TraitId.Cowardly: return Trait(id, "трус", stress: 1.5f, panic: true);
+                case TraitId.Vain: return Trait(id, "тщеславный", attraction: 1.2f);
+                case TraitId.Opportunist: return Trait(id, "оппортунист");
+                case TraitId.Honest: return Trait(id, "честный");
+                case TraitId.Shy: return Trait(id, "застенчивый", stress: 1.3f, panic: true);
+                default: return Trait(id, "хаотичный", anger: 1.1f, fight: true);
+            }
+        }
+
+        // Встроенные реакции: у каждой черты свои, на теги, которые реально дают карты и поведение участников.
+        // Злость/стресс/грусть/влечение — сдвиг эмоций при реакции. Ассет ReactionRuleSet с той же чертой их заменяет.
+        static ReactionRule[] BuiltInRules(TraitId id)
+        {
+            const NpcActionId Emote = NpcActionId.Emote;
+            const NpcActionId Panic = NpcActionId.Panic;
+            const NpcActionId Fight = NpcActionId.SeekFight;
+            switch (id)
+            {
+                case TraitId.Aggressive:
+                    return new[]
+                    {
+                        R(MomentTags.Fire, Fight, "!!!", 20, anger: 18, rage: true),
+                        R(MomentTags.Fire, Emote, "горит?!", 12, anger: 10, stress: 6),
+                        R(MomentTags.Conflict, Emote, "злость", 8, anger: 14, self: true),
+                        R(MomentTags.Conflict, Emote, "злость", 4, anger: 8),
+                        R("Humiliation", Fight, "ну всё!", 16, anger: 20, self: true),
+                        R(MomentTags.Fight, Emote, "врежь ему!", 6, anger: 8, others: true),
+                        R(MomentTags.Crying, Emote, "ой, всё", 3, anger: 5, others: true)
+                    };
+                case TraitId.Sentimental:
+                    return new[]
+                    {
+                        R(MomentTags.Fire, Panic, "слёзы", 20),
+                        R(MomentTags.Crying, Panic, "слёзы", 20, self: true),
+                        R(MomentTags.Crying, Emote, "бедняжка…", 7, sadness: 12, others: true),
+                        R(MomentTags.Fight, Emote, "не надо!", 8, stress: 10, sadness: 10, others: true),
+                        R("Confession", Panic, "слёзы", 14, sadness: 16, self: true),
+                        R(MomentTags.Misery, Emote, "брр, холодно", 5, sadness: 6),
+                        R(MomentTags.Warmth, Emote, "уют", 5, stress: -6, attraction: 6)
+                    };
+                case TraitId.Panicker:
+                    return new[]
+                    {
+                        R(MomentTags.Fire, Panic, "ааа", 20),
+                        R(MomentTags.Fight, Panic, "ааа, драка!", 14, stress: 14, others: true),
+                        R(MomentTags.Chaos, Emote, "что происходит?!", 6, stress: 10),
+                        R(MomentTags.Conflict, Emote, "только не ссорьтесь", 5, stress: 8),
+                        R(MomentTags.Misery, Emote, "брр, холодно", 5, stress: 4),
+                        R(MomentTags.Warmth, Emote, "уют", 5, stress: -6)
+                    };
+                case TraitId.Jealous:
+                    return new[]
+                    {
+                        R(MomentTags.Hug, Fight, "ревную!!!", 22, anger: 20, rage: true, others: true),
+                        R(MomentTags.Hug, Emote, "а это что?!", 12, anger: 16, others: true),
+                        R("Romance", Emote, "это что ещё?", 12, anger: 14),
+                        R("Flirt", Emote, "я всё вижу", 12, anger: 14, others: true),
+                        R("Jealousy", Emote, "злость", 14, anger: 18),
+                        R("Secret", Emote, "я всё вижу", 8, anger: 10),
+                        R(MomentTags.Warmth, Emote, "ну-ну", 4, anger: 6, others: true),
+                        R(MomentTags.Fire, Fight, "!!!", 20, anger: 18, rage: true),
+                        R(MomentTags.Fire, Emote, "кто это сделал?!", 12, anger: 10, stress: 6),
+                        R(MomentTags.Conflict, Emote, "злость", 8, anger: 12, self: true)
+                    };
+                case TraitId.Vain:
+                    return new[]
+                    {
+                        R("Public", Emote, "мой ракурс!", 10, attraction: 8),
+                        R("Camera", Emote, "мой ракурс!", 10, attraction: 8),
+                        R("Attention", Emote, "все на меня", 8, attraction: 6),
+                        R(MomentTags.Fire, Panic, "мои волосы!", 16, stress: 12),
+                        R(MomentTags.Conflict, Emote, "как ты смеешь", 10, anger: 14, self: true),
+                        R("Humiliation", Emote, "как ты смеешь", 14, anger: 18, self: true),
+                        R(MomentTags.Hug, Emote, "а на меня смотрят?", 6, anger: 6, others: true),
+                        R(MomentTags.Crying, Emote, "только не в кадре", 4, anger: 4, others: true),
+                        R(MomentTags.Fight, Emote, "фу, грубо", 5, stress: 6, others: true)
+                    };
+                case TraitId.Cowardly:
+                    return new[]
+                    {
+                        R(MomentTags.Fire, Panic, "спасите!", 20),
+                        R(MomentTags.Fight, Panic, "я ни при чём!", 16, stress: 15, others: true),
+                        R(MomentTags.Conflict, Panic, "не бейте!", 14, stress: 14, self: true),
+                        R(MomentTags.Conflict, Emote, "я лучше отойду", 5, stress: 8),
+                        R(MomentTags.Chaos, Panic, "бежим!", 10, stress: 10),
+                        R("Pressure", Emote, "ой, нет", 8, stress: 10)
+                    };
+                case TraitId.Shy:
+                    return new[]
+                    {
+                        R("Public", Panic, "не смотрите…", 14, stress: 14),
+                        R("Camera", Panic, "не снимайте…", 12, stress: 12),
+                        R(MomentTags.Fire, Panic, "ой…", 18),
+                        R(MomentTags.Conflict, Emote, "я тихо…", 6, stress: 8),
+                        R(MomentTags.Hug, Emote, "ой…", 8, stress: 6, attraction: 10, self: true),
+                        R("Private", Emote, "так лучше", 5, stress: -8),
+                        R(MomentTags.Warmth, Emote, "уют", 5, stress: -6)
+                    };
+                case TraitId.Timid:
+                    return new[]
+                    {
+                        R(MomentTags.Fire, Panic, "мамочки", 18),
+                        R(MomentTags.Fight, Panic, "уйду я", 12, stress: 12, others: true),
+                        R(MomentTags.Conflict, Emote, "может, не надо?", 6, stress: 8),
+                        R("Pressure", Emote, "я не могу", 8, stress: 10, sadness: 4),
+                        R(MomentTags.Misery, Emote, "брр", 5, sadness: 6)
+                    };
+                case TraitId.Chaotic:
+                    return new[]
+                    {
+                        R(MomentTags.Fire, Fight, "!!!", 20, anger: 16, rage: true),
+                        R(MomentTags.Fire, Emote, "ха-ха, горит!", 14, anger: 4, attraction: 4),
+                        R(MomentTags.Chaos, Emote, "ещё!", 8, anger: 6),
+                        R(MomentTags.Fight, Fight, "я тоже!", 14, anger: 16, others: true),
+                        R(MomentTags.Conflict, Emote, "погнали", 6, anger: 10),
+                        R("Party", Emote, "тусим!", 8, attraction: 6),
+                        R("Alcohol", Emote, "наливай", 8, anger: 4, attraction: 6)
+                    };
+                case TraitId.Opportunist:
+                    return new[]
+                    {
+                        R(MomentTags.Fight, Emote, "снимайте!", 10, attraction: 4, others: true),
+                        R(MomentTags.Fire, Emote, "контент!", 10, stress: 4),
+                        R(MomentTags.Sponsor, Emote, "реклама? беру", 8, attraction: 4),
+                        R(MomentTags.Crying, Emote, "плачь в камеру", 6, others: true),
+                        R("Secret", Emote, "чем заплатишь?", 8),
+                        R("Betrayal", Emote, "сделка есть сделка", 8, anger: 4)
+                    };
+                case TraitId.Honest:
+                    return new[]
+                    {
+                        R("Secret", Emote, "это нечестно", 10, anger: 10),
+                        R("Betrayal", Emote, "это нечестно", 12, anger: 14),
+                        R("Theft", Emote, "верни!", 10, anger: 12),
+                        R(MomentTags.Crying, Emote, "держись", 8, sadness: 6, others: true),
+                        R(MomentTags.Fire, Panic, "надо тушить!", 16, stress: 12),
+                        R(MomentTags.Conflict, Emote, "давайте честно", 6, anger: 6)
+                    };
+                default:
+                    return new ReactionRule[0];
+            }
         }
 
         public List<string> StarterIds()
@@ -253,22 +377,29 @@ namespace RealityDirector
             return ids;
         }
 
-        public void DestroyAssets()
+        // Удаляет только созданное в памяти. Ассеты дизайнера (черты, реакции из Resources) не трогает.
+        public void DestroyAssets(bool immediate = false)
         {
-            Object.Destroy(Aggressive);
-            Object.Destroy(Sentimental);
-            Object.Destroy(Panicker);
-            Object.Destroy(AggressiveRules);
-            Object.Destroy(SentimentalRules);
-            Object.Destroy(PanickerRules);
             for (int i = 0; i < _traits.Count; i++)
-                Object.Destroy(_traits[i]);
+                Kill(_traits[i], immediate);
             for (int i = 0; i < _sets.Count; i++)
-                Object.Destroy(_sets[i]);
+                Kill(_sets[i], immediate);
+            _traits.Clear();
+            _sets.Clear();
             if (All == null)
                 return;
             for (int i = 0; i < All.Length; i++)
-                Object.Destroy(All[i]);
+                Kill(All[i], immediate);
+        }
+
+        static void Kill(Object obj, bool immediate)
+        {
+            if (obj == null)
+                return;
+            if (immediate)
+                Object.DestroyImmediate(obj);
+            else
+                Object.Destroy(obj);
         }
 
         static void Stamp(EventDefinition def, params ShowMood[] moods)
@@ -276,34 +407,47 @@ namespace RealityDirector
             def.moods.AddRange(moods);
         }
 
-        static TraitDefinition Trait(string id, TraitId traitId, string displayName)
+        static TraitDefinition Trait(TraitId traitId, string displayName, float anger = 1f, float stress = 1f, float sadness = 1f,
+            float attraction = 1f, bool fight = false, bool panic = false)
         {
             var trait = ScriptableObject.CreateInstance<TraitDefinition>();
-            trait.name = id;
+            trait.name = "trait_" + traitId.ToString().ToLowerInvariant();
             trait.traitId = traitId;
             trait.displayName = displayName;
+            trait.angerGain = anger;
+            trait.stressGain = stress;
+            trait.sadnessGain = sadness;
+            trait.attractionGain = attraction;
+            trait.fightProne = fight;
+            trait.panicProne = panic;
             return trait;
         }
 
         static ReactionRuleSet Rules(TraitId trait, params ReactionRule[] rules)
         {
             var set = ScriptableObject.CreateInstance<ReactionRuleSet>();
+            set.name = "rules_" + trait.ToString().ToLowerInvariant();
             set.trait = trait;
             set.rules = new List<ReactionRule>(rules);
             return set;
         }
 
-        static ReactionRule Rule(string tag, TraitId trait, bool self, bool rage, NpcActionId action, string emote, int priority)
+        static ReactionRule R(string tag, NpcActionId action, string emote, int priority, int anger = 0, int stress = 0,
+            int sadness = 0, int attraction = 0, bool self = false, bool rage = false, bool others = false)
         {
             return new ReactionRule
             {
                 eventTag = tag,
-                requiredTrait = trait,
                 requireTargetSelf = self,
                 requireRage = rage,
+                othersOnly = others,
                 action = action,
                 emote = emote,
-                priority = priority
+                priority = priority,
+                anger = anger,
+                stress = stress,
+                sadness = sadness,
+                attraction = attraction
             };
         }
 

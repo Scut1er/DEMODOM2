@@ -101,19 +101,21 @@ namespace RealityDirector.EditorTools
             Debug.Log("Cards: " + report);
         }
 
-        // Двое участников из квартиры → ассеты в Resources/Content/Characters.
+        // Участники с артом художника → ассеты в Resources/Content/Characters.
         [MenuItem("RealityDirector/Content/Create Default Characters")]
         public static void CreateCharacters()
         {
             Character("npc_zloi", "Злой", "zloi", 0, RealityDirector.NPC.TraitId.Aggressive, RealityDirector.NPC.HiddenTrait.Prankster, "агрессивный");
             Character("npc_dobryak", "Добряк", "dobryak", 1, RealityDirector.NPC.TraitId.Panicker, RealityDirector.NPC.HiddenTrait.Kleptomaniac, "паникер");
+            Character("npc_kira", "Кира", "kira", 2, RealityDirector.NPC.TraitId.Jealous, RealityDirector.NPC.HiddenTrait.None, "ревнивая", "body3");
+            Character("npc_max", "Макс", "max", 3, RealityDirector.NPC.TraitId.Vain, RealityDirector.NPC.HiddenTrait.Singer, "тщеславный", "body2");
             AssetDatabase.SaveAssets();
             DesignerData.Invalidate();
             Debug.Log("Characters: участники готовы (" + DesignerData.CharactersRoot + "). Существующие не тронуты.");
         }
 
         static void Character(string id, string displayName, string prefix, int order,
-            RealityDirector.NPC.TraitId trait, RealityDirector.NPC.HiddenTrait hidden, string visible)
+            RealityDirector.NPC.TraitId trait, RealityDirector.NPC.HiddenTrait hidden, string visible, string body = "body")
         {
             Directory.CreateDirectory(DesignerData.CharactersRoot);
             string path = DesignerData.CharactersRoot + "/" + id + ".asset";
@@ -124,6 +126,7 @@ namespace RealityDirector.EditorTools
             actor.SetId(id);
             actor.displayName = displayName;
             actor.artPrefix = prefix;
+            actor.bodyPrefix = body;
             actor.order = order;
             actor.mainTrait = trait;
             actor.hiddenTrait = hidden;

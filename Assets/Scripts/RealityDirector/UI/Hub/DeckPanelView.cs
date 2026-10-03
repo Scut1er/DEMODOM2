@@ -245,7 +245,7 @@ namespace RealityDirector.UI.Hub
             _model = model;
             int owned = model.deck != null ? model.deck.Length : 0;
             if (deckTabLabel != null)
-                deckTabLabel.text = _browse ? "КОЛОДА  ·  " + owned : "КОЛОДА  " + model.picked + "/" + model.slots;
+                deckTabLabel.text = "КОЛОДА  ·  " + owned;
             if (money != null)
                 money.text = string.IsNullOrEmpty(model.moneyText) ? model.money + " кр" : model.moneyText;
             for (int i = 0; i < tabPages.Length; i++)
@@ -258,7 +258,7 @@ namespace RealityDirector.UI.Hub
 
             if (deckInfo != null)
                 deckInfo.text = _browse
-                    ? "Все твои карты. Какие взять в съёмку — выбираешь перед каждой съёмкой на карте выпуска."
+                    ? "Все твои карты. В каждой съёмке колода тасуется и сдаёт " + model.slots + " в руку; сыгранная карта вернётся к следующей съёмке."
                     : model.slotsLabel;
             Fill(deckRoot, deckEmpty, model.deck, false);
             Fill(shopRoot, shopEmpty, model.shop, true);
@@ -320,12 +320,10 @@ namespace RealityDirector.UI.Hub
             if (_browse)
                 return model.available == 0
                     ? "Колода пуста. Новые карты — в магазине хаба, разовые — у спонсоров выпуска."
-                    : "Карт в колоде: " + model.available + ". В съёмку берётся до " + model.slots + " — выбор перед съёмкой.";
+                    : "Карт в колоде: " + model.available + ". В руке на съёмке: " + model.slots + ", добор после каждой сыгранной.";
             if (model.available == 0)
                 return "Колода пуста — снимать можно и без карт. Новые карты — в магазине хаба, разовые — у спонсоров выпуска.";
-            if (model.picked == 0)
-                return "Можно снимать и без карт, но провоцировать будет нечем. Лимит: " + model.slots + ".";
-            return "В серию: " + model.picked + " из " + model.slots + ". Неиспользованные карты вернутся в колоду.";
+            return "Карт в колоде: " + model.available + ". В руке на съёмке: " + model.slots + ".";
         }
     }
 }

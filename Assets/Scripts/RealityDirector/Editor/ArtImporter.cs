@@ -6,7 +6,7 @@ namespace RealityDirector.Editor
 {
     // Настройки импорта для арта в Assets/Resources/Art — художнику достаточно положить файл в нужную папку.
     //   Cards/       рамки карт                 — спрайт, пивот по центру
-    //   Characters/  головы и тела участников   — спрайт, пивот снизу по центру
+    //   Characters/  головы <prefix>_<face> и тела <body>_<pose> — спрайт, пивот снизу по центру
     //   Location/    floor_* и wall_*           — тайлятся (Repeat, FullRect); остальное — обычные объекты
     public class ArtImporter : AssetPostprocessor
     {
@@ -34,8 +34,8 @@ namespace RealityDirector.Editor
             else if (path.StartsWith(Root + "Characters/"))
             {
                 alignment = SpriteAlignment.BottomCenter;
-                // тело ~0.9 юнита в ширину, голова ~0.8
-                ppu = file.StartsWith("body_") ? 760f : 875f;
+                // тело ~0.9 юнита в ширину, голова ~0.8 (тела: body_*, body2_*, body3_* — разные наряды)
+                ppu = file.StartsWith("body") ? 760f : 875f;
             }
             else if (file.StartsWith("floor_") || file.StartsWith("wall_"))
             {

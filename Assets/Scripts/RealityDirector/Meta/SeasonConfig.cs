@@ -18,6 +18,8 @@ namespace RealityDirector.Meta
         [Min(0)] public int startingCash = 90;
         [Tooltip("HellToken ($) на каждую съёмку: из него платят за розыгрыш карт. Заливается заново в каждой комнате.")]
         [Min(1)] public float hellTokenBudget = 10f;
+        [Tooltip("Карт в руке на съёмке. Колода тасуется в начале каждой съёмки, сыгранная карта уходит в «Использовано», на её место добирается следующая.")]
+        [Min(1)] public int handSize = 5;
 
         [Header("Каст")]
         [Tooltip("Минимум участников в выпуске.")]

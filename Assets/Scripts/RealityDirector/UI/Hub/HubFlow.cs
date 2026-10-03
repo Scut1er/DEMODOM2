@@ -64,7 +64,6 @@ namespace RealityDirector.UI.Hub
 
             hub.Select += () => { Click(); RefreshHub(); };
             hub.Upgrade += track => Act(_meta.TryUpgrade(track), Cue.Coin, 0.45f, 0.9f);
-            hub.Toggle += id => Act(_meta.TogglePick(id), Cue.Click, 0.3f);
             hub.Buy += id => Act(_meta.TryBuy(id), Cue.Coin, 0.5f);
             hub.OpenDeck += tab =>
             {
@@ -96,17 +95,6 @@ namespace RealityDirector.UI.Hub
 
                 _selected = node;
                 RefreshMap();
-            };
-            // Выбор карт для съёмки — прямо на карте сезона.
-            map.Deck.Toggle += id =>
-            {
-                bool ok = _meta.TogglePick(id);
-                Sfx.Play(ok ? Cue.Click : Cue.Miss, ok ? 0.3f : 0.45f);
-                if (ok)
-                    GameSession.Save();
-                map.Deck.Show(_runShop ? _meta.BuildRunShop() : _meta.BuildPrep());
-                if (ok)
-                    OnDeckPicked(id);
             };
             map.Deck.Close += () =>
             {
@@ -319,7 +307,6 @@ namespace RealityDirector.UI.Hub
         {
             if (_meta.GrantDevDeck() > 0)
                 GameSession.Save();
-            _meta.TrimPicked();
             _meta.ClearReject();
             Show(hub.gameObject);
             hub.Deck.Hide();
@@ -343,8 +330,8 @@ namespace RealityDirector.UI.Hub
             Canvas.ForceUpdateCanvases();
             var steps = new List<CoachStep>();
             BossCoach.Line(steps, BossMood.Stern, "Колода. Всё, что уже купил. Сейчас только смотри. Тыкать не надо.", hub.Deck.CardsFocus());
-            BossCoach.Line(steps, BossMood.Aside, "Пояснение. В съёмку отсюда ничего не уезжает. Выбор будет перед дверью на карте.", hub.Deck.ExplainFocus());
-            BossCoach.Line(steps, BossMood.Stern, "Снизу счёт. Сколько карт есть и сколько пустят с собой.", hub.Deck.FooterFocus());
+            BossCoach.Line(steps, BossMood.Aside, "Пояснение. На съёмке колоду тасуют и сдают в руку. Сыграл карту — добираешь следующую.", hub.Deck.ExplainFocus());
+            BossCoach.Line(steps, BossMood.Stern, "Снизу счёт. Сколько карт в колоде и сколько в руке. Сыгранные к следующей съёмке вернутся.", hub.Deck.FooterFocus());
             BossCoach.Guide(0, steps.ToArray(), CloseDeckThenStart);
         }
 
@@ -475,82 +462,17 @@ namespace RealityDirector.UI.Hub
             }
         }
 
-        // Съёмка: сначала выбор карт прямо на карте, «Начать съёмку» — сразу в квартиру.
+        // Съёмка: сразу в квартиру. Карты не выбираются у двери — колода тасуется и сдаёт руку уже на площадке (GDD 0.3).
         void StartFilming(MapNode node)
         {
             _runShop = false;
-            _meta.TrimPicked();
             _meta.ClearReject();
-            map.Deck.Open(DeckPanelView.DeckTab, _meta.BuildPrep());
-            if (!DeckLesson())
-                return;
-            map.Deck.SetCancelEnabled(false);
-            map.Deck.SetCloseEnabled(false);
-            map.Deck.SetOnly("fridge_fire");
-            StartCoroutine(PromptDeckCard());
-        }
-
-        bool DeckLesson()
-        {
-            var state = GameSession.State;
-            return state != null && state.wantsTutorial && state.tutorialBeat >= 2 && state.tutorialBeat < 4;
-        }
-
-        IEnumerator PromptDeckCard()
-        {
-            yield return null;
-            Canvas.ForceUpdateCanvases();
-            if (!DeckLesson())
-                yield break;
-            if (GameSession.State.picked.Contains("fridge_fire"))
-            {
-                ExplainPick();
-                yield break;
-            }
-
-            BossCoach.Ensure().Order(BossMood.Annoyed, "Колода перед дверью. Жми «Поджог». Остальные сегодня не трогай.", map.Deck.CardRect("fridge_fire"));
-        }
-
-        void OnDeckPicked(string id)
-        {
-            if (!DeckLesson() || _runShop || id != "fridge_fire")
-                return;
-            if (!GameSession.State.picked.Contains(id))
-            {
-                map.Deck.SetOnly("fridge_fire");
-                map.Deck.SetCloseEnabled(false);
-                BossCoach.Ensure().Order(BossMood.Mad, "Верни её. «Поджог». Без неё урок пустой.", map.Deck.CardRect("fridge_fire"));
-                return;
-            }
-
-            ExplainPick();
-        }
-
-        void ExplainPick()
-        {
-            map.Deck.SetCardsEnabled(false);
-            map.Deck.SetCloseEnabled(false);
-            BossCoach.Ensure().Hide();
-            BossCoach.Ensure().Freeze(
-                BossMood.Think,
-                "Видишь «В СЕРИИ». Она едет на эту съёмку. Колода на месте, уехала только она.",
-                () =>
-                {
-                    map.Deck.SetCloseEnabled(true);
-                    BossCoach.Ensure().Order(BossMood.Grin, "Начать съёмку. Отмеченное едет на площадку.", map.Deck.CloseFocus());
-                },
-                map.Deck.CardRect("fridge_fire"));
+            BeginFilming(node);
         }
 
         void BeginFilming(MapNode node)
         {
-            if (node == null || !_episode.Map.CanEnter(node) || !_meta.CanStart())
-            {
-                Sfx.Play(Cue.Miss, 0.4f);
-                return;
-            }
-
-            if (DeckLesson() && !GameSession.State.picked.Contains("fridge_fire"))
+            if (node == null || !_episode.Map.CanEnter(node))
             {
                 Sfx.Play(Cue.Miss, 0.4f);
                 return;
@@ -579,8 +501,7 @@ namespace RealityDirector.UI.Hub
             GameSession.RoomNodeId = node.id;
             if (situation != null && _episode.Current != null)
                 _episode.Current.roleBrief = situation.roleBrief;
-            if (DeckLesson())
-                BossCoach.Ensure().Hide();
+            BossCoach.Ensure().Hide();
             GameSession.Save();
             StopBed();
             SceneFlow.ToScene(GameSession.SceneId);
@@ -975,6 +896,7 @@ namespace RealityDirector.UI.Hub
                 {
                     actorNames = clip.actorNames,
                     tags = clip.tags,
+                    cues = clip.cues ?? new List<string>(),
                     mood = clip.mood,
                     grade = clip.grade,
                     exposed = clip.exposed,

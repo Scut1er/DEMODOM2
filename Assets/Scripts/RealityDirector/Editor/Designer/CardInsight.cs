@@ -197,6 +197,9 @@ namespace RealityDirector.EditorTools
                 if (!c.tags.Contains(rule.eventTag))
                     continue;
                 string who = ActorsWith(_ruleTraits[i]);
+                if (who == "никто из каста")
+                    continue;
+                who += " (" + TraitName(_ruleTraits[i]) + ")";
                 string when = "";
                 if (rule.requireTargetSelf)
                     when += " если карту сыграли на него";
@@ -216,51 +219,46 @@ namespace RealityDirector.EditorTools
                 return;
             _rules = new List<ReactionRule>();
             _ruleTraits = new List<TraitId>();
+            _traitNames = new Dictionary<TraitId, string>();
             var content = PitchContent.Create();
-            foreach (var set in new[] { content.AggressiveRules, content.SentimentalRules, content.PanickerRules })
+            foreach (var set in content.AllRuleSets())
             {
                 if (set == null)
                     continue;
                 foreach (var rule in set.rules)
                 {
-                    _rules.Add(rule);
+                    // Копия: набор ниже удаляется, а встроенные правила живут только в нём.
+                    _rules.Add(JsonUtility.FromJson<ReactionRule>(JsonUtility.ToJson(rule)));
                     _ruleTraits.Add(set.trait);
                 }
+
+                var trait = content.TraitOf(set.trait);
+                if (trait != null)
+                    _traitNames[set.trait] = trait.displayName;
             }
 
-            foreach (var card in content.All)
-                Object.DestroyImmediate(card);
-            Object.DestroyImmediate(content.Aggressive);
-            Object.DestroyImmediate(content.Sentimental);
-            Object.DestroyImmediate(content.Panicker);
-            Object.DestroyImmediate(content.AggressiveRules);
-            Object.DestroyImmediate(content.SentimentalRules);
-            Object.DestroyImmediate(content.PanickerRules);
+            content.DestroyAssets(true);
         }
 
+        static Dictionary<TraitId, string> _traitNames;
+
+        // Кто из участников (ассеты Characters) с этой главной чертой.
         public static string ActorsWith(TraitId trait)
         {
-            // Черты участникам квартиры задаёт код квартиры: агрессивный — npc_zloi, сентиментальный — npc_dobryak.
-            string id = trait == TraitId.Aggressive ? "npc_zloi" : trait == TraitId.Sentimental ? "npc_dobryak" : null;
-            if (id == null)
-                return "никто из каста";
+            var names = new List<string>();
             foreach (var actor in DesignerData.LoadAll<ActorDefinition>())
             {
-                if (actor.Id == id)
-                    return actor.displayName;
+                if (actor.available && actor.mainTrait == trait)
+                    names.Add(actor.displayName);
             }
 
-            return trait == TraitId.Aggressive ? "Злой" : "Добряк";
+            return names.Count > 0 ? string.Join(", ", names) : "никто из каста";
         }
 
         public static string TraitName(TraitId trait)
         {
-            switch (trait)
-            {
-                case TraitId.Aggressive: return "агрессивный";
-                case TraitId.Sentimental: return "сентиментальный";
-                default: return "робкий";
-            }
+            LoadRules();
+            return _traitNames != null && _traitNames.TryGetValue(trait, out var name) ? name : trait.ToString();
         }
 
         static string ActionName(NpcActionId action)

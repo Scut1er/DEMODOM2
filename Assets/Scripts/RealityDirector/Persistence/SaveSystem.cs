@@ -26,6 +26,7 @@ namespace RealityDirector.Persistence
         public List<string> owned = new List<string>();
         public List<string> played = new List<string>();
         public List<string> picked = new List<string>();
+        public List<string> library = new List<string>();
         public List<SavedTask> tasks = new List<SavedTask>();
         public int step;
         public float ratingSum;
@@ -89,6 +90,7 @@ namespace RealityDirector.Persistence
                 owned = new List<string>(state.owned),
                 played = new List<string>(state.played),
                 picked = new List<string>(state.picked),
+                library = new List<string>(state.library),
                 step = state.step,
                 ratingSum = state.ratingSum,
                 rated = state.rated,
@@ -164,6 +166,17 @@ namespace RealityDirector.Persistence
             if (data.hand != null)
                 state.hand.AddRange(data.hand);
             state.embarked = data.embarked;
+            if (data.library != null)
+                state.library.AddRange(data.library);
+            // «Использовано» и библиотека живут только внутри съёмки. Вне съёмки — пусто:
+            // так и старые сейвы, где карты сгорали на весь сезон, получают колоду обратно.
+            if (!state.embarked)
+            {
+                state.played.Clear();
+                state.library.Clear();
+            }
+
+            state.picked.Clear();
             state.roomNodeId = data.roomNodeId;
             state.sceneTitle = data.sceneTitle;
             state.sceneId = data.sceneId;

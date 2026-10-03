@@ -40,7 +40,8 @@ namespace RealityDirector.Meta
                 budgetAtStart = _state.money,
                 cash = cash,
                 footageLimit = _season != null && _season.footageLimit > 0 ? _season.footageLimit : 5,
-                hellMax = _season != null && _season.hellTokenBudget > 0f ? _season.hellTokenBudget : EpisodeState.HellCap
+                hellMax = _season != null && _season.hellTokenBudget > 0f ? _season.hellTokenBudget : EpisodeState.HellCap,
+                handSize = _season != null && _season.handSize > 0 ? _season.handSize : EpisodeState.DefaultHandSize
             };
             if (cast != null)
                 ep.cast.AddRange(cast);

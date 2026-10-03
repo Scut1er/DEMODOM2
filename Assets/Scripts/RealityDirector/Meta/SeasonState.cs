@@ -18,9 +18,14 @@ namespace RealityDirector.Meta
         public int operatorLevel = 1;
         public int writerLevel = 1;
         public readonly List<ViewerTask> tasks = new List<ViewerTask>();
+        // Коллекция сезона (рабочая колода). Карты не сгорают: каждая съёмка тасует её заново.
         public readonly List<string> owned = new List<string>();
+        // «Использовано» текущей съёмки (GDD §15–16). Чистится в начале и в конце каждой съёмки.
         public readonly HashSet<string> played = new HashSet<string>();
+        // Устарело: ручной выбор карт перед съёмкой. Остаётся ради старых сейвов.
         public readonly List<string> picked = new List<string>();
+        // «Библиотека» текущей съёмки: перетасованная колода, сверху — следующая карта добора.
+        public readonly List<string> library = new List<string>();
         public float ratingSum;
         public int rated;
 
@@ -56,6 +61,7 @@ namespace RealityDirector.Meta
             owned.Clear();
             played.Clear();
             picked.Clear();
+            library.Clear();
             step = 0;
             ratingSum = 0;
             rated = 0;
@@ -145,16 +151,22 @@ namespace RealityDirector.Meta
             return played.Contains(id);
         }
 
-        public int UnplayedCount()
+        // Верхняя карта библиотеки. Пусто — null: рука просто становится меньше.
+        public string Draw()
         {
-            int n = 0;
-            for (int i = 0; i < owned.Count; i++)
-            {
-                if (!played.Contains(owned[i]))
-                    n++;
-            }
+            if (library.Count == 0)
+                return null;
+            string id = library[0];
+            library.RemoveAt(0);
+            return id;
+        }
 
-            return n;
+        // Съёмка закончилась: «Использовано» и библиотека пустеют, в следующей съёмке колода снова целиком.
+        public void EndSituation()
+        {
+            played.Clear();
+            library.Clear();
+            hand.Clear();
         }
     }
 }

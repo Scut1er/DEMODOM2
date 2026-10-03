@@ -191,10 +191,11 @@ namespace RealityDirector.Capture
             bool fridgeIn = InFrame(origin, _fridge) && _sceneOnFire != null && _sceneOnFire();
             bool bathIn = InFrame(origin, _bathroom) && _bathOpen != null && _bathOpen();
             bool cast = inside.Count > 0;
-            var tags = cast && _context != null ? _context.RecentTags(5f) : new List<string>();
+            var cues = new List<string>();
+            var tags = cast ? FramedTags(origin, inside, cues) : new List<string>();
             if (!fridgeIn)
                 tags.Remove(MomentTags.Fire);
-            AddLiveTags(tags, inside, fridgeIn);
+            AddLiveTags(tags, inside, fridgeIn, cues);
             ShowMood mood;
             CaptureGrade grade;
             if (cast)
@@ -230,16 +231,76 @@ namespace RealityDirector.Capture
             var names = new List<string>();
             for (int i = 0; i < inside.Count; i++)
                 names.Add(inside[i].DisplayName);
+            if (grade == CaptureGrade.Cast)
+            {
+                for (int i = 0; i < inside.Count; i++)
+                {
+                    if (inside[i].IsTripping || inside[i].IsPlanting)
+                        CapturedMoment.AddCue(cues, HiddenTrait.Prankster.ToString(), inside[i].DisplayName);
+                    else if (inside[i].IsStealing)
+                        CapturedMoment.AddCue(cues, HiddenTrait.Kleptomaniac.ToString(), inside[i].DisplayName);
+                }
+            }
+
             _take.Add(new ClipHit
             {
                 image = photo,
                 screen = screen,
                 tags = tags,
+                cues = cues,
                 names = names,
                 mood = mood,
                 grade = grade,
                 exposed = grade == CaptureGrade.Cast ? ExposedIn(inside) : HiddenTrait.None
             });
+        }
+
+        // Теги недавних событий, но только тех, что видны в кадре: участник события в кадре
+        // или место события (горящий холодильник) в кадре. Событие «на всю квартиру» без места — общее.
+        // Раньше в ролик попадали все теги за 5 с, и в эфире «плакал» тот, кого в кадре не было.
+        List<string> FramedTags(Vector2 origin, List<NPCController> inside, List<string> cues)
+        {
+            var tags = new List<string>();
+            if (_context == null)
+                return tags;
+            var stamps = _context.RecentStamps(5f);
+            for (int s = 0; s < stamps.Count; s++)
+            {
+                var stamp = stamps[s];
+                bool actors = !string.IsNullOrEmpty(stamp.sourceActorId) || !string.IsNullOrEmpty(stamp.targetActorId);
+                if (actors)
+                {
+                    var source = Find(inside, stamp.sourceActorId);
+                    var target = Find(inside, stamp.targetActorId);
+                    if (source == null && target == null)
+                        continue;
+                    Add(tags, stamp.tag);
+                    if (source != null)
+                        CapturedMoment.AddCue(cues, stamp.tag, source.DisplayName);
+                    if (target != null)
+                        CapturedMoment.AddCue(cues, stamp.tag, target.DisplayName);
+                    continue;
+                }
+
+                if (stamp.hasLocus && (Mathf.Abs(stamp.locus.x - origin.x) > HalfX + 0.5f || Mathf.Abs(stamp.locus.y - origin.y) > HalfY + 0.5f))
+                    continue;
+                Add(tags, stamp.tag);
+            }
+
+            return tags;
+        }
+
+        static NPCController Find(List<NPCController> inside, string id)
+        {
+            if (string.IsNullOrEmpty(id))
+                return null;
+            for (int i = 0; i < inside.Count; i++)
+            {
+                if (inside[i] != null && inside[i].Id == id)
+                    return inside[i];
+            }
+
+            return null;
         }
 
         static CapturedMoment Fold(List<ClipHit> hits, float duration)
@@ -254,6 +315,7 @@ namespace RealityDirector.Capture
             var moodCount = new int[3];
             int moodPick = 0;
             var tags = new List<string>();
+            var cues = new List<string>();
             var names = new List<string>();
             HiddenTrait exposed = HiddenTrait.None;
             var frames = new List<Texture2D>(hits.Count);
@@ -263,6 +325,11 @@ namespace RealityDirector.Capture
                 frames.Add(hit.image);
                 for (int t = 0; t < hit.tags.Count; t++)
                     Add(tags, hit.tags[t]);
+                if (hit.cues != null)
+                {
+                    for (int c = 0; c < hit.cues.Count; c++)
+                        Add(cues, hit.cues[c]);
+                }
                 for (int n = 0; n < hit.names.Count; n++)
                 {
                     if (!names.Contains(hit.names[n]))
@@ -292,7 +359,8 @@ namespace RealityDirector.Capture
                 mood = (ShowMood)moodPick,
                 grade = best,
                 exposed = best == CaptureGrade.Cast ? exposed : HiddenTrait.None,
-                actorNames = names
+                actorNames = names,
+                cues = cues
             };
         }
 
@@ -321,6 +389,7 @@ namespace RealityDirector.Capture
             public Texture2D image;
             public Vector2 screen;
             public List<string> tags;
+            public List<string> cues;
             public List<string> names;
             public ShowMood mood;
             public CaptureGrade grade;
@@ -391,24 +460,36 @@ namespace RealityDirector.Capture
             return false;
         }
 
-        void AddLiveTags(List<string> tags, List<NPCController> inside, bool fridgeIn)
+        void AddLiveTags(List<string> tags, List<NPCController> inside, bool fridgeIn, List<string> cues)
         {
             for (int i = 0; i < inside.Count; i++)
             {
+                string name = inside[i].DisplayName;
                 if (inside[i].IsFighting)
                 {
                     Add(tags, MomentTags.Fight);
                     Add(tags, MomentTags.Slap);
                     Add(tags, MomentTags.Conflict);
+                    CapturedMoment.AddCue(cues, MomentTags.Fight, name);
                 }
 
                 if (inside[i].IsCrying)
+                {
                     Add(tags, MomentTags.Crying);
+                    CapturedMoment.AddCue(cues, MomentTags.Crying, name);
+                }
+
                 if (inside[i].IsHugging || inside[i].IsSeekingComfort)
+                {
                     Add(tags, MomentTags.Hug);
+                    CapturedMoment.AddCue(cues, MomentTags.Hug, name);
+                }
 
                 if (inside[i].HasRage)
+                {
                     Add(tags, MomentTags.Conflict);
+                    CapturedMoment.AddCue(cues, MomentTags.Conflict, name);
+                }
             }
 
             if (fridgeIn)

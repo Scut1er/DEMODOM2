@@ -57,7 +57,7 @@ namespace RealityDirector.EditorTools
             return true;
         }
 
-        // Квартира откроется с этой картой первой в руке (через MetaService.AutoPick).
+        // Квартира откроется с этой картой первой в руке (через MetaService.TryEmbark).
         public static void PlayTest(EventDefinition card)
         {
             if (card == null || string.IsNullOrEmpty(card.id))

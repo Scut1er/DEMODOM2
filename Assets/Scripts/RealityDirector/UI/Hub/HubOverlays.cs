@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using RealityDirector.Meta;
 using RealityDirector.UI;
+using RealityDirector.Util;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -90,7 +91,7 @@ namespace RealityDirector.UI.Hub
             var face = faceGo.GetComponent<RectTransform>();
             Pin(face, 1100f, 80f, 280f, 360f);
             var faceImg = faceGo.GetComponent<Image>();
-            faceImg.sprite = BossCoach.Portrait();
+            faceImg.sprite = GameArt.BossPresent ?? BossCoach.Portrait();
             faceImg.preserveAspect = true;
             faceImg.raycastTarget = false;
             var field = NameField(_page.transform, new Vector2(80f, 300f), new Vector2(900f, 56f), Color.white, current);

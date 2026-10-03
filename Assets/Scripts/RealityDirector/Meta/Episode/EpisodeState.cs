@@ -16,6 +16,8 @@ namespace RealityDirector.Meta
         public List<string> actorIds = new List<string>();
         public List<string> objectIds = new List<string>();
         public List<string> tags = new List<string>();
+        [Tooltip("Кто что делал в кадре: «тег|имя». HellTube называет только тех, кто попал в эфир.")]
+        public List<string> cues = new List<string>();
         public ShowMood mood;
         public int quality;
         public int value;
@@ -96,6 +98,9 @@ namespace RealityDirector.Meta
         public float hell;
         public float hellMax;
         public string hellRoom;
+        public const int DefaultHandSize = 5;
+        [Tooltip("Карт в руке на съёмке (из SeasonConfig).")]
+        public int handSize = DefaultHandSize;
         public string setRoom;
         public bool setOnFire;
         public bool setBathOpen;

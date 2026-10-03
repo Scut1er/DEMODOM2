@@ -178,6 +178,7 @@ namespace RealityDirector.UI
 
         class Card
         {
+            public int Slot;
             public EventDefinition Def;
             public Image Frame;
             public Text Status;
@@ -455,8 +456,45 @@ namespace RealityDirector.UI
                 int index = i;
                 var def = hand[i];
                 var card = MakeCard(index, def, () => onCard(def));
+                card.Slot = index;
                 _cards.Add(card);
             }
+        }
+
+        // Добор из библиотеки: новая карта встаёт в слот сыгранной (тот же номер-клавиша).
+        public void PutCard(int slot, EventDefinition def, Action<EventDefinition> onCard)
+        {
+            if (def == null)
+                return;
+            var card = MakeCard(slot, def, () => onCard(def));
+            card.Slot = slot;
+            int at = 0;
+            while (at < _cards.Count && _cards[at].Slot < slot)
+                at++;
+            if (at < _cards.Count && _cards[at].Root != null)
+                card.Root.SetSiblingIndex(_cards[at].Root.GetSiblingIndex());
+            else
+                card.Root.SetAsLastSibling();
+            _cards.Insert(at, card);
+            SetHandLocked(_handLocked);
+            SetArmed(_armedDef);
+            StartCoroutine(DealIn(card));
+        }
+
+        IEnumerator DealIn(Card card)
+        {
+            float t = 0f;
+            const float dur = 0.3f;
+            while (t < dur && card.Root != null)
+            {
+                t += Time.unscaledDeltaTime;
+                float k = 1f - (1f - Mathf.Clamp01(t / dur)) * (1f - Mathf.Clamp01(t / dur));
+                card.Root.localScale = Vector3.one * Mathf.Lerp(0.6f, 1f, k);
+                yield return null;
+            }
+
+            if (card.Root != null)
+                card.Root.localScale = Vector3.one;
         }
 
         public void SetHandLocked(bool locked)
@@ -1770,7 +1808,7 @@ namespace RealityDirector.UI
             var sub = MakeText(panel.transform, "Создай драму. Сними хайлайт.", 36, Accent, TextAnchor.MiddleCenter);
             Place(sub.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0f, 10f), new Vector2(1200f, 60f));
             var help = MakeText(panel.transform,
-                "хаб: карты в серию, магазин, команда  ·  съёмка  ·  фидбек  ·  6 серий",
+                "хаб: колода, магазин, команда  ·  съёмка  ·  фидбек  ·  6 серий",
                 22, Muted, TextAnchor.MiddleCenter);
             Place(help.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0f, -70f), new Vector2(1400f, 40f));
             MakeButton(panel.transform, "НАЧАТЬ", new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f),

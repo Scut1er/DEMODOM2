@@ -13,6 +13,8 @@ namespace RealityDirector.Core
             public string tag;
             public string sourceActorId;
             public string targetActorId;
+            public bool hasLocus;
+            public Vector2 locus;
         }
 
         public void Bind()
@@ -56,6 +58,20 @@ namespace RealityDirector.Core
             return list;
         }
 
+        // События за окно с участниками и местом — камера берёт в ролик только то, что было в кадре.
+        public List<Stamp> RecentStamps(float window)
+        {
+            var list = new List<Stamp>();
+            float now = Time.time;
+            for (int i = 0; i < _stamps.Count; i++)
+            {
+                if (now - _stamps[i].time <= window)
+                    list.Add(_stamps[i]);
+            }
+
+            return list;
+        }
+
         void OnEvent(WorldEvent worldEvent)
         {
             if (worldEvent.tags == null)
@@ -69,7 +85,9 @@ namespace RealityDirector.Core
                     time = time,
                     tag = worldEvent.tags[i],
                     sourceActorId = worldEvent.sourceActorId,
-                    targetActorId = worldEvent.targetActorId
+                    targetActorId = worldEvent.targetActorId,
+                    hasLocus = worldEvent.hasLocus,
+                    locus = worldEvent.locus
                 });
             }
         }

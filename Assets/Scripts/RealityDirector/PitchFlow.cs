@@ -108,7 +108,6 @@ namespace RealityDirector
             if (GameSession.Embarked)
                 return;
             var meta = new MetaService(_state, _tone, _content.All);
-            meta.AutoPick();
             meta.TryEmbark(GameSession.Hand);
         }
 
@@ -294,8 +293,10 @@ namespace RealityDirector
                 Place(root, "Rug", IllustratedArt.Rug, new Vector3(-5.45f, 3.15f, 0f), new Vector2(2.1f, 1.25f), 1);
             PlaceArt(root, "Sofa", GameArt.Sofa, IllustratedArt.Sofa, new Vector3(-5.45f, 3.35f, 0f), new Vector2(2.2f, 1.5f), new Vector2(2.15f, 1.15f), 4);
             Place(root, "Table", IllustratedArt.Table, new Vector3(-0.55f, 2.9f, 0f), new Vector2(1.45f, 0.95f), 4);
-            Place(root, "Stove", IllustratedArt.Stove, new Vector3(2.05f, 3.55f, 0f), new Vector2(0.85f, 0.85f), 4);
+            PlaceArt(root, "Stove", GameArt.Stove, IllustratedArt.Stove, new Vector3(2.05f, 3.55f, 0f), new Vector2(0.85f, 1.1f), new Vector2(0.85f, 0.85f), 4);
             PlaceArt(root, "Plant", GameArt.Plant, IllustratedArt.Plant, new Vector3(-7.15f, 4.15f, 0f), new Vector2(0.7f, 1.1f), new Vector2(0.7f, 0.9f), 5);
+            if (GameArt.Palm != null)
+                GameArt.FitInside(SpriteUtil.Show(root, "Palm", new Vector3(-3.4f, 3.85f, 0f), GameArt.Palm, 5), new Vector2(0.75f, 1.3f));
             Place(root, "WindowL", IllustratedArt.Window, new Vector3(-5.4f, 4.45f, 0f), new Vector2(1.35f, 0.7f), 5);
 
             _fridge = BuildFridge(root);
@@ -424,8 +425,11 @@ namespace RealityDirector
             var ring = SpriteUtil.Show(go.transform, "ring", Vector3.zero, IllustratedArt.Glow, 5);
             SpriteUtil.Fit(ring, new Vector2(1.25f, 1.8f));
             ring.color = new Color(1f, 0.86f, 0.25f, 0.9f);
-            var body = SpriteUtil.Show(go.transform, "body", Vector3.zero, IllustratedArt.Fridge, 6);
-            SpriteUtil.Fit(body, new Vector2(0.95f, 1.6f));
+            var body = SpriteUtil.Show(go.transform, "body", Vector3.zero, GameArt.Fridge ?? IllustratedArt.Fridge, 6);
+            if (GameArt.Fridge != null)
+                GameArt.FitInside(body, new Vector2(0.95f, 1.6f));
+            else
+                SpriteUtil.Fit(body, new Vector2(0.95f, 1.6f));
 
             var flames = new Transform[5];
             var renderers = new SpriteRenderer[5];
@@ -507,6 +511,9 @@ namespace RealityDirector
                 var traitId = TraitOf(id, member);
                 bool angry = traitId == TraitId.Aggressive || traitId == TraitId.Jealous || traitId == TraitId.Chaotic;
                 var npc = BuildNpc(id, name, name, _content.TraitOf(traitId), _content.RulesFor(traitId), Homes[i], angry, HiddenOf(id));
+                // Подпись черты из ассета участника — с правильным родом («ревнивая»).
+                if (member != null && member.traits != null && member.traits.Length > 0)
+                    npc.TraitLabel = member.traits[0];
                 _cast.Add(npc);
                 if (id == "npc_zloi")
                     _zloi = npc;
@@ -602,6 +609,8 @@ namespace RealityDirector
             Floor(t, "floor", GameArt.FloorParquetDark, IllustratedArt.Wood, new Vector3(5.5f, 2.6f, 0f), new Vector2(4.7f, 4.55f));
             BackWall(t, GameArt.WallStripes, 5.5f, 4.5f, 4.7f);
             Place(t, "Bed", IllustratedArt.Bed, new Vector3(6.2f, 3.15f, 0f), new Vector2(1.85f, 2.35f), 4);
+            if (GameArt.Jacuzzi != null)
+                GameArt.FitInside(SpriteUtil.Show(t, "Jacuzzi", new Vector3(4.15f, 3.7f, 0f), GameArt.Jacuzzi, 4), new Vector2(1.35f, 1.1f));
             Place(t, "WindowR", IllustratedArt.Window, new Vector3(6.3f, 4.45f, 0f), new Vector2(1.35f, 0.7f), 5);
             return go;
         }
@@ -689,10 +698,17 @@ namespace RealityDirector
             ResetSet();
             RestoreMood();
             RestoreSet();
-            if (ShootLesson() && !_state.played.Contains("fridge_fire"))
+            if (ShootLesson() && !_state.played.Contains("fridge_fire") && !GameSession.Hand.Contains("fridge_fire"))
             {
-                GameSession.Hand.Remove("fridge_fire");
+                // «Поджога» нет в колоде — урок всё равно на нём. Лишняя карта уходит наверх библиотеки.
+                _state.library.Remove("fridge_fire");
                 GameSession.Hand.Insert(0, "fridge_fire");
+                int size = _state.episode != null && _state.episode.handSize > 0 ? _state.episode.handSize : EpisodeState.DefaultHandSize;
+                if (GameSession.Hand.Count > size)
+                {
+                    _state.library.Insert(0, GameSession.Hand[GameSession.Hand.Count - 1]);
+                    GameSession.Hand.RemoveAt(GameSession.Hand.Count - 1);
+                }
             }
 
             if (_state.episode != null)
@@ -817,6 +833,7 @@ namespace RealityDirector
             StopAllCoroutines();
             ClearSet();
             GameSession.Hand.Clear();
+            _state.EndSituation();
             GameSession.Embarked = false;
             GameSession.Save();
             SceneFlow.ToHub();
@@ -835,6 +852,7 @@ namespace RealityDirector
             DepositFootage();
             ClearSet();
             GameSession.Hand.Clear();
+            _state.EndSituation();
             GameSession.Embarked = false;
             GameSession.ExitToHub = true;
             GameSession.ReturnToMap = false;
@@ -922,9 +940,9 @@ namespace RealityDirector
                 Sfx.Play(Cue.Miss, 0.35f);
                 return;
             }
-            if (_state.played.Contains(def.id) && !TempCard(def.id))
+            if (_state.played.Contains(def.id))
             {
-                _ui.Toast("Уже сыграно.");
+                _ui.Toast("Уже сыграно в этой съёмке.");
                 return;
             }
 
@@ -938,6 +956,7 @@ namespace RealityDirector
                 _ui.SetArmed(null);
                 _ui.MarkUsed(def.id);
                 _state.played.Add(def.id);
+                DrawInto(def);
                 _ui.Toast("Спальня уже открыта.");
                 return;
             }
@@ -948,6 +967,7 @@ namespace RealityDirector
                 _ui.SetArmed(null);
                 _ui.MarkUsed(def.id);
                 _state.played.Add(def.id);
+                DrawInto(def);
                 _ui.Toast("Ванная уже открыта.");
                 return;
             }
@@ -1475,18 +1495,34 @@ namespace RealityDirector
             FadeBit.Burst(at + Vector3.up * 0.4f, 8, fx);
         }
 
-        bool TempCard(string id)
+        // Слот сыгранной карты занимает следующая из библиотеки. Библиотека пуста — слот остаётся пустым.
+        void DrawInto(EventDefinition used)
         {
-            return _state.episode != null && _state.episode.tempCards.Contains(id);
+            int slot = GameSession.Hand.IndexOf(used.id);
+            if (slot < 0)
+                return;
+            string next = _state.Draw();
+            EventDefinition def = null;
+            while (next != null && (def = _content.Find(next)) == null)
+                next = _state.Draw();
+            if (def == null)
+                return;
+            GameSession.Hand[slot] = next;
+            if (slot < _hand.Length)
+                _hand[slot] = def;
+            _ui.PutCard(slot, def, Arm);
         }
 
+        // Сыгранная карта → «Использовано» этой съёмки, на её место — верхняя карта библиотеки (GDD §16).
+        // Постоянная карта вернётся в следующей съёмке; разовая карта выпуска (магазин, спонсор) тратится насовсем.
         void NoteCard(EventDefinition def)
         {
             if (def == null)
                 return;
-            bool temp = _state.episode != null && _state.episode.tempCards.Remove(def.id);
-            if (!temp)
-                _state.played.Add(def.id);
+            if (_state.episode != null)
+                _state.episode.tempCards.Remove(def.id);
+            _state.played.Add(def.id);
+            DrawInto(def);
             if (def.sponsor && _state.episode != null)
             {
                 var episode = _state.episode;
@@ -1742,7 +1778,7 @@ namespace RealityDirector
                 _faces[i] = new PitchUi.CastFace
                 {
                     name = npc.DisplayName,
-                    trait = npc.Trait != null ? npc.Trait.displayName : "",
+                    trait = npc.TraitName,
                     mood = MoodLine(npc),
                     stress = npc.Stress,
                     anger = npc.Anger
@@ -1762,15 +1798,7 @@ namespace RealityDirector
 
         static string MoodLine(NPCController npc)
         {
-            if (npc.Anger >= npc.Stress && npc.Anger >= npc.Sadness && npc.Anger >= 40)
-                return npc.Anger >= 70 ? "злость высокая" : "злость";
-            if (npc.Stress >= npc.Sadness && npc.Stress >= 40)
-                return npc.Stress >= 70 ? "стресс высокий" : "стресс";
-            if (npc.Sadness >= 40)
-                return npc.Sadness >= 70 ? "грусть высокая" : "грусть";
-            if (npc.Attraction >= 40)
-                return "тянет";
-            return "спокоен";
+            return npc.Mood();
         }
 
         void SyncGates()

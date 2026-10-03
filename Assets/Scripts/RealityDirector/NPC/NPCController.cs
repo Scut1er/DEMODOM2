@@ -49,6 +49,9 @@ namespace RealityDirector.NPC
         public string Memory = "";
         public bool Heat;
         public int Chain;
+        // Подпись черты на табличке из ассета участника («ревнивая»). Пусто — имя черты.
+        public string TraitLabel;
+        float _heatStress;
 
         public static event Action<NPCController, NPCController> FightStarted;
 
@@ -149,6 +152,7 @@ namespace RealityDirector.NPC
         public void ApplyRage(float seconds)
         {
             _rageUntil = Mathf.Max(_rageUntil, Time.time + seconds);
+            Anger = Mathf.Clamp(Anger + Gain(15, Trait != null ? Trait.angerGain : 1f), 0, 100);
             Say("злость", 90f, true);
             Sfx.Play(Cue.Blip, 0.4f, 0.62f);
             FadeBit.Burst(transform.position + Vector3.up * 0.85f, 6, new Color(1f, 0.28f, 0.12f, 1f));
@@ -223,10 +227,13 @@ namespace RealityDirector.NPC
             }
 
             if ((_action == NpcActionId.Panic || _action == NpcActionId.SeekFight) && best.action == NpcActionId.Emote)
+            {
+                Bump(best);
                 return;
+            }
 
             Run(best.action, best.emote);
-            Bump(best.action);
+            Bump(best);
         }
 
         void QueueApproach(ReactionRule rule, Vector2 locus)
@@ -270,7 +277,7 @@ namespace RealityDirector.NPC
             }
 
             Run(rule.action, rule.emote);
-            Bump(rule.action);
+            Bump(rule);
             if (rule.action == NpcActionId.Panic)
                 _reactHoldUntil = Time.time + (IsPanicker ? 0.15f : 0.55f);
             else if (rule.action == NpcActionId.SeekFight)
@@ -310,10 +317,12 @@ namespace RealityDirector.NPC
             };
         }
 
+        public string TraitName => !string.IsNullOrEmpty(TraitLabel) ? TraitLabel : Trait != null ? Trait.displayName : "";
+
         public string Plate()
         {
-            string trait = Trait != null ? Trait.displayName : "";
-            string emo = Loudest();
+            string trait = TraitName;
+            string emo = Mood();
             string edge = Anger >= 70 && SelfControl <= 40 ? "\nна грани" : "";
             string mem = string.IsNullOrEmpty(Memory) ? "" : "\n" + Memory;
             string bond = Hostility >= 30 ? "\nзлость к соседу" : "";
@@ -321,26 +330,34 @@ namespace RealityDirector.NPC
             return DisplayName + "\n" + trait + "\n" + emo + edge + mem + bond + chain;
         }
 
-        string Loudest()
+        public const int MildMood = 20;
+        public const int StrongMood = 40;
+        public const int HighMood = 70;
+
+        // Самая громкая эмоция словом. Три ступени: слабая (от 20) — уже не «спокоен».
+        public string Mood()
         {
-            if (Anger >= Stress && Anger >= Sadness && Anger >= 40)
-                return Anger >= 70 ? "злость высокая" : "злость";
-            if (Stress >= Sadness && Stress >= 40)
-                return Stress >= 70 ? "стресс высокий" : "стресс";
-            if (Sadness >= 40)
-                return Sadness >= 70 ? "грусть высокая" : "грусть";
-            if (Attraction >= 40)
-                return "тянет к кому-то";
-            return "спокоен";
+            int top = Mathf.Max(Anger, Mathf.Max(Stress, Mathf.Max(Sadness, Attraction)));
+            if (top < MildMood)
+                return "спокоен";
+            if (Anger == top)
+                return Anger >= HighMood ? "злость высокая" : Anger >= StrongMood ? "злость" : "раздражение";
+            if (Stress == top)
+                return Stress >= HighMood ? "стресс высокий" : Stress >= StrongMood ? "стресс" : "нервничает";
+            if (Sadness == top)
+                return Sadness >= HighMood ? "грусть высокая" : Sadness >= StrongMood ? "грусть" : "грустно";
+            return Attraction >= StrongMood ? "тянет к кому-то" : "симпатия";
         }
 
         int Bias(ReactionRule rule)
         {
             int n = 0;
             bool brittle = SelfControl <= 35;
-            if (rule.action == NpcActionId.Panic && (Stress >= 40 || Heat || TraitIdMatch(TraitId.Panicker, TraitId.Cowardly, TraitId.Shy)))
+            bool panicProne = Trait != null && Trait.panicProne;
+            bool fightProne = Trait != null && Trait.fightProne;
+            if (rule.action == NpcActionId.Panic && (Stress >= StrongMood || Heat || panicProne))
                 n += 4 + Stress / 12;
-            if (rule.action == NpcActionId.SeekFight && (Anger >= 40 || TraitIdMatch(TraitId.Aggressive, TraitId.Jealous, TraitId.Chaotic)))
+            if (rule.action == NpcActionId.SeekFight && (Anger >= StrongMood || fightProne))
                 n += 4 + Anger / 10;
             if (Heat && rule.action == NpcActionId.Panic)
                 n += 8;
@@ -351,40 +368,61 @@ namespace RealityDirector.NPC
             return n;
         }
 
-        bool TraitIdMatch(params TraitId[] ids)
+        static int Gain(int amount, float gain)
         {
-            if (Trait == null)
-                return false;
-            for (int i = 0; i < ids.Length; i++)
-            {
-                if (Trait.traitId == ids[i])
-                    return true;
-            }
-
-            return false;
+            return Mathf.RoundToInt(amount * Mathf.Max(0f, gain));
         }
 
-        void Bump(NpcActionId action)
+        // Реакция сдвигает эмоции: значения из правила × чувствительность черты.
+        // В правиле нули — по действию, как раньше (паника: стресс и грусть, драка: злость).
+        void Bump(ReactionRule rule)
         {
-            if (action == NpcActionId.Panic)
-            {
-                Stress = Mathf.Clamp(Stress + 15, 0, 100);
-                Sadness = Mathf.Clamp(Sadness + 8, 0, 100);
+            float angerGain = Trait != null ? Trait.angerGain : 1f;
+            float stressGain = Trait != null ? Trait.stressGain : 1f;
+            float sadnessGain = Trait != null ? Trait.sadnessGain : 1f;
+            float attractionGain = Trait != null ? Trait.attractionGain : 1f;
+            bool authored = rule.anger != 0 || rule.stress != 0 || rule.sadness != 0 || rule.attraction != 0;
+            int anger = authored ? rule.anger : rule.action == NpcActionId.SeekFight ? 18 : 0;
+            int stress = authored ? rule.stress : rule.action == NpcActionId.Panic ? 15 : 0;
+            int sadness = authored ? rule.sadness : rule.action == NpcActionId.Panic ? 8 : 0;
+            Anger = Mathf.Clamp(Anger + Gain(anger, angerGain), 0, 100);
+            Stress = Mathf.Clamp(Stress + Gain(stress, stressGain), 0, 100);
+            Sadness = Mathf.Clamp(Sadness + Gain(sadness, sadnessGain), 0, 100);
+            Attraction = Mathf.Clamp(Attraction + Gain(rule.attraction, attractionGain), 0, 100);
+            if (rule.action == NpcActionId.Panic)
                 SelfControl = Mathf.Clamp(SelfControl - 6, 0, 100);
-            }
-            else if (action == NpcActionId.SeekFight)
+            else if (rule.action == NpcActionId.SeekFight)
             {
-                Anger = Mathf.Clamp(Anger + 18, 0, 100);
                 SelfControl = Mathf.Clamp(SelfControl - 8, 0, 100);
                 Memory = "унижен";
             }
         }
 
+        // Огонь рядом: стресс копится, пока стоишь у пламени (× чувствительность к стрессу).
+        void TickHeat()
+        {
+            if (!Heat)
+            {
+                _heatStress = 0f;
+                return;
+            }
+
+            _heatStress += Time.deltaTime * 6f * (Trait != null ? Trait.stressGain : 1f);
+            if (_heatStress < 1f)
+                return;
+            int add = Mathf.FloorToInt(_heatStress);
+            _heatStress -= add;
+            Stress = Mathf.Clamp(Stress + add, 0, 85);
+        }
+
         bool Matches(ReactionRule rule, WorldEvent worldEvent)
         {
-            if (rule.requiredTrait != Trait.traitId)
-                return false;
             if (worldEvent.tags == null || !worldEvent.tags.Contains(rule.eventTag))
+                return false;
+            // На своё же поведение не реагируют (сам обнял — сам не ревнует).
+            if (!string.IsNullOrEmpty(worldEvent.sourceActorId) && worldEvent.sourceActorId == Id)
+                return false;
+            if (rule.othersOnly && worldEvent.targetActorId == Id)
                 return false;
             if (rule.requireTargetSelf && worldEvent.targetActorId != Id)
                 return false;
@@ -407,6 +445,7 @@ namespace RealityDirector.NPC
                     {
                         Sfx.Play(Cue.Cry, 0.65f);
                         FadeBit.Burst(transform.position + Vector3.up * 0.9f, 7, new Color(0.45f, 0.75f, 1f, 1f));
+                        Broadcast("crying", null, MomentTags.Crying);
                     }
 
                     break;
@@ -454,6 +493,7 @@ namespace RealityDirector.NPC
             }
 
             TickTrap();
+            TickHeat();
             if (_seekingComfort && Rival != null && (Rival.HasRage || Rival.IsFighting || Rival.Action == NpcActionId.SeekFight))
                 AbortComfort();
 
@@ -647,6 +687,7 @@ namespace RealityDirector.NPC
                 {
                     _hugging = true;
                     Say("обними", ReadFor("обними"), false);
+                    Broadcast("hug", Rival, MomentTags.Hug, MomentTags.Warmth);
                     return;
                 }
 
@@ -893,6 +934,20 @@ namespace RealityDirector.NPC
                 depth = Chain + 1
             });
             FightStarted?.Invoke(this, other);
+        }
+
+        // Заметное поведение — новое событие мира (GDD §10): на него реагируют остальные, следующее звено цепочки.
+        void Broadcast(string eventId, NPCController target, params string[] tags)
+        {
+            EventBus.Publish(new WorldEvent
+            {
+                eventId = eventId,
+                tags = new List<string>(tags),
+                sourceActorId = Id,
+                targetActorId = target != null ? target.Id : null,
+                time = Time.time,
+                depth = Chain + 1
+            });
         }
 
         void BeginComfort()

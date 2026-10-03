@@ -17,6 +17,8 @@ namespace RealityDirector.Meta
         public Sprite portrait;
         [Tooltip("Префикс файлов арта: zloi → zloi_happy, zloi_mad… в Resources/Art/Characters.")]
         public string artPrefix;
+        [Tooltip("Наряд (тело): body, body2, body3… → <наряд>_neutral, _happy, _mad, _sad, _scared в Resources/Art/Characters. Пусто — body. Нет позы — нейтральная этого наряда.")]
+        public string bodyPrefix = "body";
 
         [Header("Черты (строки под портретом в хабе)")]
         [Tooltip("Видимые черты.")]

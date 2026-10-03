@@ -77,7 +77,7 @@ namespace RealityDirector.Meta
                 name = def.displayName,
                 traits = traits.ToArray(),
                 portrait = def.portrait != null ? def.portrait
-                    : GameArt.HeadByPrefix(def.artPrefix, Face.Happy) ?? GameArt.Head(def.Id, Face.Happy) ?? IllustratedArt.PersonKind,
+                    : GameArt.HeadByPrefix(def.artPrefix, Face.Neutral) ?? GameArt.Head(def.Id, Face.Neutral) ?? IllustratedArt.PersonKind,
                 secretHidden = string.IsNullOrEmpty(def.hiddenTraitLabel) ? "" : def.hiddenTraitLabel,
                 secretKnown = SecretName(def.hiddenTrait)
             };
@@ -121,7 +121,7 @@ namespace RealityDirector.Meta
                     id = "npc_kira",
                     name = "Кира",
                     traits = new[] { "ревнивая" },
-                    portrait = IllustratedArt.PersonAngry,
+                    portrait = GameArt.Head("npc_kira", Face.Neutral) ?? IllustratedArt.PersonAngry,
                     secretHidden = "",
                     secretKnown = ""
                 },
@@ -130,7 +130,7 @@ namespace RealityDirector.Meta
                     id = "npc_max",
                     name = "Макс",
                     traits = new[] { "тщеславный" },
-                    portrait = IllustratedArt.PersonKind,
+                    portrait = GameArt.Head("npc_max", Face.Neutral) ?? IllustratedArt.PersonKind,
                     secretHidden = "скрытая черта: ???",
                     secretKnown = "поёт"
                 },

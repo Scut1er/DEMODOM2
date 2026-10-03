@@ -48,49 +48,34 @@ namespace RealityDirector.Meta
             return added;
         }
 
-        public int SlotsNow()
+        // Карт в руке на съёмке (SeasonConfig → выпуск). GDD §15: placeholder 5.
+        public int HandSize()
         {
-            return Progression.EventSlots(_state.writerLevel, _state.episodeIndex);
+            var ep = _state.episode;
+            return ep != null && ep.handSize > 0 ? ep.handSize : EpisodeState.DefaultHandSize;
         }
 
-        public void TrimPicked()
+        // Рабочая колода съёмки: вся коллекция сезона + разовые карты выпуска.
+        public int DeckCount()
         {
-            int slots = SlotsNow();
-            for (int i = _state.picked.Count - 1; i >= 0; i--)
+            int n = 0;
+            for (int i = 0; i < _state.owned.Count; i++)
             {
-                if (!_state.Owns(_state.picked[i]) || _state.IsPlayed(_state.picked[i]) || Find(_state.picked[i]) == null)
-                    _state.picked.RemoveAt(i);
+                if (Find(_state.owned[i]) != null)
+                    n++;
             }
 
-            while (_state.picked.Count > slots)
-                _state.picked.RemoveAt(_state.picked.Count - 1);
-        }
+            var ep = _state.episode;
+            if (ep != null)
+            {
+                for (int i = 0; i < ep.tempCards.Count; i++)
+                {
+                    if (!_state.Owns(ep.tempCards[i]) && Find(ep.tempCards[i]) != null)
+                        n++;
+                }
+            }
 
-        // Добирает колоду до лимита — для запуска квартиры напрямую из редактора.
-        public void AutoPick()
-        {
-            TrimPicked();
-            int slots = SlotsNow();
-#if UNITY_EDITOR
-            // Мастерская карт → «Проверить в квартире»: эта карта первой в руке.
-            string test = CardLibrary.TakeTestCard();
-            if (!string.IsNullOrEmpty(test) && Find(test) != null)
-            {
-                if (!_state.owned.Contains(test))
-                    _state.owned.Add(test);
-                _state.played.Remove(test);
-                _state.picked.Remove(test);
-                _state.picked.Insert(0, test);
-                while (_state.picked.Count > Mathf.Max(1, slots))
-                    _state.picked.RemoveAt(_state.picked.Count - 1);
-            }
-#endif
-            for (int i = 0; i < _state.owned.Count && _state.picked.Count < slots; i++)
-            {
-                string id = _state.owned[i];
-                if (!_state.IsPlayed(id) && !_state.picked.Contains(id) && Find(id) != null)
-                    _state.picked.Add(id);
-            }
+            return n;
         }
 
         public int Level(CrewTrack track)
@@ -120,30 +105,6 @@ namespace RealityDirector.Meta
                 _state.operatorLevel++;
             else
                 _state.writerLevel++;
-            Reject = null;
-            return true;
-        }
-
-        public bool TogglePick(string id)
-        {
-            if (IsTemp(id))
-                return true;
-            if (_state.IsPlayed(id) || !_state.Owns(id))
-                return false;
-            if (_state.picked.Contains(id))
-            {
-                _state.picked.Remove(id);
-                Reject = null;
-                return true;
-            }
-
-            if (_state.picked.Count >= SlotsNow())
-            {
-                Reject = "Слоты заняты — сними одну карту.";
-                return false;
-            }
-
-            _state.picked.Add(id);
             Reject = null;
             return true;
         }
@@ -255,32 +216,75 @@ namespace RealityDirector.Meta
                    + (Reject != null ? "\n" + Reject : "");
         }
 
-        // Снимать можно с любым числом выбранных карт — от нуля до лимита слотов.
-        public bool CanStart()
-        {
-            return _state.picked.Count <= SlotsNow();
-        }
-
-        // Переносит выбранные карты в руку сессии. Неиспользованные вернутся в колоду.
+        // Начало съёмки (GDD 0.3): Deck → shuffle → Library → draw Hand. Разовые карты выпуска (магазин, спонсор)
+        // сдаются первыми — за них уже заплачено. «Использовано» прошлой съёмки обнуляется: карты не сгорают.
         public bool TryEmbark(List<string> hand)
         {
-            if (!CanStart())
-                return false;
-            hand.Clear();
-            hand.AddRange(_state.picked);
+            _state.EndSituation();
             _state.picked.Clear();
+            hand.Clear();
+
+            var deck = new List<string>();
+            for (int i = 0; i < _state.owned.Count; i++)
+            {
+                string id = _state.owned[i];
+                if (Find(id) != null && !deck.Contains(id))
+                    deck.Add(id);
+            }
+
+            Shuffle(deck);
+            var order = new List<string>();
             var ep = _state.episode;
             if (ep != null)
             {
                 for (int i = 0; i < ep.tempCards.Count; i++)
                 {
-                    if (!hand.Contains(ep.tempCards[i]))
-                        hand.Add(ep.tempCards[i]);
+                    string id = ep.tempCards[i];
+                    if (Find(id) == null || order.Contains(id))
+                        continue;
+                    deck.Remove(id);
+                    order.Add(id);
                 }
+            }
+
+            order.AddRange(deck);
+#if UNITY_EDITOR
+            // Мастерская карт → «Проверить в квартире»: эта карта первой в руке.
+            string test = CardLibrary.TakeTestCard();
+            if (!string.IsNullOrEmpty(test) && Find(test) != null)
+            {
+                if (!_state.owned.Contains(test))
+                    _state.owned.Add(test);
+                order.Remove(test);
+                order.Insert(0, test);
+            }
+#endif
+            // Урок съёмки: «Поджог» обязан прийти в первой руке.
+            if (_state.wantsTutorial && _state.tutorialBeat < 4 && order.Remove(TutorialCard))
+                order.Insert(0, TutorialCard);
+
+            int size = HandSize();
+            for (int i = 0; i < order.Count; i++)
+            {
+                if (i < size)
+                    hand.Add(order[i]);
+                else
+                    _state.library.Add(order[i]);
             }
 
             Reject = null;
             return true;
+        }
+
+        public const string TutorialCard = "fridge_fire";
+
+        static void Shuffle(List<string> list)
+        {
+            for (int i = list.Count - 1; i > 0; i--)
+            {
+                int j = Random.Range(0, i + 1);
+                (list[i], list[j]) = (list[j], list[i]);
+            }
         }
 
         public void ClearReject()
@@ -309,27 +313,23 @@ namespace RealityDirector.Meta
 
         public PrepModel BuildPrep()
         {
-            int slots = SlotsNow();
-            int available = _state.UnplayedCount();
-            int later = Progression.EventSlots(_state.writerLevel, 1);
-            string writers = _state.episodeIndex <= 0
-                ? "ур. " + _state.writerLevel + "\nсейчас 1 карта\nдальше " + later
-                : "ур. " + _state.writerLevel + "\nкарт в серию: " + later;
+            int slots = HandSize();
+            int available = DeckCount();
+            string writers = "ур. " + _state.writerLevel + "\nконтрактов: " + Progression.ContractSlots(_state.writerLevel);
             int hype = Mathf.RoundToInt(Progression.HypeBonus(_state.castLevel) * 100f);
-            string slotsLabel = _state.episodeIndex <= 0
-                ? "Обучение: в серию берётся 1 карта. Со следующей серии слоты от сценаристов, минимум 2."
-                : "Карт в серию: " + slots + "  ·  несыгранных в колоде: " + available;
+            string slotsLabel = "В колоде " + available + "  ·  на съёмке колода тасуется, в руке " + slots
+                                + ". Сыграл — карта в «Использовано», на её место — следующая.";
             if (_state.episode != null && _state.episode.tempCards.Count > 0)
-                slotsLabel += "  ·  из магазина выпуска уже в руке: " + _state.episode.tempCards.Count;
+                slotsLabel += "  ·  разовых карт выпуска: " + _state.episode.tempCards.Count + " (сдаются первыми)";
 
             return new PrepModel
             {
                 episodeNumber = _state.episodeIndex + 1,
                 money = _state.money,
                 slots = slots,
-                picked = _state.picked.Count,
+                picked = 0,
                 available = available,
-                canStart = CanStart(),
+                canStart = true,
                 reject = Reject,
                 moneyText = MoneyLine(),
                 shopFooter = "Покупка открывает карту навсегда — она остаётся в колоде сезона.",
@@ -377,7 +377,7 @@ namespace RealityDirector.Meta
                     break;
                 default:
                     info.title = "СЦЕНАРНАЯ";
-                    info.description = "Новые категории карт и второй слот контракта на 4 уровне. Число карт в серию — следом.";
+                    info.description = "Новые категории карт и второй слот контракта на 4 уровне.";
                     info.now = WriterLines(level);
                     info.next = WriterLines(up);
                     break;
@@ -404,8 +404,7 @@ namespace RealityDirector.Meta
 
         static string WriterLines(int level)
         {
-            return "• карт в серию: " + Progression.EventSlots(level, 1)
-                   + "\n• " + CategoryLine(level)
+            return "• " + CategoryLine(level)
                    + "\n• контрактов: " + Progression.ContractSlots(level);
         }
 
@@ -497,7 +496,7 @@ namespace RealityDirector.Meta
                     if (owned || def.sponsor || def.price <= 0)
                         continue;
                 }
-                else if (!owned || _state.IsPlayed(def.id))
+                else if (!owned)
                 {
                     continue;
                 }
@@ -511,7 +510,7 @@ namespace RealityDirector.Meta
                     title = def.displayName,
                     hint = def.hint,
                     price = def.price,
-                    picked = _state.picked.Contains(def.id),
+                    picked = false,
                     affordable = _state.money >= def.price,
                     color = def.cardColor,
                     art = def.cardArt,
@@ -590,7 +589,7 @@ namespace RealityDirector.Meta
                 price = price,
                 unit = unit,
                 temporary = temp,
-                picked = inHand || _state.picked.Contains(def.id),
+                picked = inHand,
                 affordable = unit == "нал"
                     ? _state.episode != null && _state.episode.cash >= price
                     : _state.money >= price,

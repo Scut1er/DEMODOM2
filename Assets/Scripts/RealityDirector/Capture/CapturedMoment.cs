@@ -24,8 +24,44 @@ namespace RealityDirector.Capture
         public ShowMood mood;
         public CaptureGrade grade;
         public HiddenTrait exposed;
+        // Кто что делал в кадре: «тег|имя» (Crying|Кира, Fight|Злой, Kleptomaniac|Добряк). HellTube называет только их.
+        public List<string> cues = new List<string>();
 
         public bool Framed => grade != CaptureGrade.Blank;
+
+        public static string Cue(string tag, string name)
+        {
+            return tag + "|" + name;
+        }
+
+        public static void AddCue(List<string> cues, string tag, string name)
+        {
+            if (cues == null || string.IsNullOrEmpty(tag) || string.IsNullOrEmpty(name))
+                return;
+            string cue = Cue(tag, name);
+            if (!cues.Contains(cue))
+                cues.Add(cue);
+        }
+
+        // Имена из подсказок с этим тегом, в порядке записи.
+        public static List<string> Who(List<string> cues, string tag)
+        {
+            var names = new List<string>();
+            if (cues == null)
+                return names;
+            string prefix = tag + "|";
+            for (int i = 0; i < cues.Count; i++)
+            {
+                if (cues[i] != null && cues[i].StartsWith(prefix))
+                {
+                    string name = cues[i].Substring(prefix.Length);
+                    if (!names.Contains(name))
+                        names.Add(name);
+                }
+            }
+
+            return names;
+        }
 
         public Texture2D FrameAt(float clipTime)
         {
