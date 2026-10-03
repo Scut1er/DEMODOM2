@@ -1294,16 +1294,18 @@ namespace RealityDirector.UI
             leftRect.sizeDelta = new Vector2(268f, 150f);
             _castPlate = leftRect;
 
-            _episodeTitle = MakeText(left.transform, "СЕРИЯ 1\nты режиссёр, не участник", 20, Paper, TextAnchor.UpperLeft);
+            _episodeTitle = MakeText(left.transform, "СЕРИЯ 1", 20, Paper, TextAnchor.UpperLeft);
+            _episodeTitle.horizontalOverflow = HorizontalWrapMode.Wrap;
+            _episodeTitle.verticalOverflow = VerticalWrapMode.Truncate;
             var titleRect = _episodeTitle.rectTransform;
             titleRect.anchorMin = new Vector2(0f, 1f);
             titleRect.anchorMax = new Vector2(0f, 1f);
             titleRect.pivot = new Vector2(0f, 1f);
             titleRect.anchoredPosition = new Vector2(16f, -14f);
-            titleRect.sizeDelta = new Vector2(236f, 64f);
+            titleRect.sizeDelta = new Vector2(248f, 36f);
 
             var cam = MakeButton(left.transform, "КАМЕРА   C", new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(0f, 1f),
-                new Vector2(16f, -86f), new Vector2(236f, 44f), Accent, () => _onCamera?.Invoke());
+                new Vector2(16f, -100f), new Vector2(236f, 44f), Accent, () => _onCamera?.Invoke());
             _camButton = cam;
             _camRect = cam.transform as RectTransform;
             _camLabel = cam.GetComponentInChildren<Text>();
@@ -1315,7 +1317,7 @@ namespace RealityDirector.UI
             _castRoot.anchorMin = new Vector2(0f, 1f);
             _castRoot.anchorMax = new Vector2(1f, 1f);
             _castRoot.pivot = new Vector2(0.5f, 1f);
-            _castRoot.anchoredPosition = new Vector2(0f, -142f);
+            _castRoot.anchoredPosition = new Vector2(0f, -156f);
             _castRoot.sizeDelta = new Vector2(-16f, 520f);
 
             var footPlate = Panel("footagePlate", _hud.transform, new Color(0f, 0f, 0f, 0f));
@@ -1575,13 +1577,18 @@ namespace RealityDirector.UI
             var pill = Panel("cost", art.transform, new Color(0.14f, 0.09f, 0.08f, 0.92f));
             CoreGameplayArt.Paint(pill, "UI/HUD/cost_badge", false);
             var pillRect = pill.rectTransform;
-            pillRect.anchorMin = new Vector2(1f, 0f);
-            pillRect.anchorMax = new Vector2(1f, 0f);
-            pillRect.pivot = new Vector2(1f, 0f);
-            pillRect.anchoredPosition = new Vector2(-3f, 3f);
-            pillRect.sizeDelta = new Vector2(56f, 22f);
+            pillRect.anchorMin = new Vector2(1f, 1f);
+            pillRect.anchorMax = new Vector2(1f, 1f);
+            pillRect.pivot = new Vector2(1f, 1f);
+            pillRect.anchoredPosition = new Vector2(-3f, -3f);
+            pillRect.sizeDelta = new Vector2(64f, 22f);
             pill.raycastTarget = false;
-            var price = MakeText(pill.transform, HellToken.Format(def.cost), 15, Gold, TextAnchor.MiddleCenter);
+            var price = MakeText(pill.transform, HellToken.Format(def.cost), 14, Gold, TextAnchor.MiddleCenter);
+            price.resizeTextForBestFit = true;
+            price.resizeTextMinSize = 10;
+            price.resizeTextMaxSize = 14;
+            price.horizontalOverflow = HorizontalWrapMode.Wrap;
+            price.verticalOverflow = VerticalWrapMode.Truncate;
             Stretch(price.rectTransform);
 
             var body = MakeText(inner.transform, def.hint, 13,
@@ -1664,7 +1671,7 @@ namespace RealityDirector.UI
             plate.raycastTarget = false;
             var element = plate.gameObject.AddComponent<LayoutElement>();
             element.preferredWidth = BudgetWidth + 24f;
-            element.preferredHeight = 120f;
+            element.preferredHeight = 168f;
 
             var caption = MakeText(plate.transform, "БЮДЖЕТ НА КАРТЫ", 13, Muted, TextAnchor.UpperLeft);
             TopLeft(caption.rectTransform, 12f, -10f, BudgetWidth, 18f);
@@ -1684,7 +1691,9 @@ namespace RealityDirector.UI
             TopLeft(_budgetSpend, 0f, 0f, 0f, 10f);
 
             _budgetNote = MakeText(plate.transform, "", 13, Muted, TextAnchor.UpperLeft);
-            TopLeft(_budgetNote.rectTransform, 12f, -86f, BudgetWidth, 32f);
+            _budgetNote.horizontalOverflow = HorizontalWrapMode.Wrap;
+            _budgetNote.verticalOverflow = VerticalWrapMode.Truncate;
+            TopLeft(_budgetNote.rectTransform, 12f, -86f, BudgetWidth, 52f);
             RefreshBudget();
         }
 

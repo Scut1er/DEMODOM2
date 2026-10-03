@@ -297,9 +297,10 @@ namespace RealityDirector.UI.Hub
                     tabSelected[i].SetActive(i == _tab);
             }
 
+            int draw = Mathf.Min(model.slots, Mathf.Max(0, model.available));
             if (deckInfo != null)
                 deckInfo.text = _browse
-                    ? "Все твои карты. В каждой съёмке колода тасуется и сдаёт " + model.slots + " в руку; сыгранная карта вернётся к следующей съёмке."
+                    ? "Все твои карты. В каждой съёмке колода тасуется и сдаёт " + draw + " в руку; сыгранная карта вернётся к следующей съёмке."
                     : model.slotsLabel;
             Fill(deckRoot, deckEmpty, model.deck, false);
             Fill(shopRoot, shopEmpty, model.shop, true);
@@ -358,13 +359,14 @@ namespace RealityDirector.UI.Hub
                 return string.IsNullOrEmpty(model.shopFooter)
                     ? "Купленная карта попадает в колоду."
                     : model.shopFooter;
+            int draw = Mathf.Min(model.slots, Mathf.Max(0, model.available));
             if (_browse)
                 return model.available == 0
                     ? "Колода пуста. Новые карты — в магазине хаба, разовые — у спонсоров выпуска."
-                    : "Карт в колоде: " + model.available + ". В руке на съёмке: " + model.slots + ", добор после каждой сыгранной.";
+                    : "Карт в колоде: " + model.available + ". В руке на съёмке: " + draw + ", добор после каждой сыгранной.";
             if (model.available == 0)
                 return "Колода пуста — снимать можно и без карт. Новые карты — в магазине хаба, разовые — у спонсоров выпуска.";
-            return "Карт в колоде: " + model.available + ". В руке на съёмке: " + model.slots + ".";
+            return "Карт в колоде: " + model.available + ". В руке на съёмке: " + draw + ".";
         }
     }
 }

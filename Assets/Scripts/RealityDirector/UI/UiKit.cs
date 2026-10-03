@@ -128,7 +128,7 @@ namespace RealityDirector.UI
             Dress(image, frame, scale);
             if (image.transform.Find("Solid") != null)
                 return;
-            var fill = Img("Solid", image.transform, null, new Color(0.07f, 0.035f, 0.055f, 0.93f));
+            var fill = Img("Solid", image.transform, null, new Color(0.07f, 0.035f, 0.055f, 1f));
             fill.transform.SetAsFirstSibling();
             Stretch(fill.rectTransform, inset);
         }

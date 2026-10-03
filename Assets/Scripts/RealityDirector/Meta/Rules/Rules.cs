@@ -88,7 +88,7 @@ namespace RealityDirector.Meta
                 case ConditionType.CastHasActor: return (c.not ? "Без участника " : "Нужен участник ") + c.key;
                 case ConditionType.CrewLevelAtLeast: return "Нужно: " + TrackName(Track(c.key)) + " ур. " + c.value;
                 case ConditionType.ToneAtLeast: return "Нужно: " + MoodStyle.Short(c.mood) + " " + c.value;
-                case ConditionType.CashAtLeast: return "Нужно " + c.value + " нал";
+                case ConditionType.CashAtLeast: return "Нужно " + c.value + " в кассе выпуска";
                 default: return "Условие не выполнено";
             }
         }
@@ -243,7 +243,7 @@ namespace RealityDirector.Meta
                         break;
                     case EffectType.Cash:
                         if (fx.value != 0)
-                            parts.Add((fx.value > 0 ? "+" : "") + fx.value + " нал");
+                            parts.Add((fx.value > 0 ? "+" : "") + fx.value + " касса");
                         break;
                     case EffectType.Tone:
                         if (fx.value != 0)

@@ -146,7 +146,12 @@ namespace RealityDirector.UI.Hub
         // Полная карточка: цена следующего уровня и можно ли его взять прямо сейчас.
         public void Show(CrewInfo info, bool isSelected)
         {
-            Show(info.level, isSelected);
+            int max = info.maxLevel > 0 ? info.maxLevel : Progression.MaxLevel;
+            if (level != null)
+                level.text = "уровень " + info.level + " из " + max;
+            if (_pips != null)
+                UiKit.Pips(transform, "Pips", info.level, max, UiKit.Gold, 13f, 9f);
+            SetChosen(isSelected);
             if (_ribbon == null)
                 return;
             if (info.maxed)

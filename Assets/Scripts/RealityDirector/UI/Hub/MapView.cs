@@ -141,7 +141,27 @@ namespace RealityDirector.UI.Hub
                 ? focus.goal
                 : "Пройти выпуск до монтажа и набрать материала на сильный эфир.";
             if (goal != null)
+            {
+                goal.gameObject.SetActive(true);
+                var header = goal.transform.parent != null ? goal.transform.parent.Find("GoalHeader") : null;
+                if (header != null)
+                    header.gameObject.SetActive(true);
+                var titlePanel = goal.transform.parent as RectTransform;
+                if (titlePanel != null && titlePanel.sizeDelta.y < 180f)
+                    titlePanel.sizeDelta = new Vector2(titlePanel.sizeDelta.x, 180f);
+                if (header is RectTransform headerRect)
+                {
+                    headerRect.anchoredPosition = new Vector2(24f, -98f);
+                    headerRect.sizeDelta = new Vector2(472f, 22f);
+                }
+
+                var goalRect = goal.rectTransform;
+                goalRect.anchoredPosition = new Vector2(24f, -120f);
+                goalRect.sizeDelta = new Vector2(472f, 40f);
+                goal.horizontalOverflow = HorizontalWrapMode.Wrap;
+                goal.verticalOverflow = VerticalWrapMode.Truncate;
                 goal.text = goalText;
+            }
 
             DrawEdges(map);
             DrawNodes(map, selected);
@@ -194,8 +214,7 @@ namespace RealityDirector.UI.Hub
                 var view = Instantiate(nodePrefab, nodesRoot);
                 view.name = "Node_" + node.id;
                 ((RectTransform)view.transform).anchoredPosition = PositionOf(node);
-                float scale = _nodeScale * (node.type == RoomType.Montage ? 1.2f : 1f);
-                view.transform.localScale = Vector3.one * scale;
+                view.transform.localScale = Vector3.one * _nodeScale;
                 string id = node.id;
                 var state = map.StateOf(node);
                 view.Show(node, state, map.LockReason(node), selected == node, () => Select?.Invoke(id));
@@ -247,6 +266,16 @@ namespace RealityDirector.UI.Hub
         {
             if (plan == null)
                 return;
+            plan.gameObject.SetActive(true);
+            plan.resizeTextForBestFit = false;
+            plan.horizontalOverflow = HorizontalWrapMode.Wrap;
+            plan.verticalOverflow = VerticalWrapMode.Truncate;
+            var planRect = plan.rectTransform;
+            planRect.offsetMin = new Vector2(28f, 16f);
+            planRect.offsetMax = new Vector2(-28f, -16f);
+            var planPanel = plan.transform.parent as RectTransform;
+            if (planPanel != null && planPanel.sizeDelta.y < 148f)
+                planPanel.sizeDelta = new Vector2(planPanel.sizeDelta.x, 148f);
             var body = "<color=#F2C94C><b>ЦЕЛЬ ВЫПУСКА</b></color>\n" + goalText;
             if (tasks != null && tasks.Count > 0)
             {

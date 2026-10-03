@@ -65,8 +65,13 @@ namespace RealityDirector.UI.Hub
                 Top(art.rectTransform, -70f, 92f, 26f);
                 art.preserveAspect = true;
                 _pill = UiKit.Img("Price", art.transform, UiKit.Load("Art/UI/CoreGameplay/UI/HUD/cost_badge"), Color.white);
-                UiKit.Place(_pill.rectTransform, new Vector2(1f, 0f), new Vector2(1f, 0f), new Vector2(4f, -4f), new Vector2(76f, 26f));
-                _price = UiKit.Txt("Label", _pill.transform, "", 15, UiKit.Gold, TextAnchor.MiddleCenter);
+                UiKit.Place(_pill.rectTransform, new Vector2(1f, 1f), new Vector2(1f, 1f), new Vector2(-4f, -4f), new Vector2(84f, 26f));
+                _price = UiKit.Txt("Label", _pill.transform, "", 14, UiKit.Gold, TextAnchor.MiddleCenter);
+                _price.resizeTextForBestFit = true;
+                _price.resizeTextMinSize = 10;
+                _price.resizeTextMaxSize = 14;
+                _price.horizontalOverflow = HorizontalWrapMode.Wrap;
+                _price.verticalOverflow = VerticalWrapMode.Truncate;
                 UiKit.Stretch(_price.rectTransform);
                 _price.fontStyle = FontStyle.Bold;
             }
@@ -154,7 +159,7 @@ namespace RealityDirector.UI.Hub
 
             if (_pill != null)
             {
-                string unit = string.IsNullOrEmpty(card.unit) ? "кр" : card.unit;
+                string unit = string.IsNullOrEmpty(card.unit) ? "кр" : card.unit == "нал" ? "касса" : card.unit;
                 _pill.gameObject.SetActive(shop);
                 _pill.color = poor ? new Color(1f, 0.45f, 0.45f, 1f) : Color.white;
                 _price.text = card.price + " " + unit;
