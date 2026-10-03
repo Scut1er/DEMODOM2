@@ -784,11 +784,15 @@ namespace RealityDirector.UI.Hub
             string name = string.IsNullOrEmpty(GameSession.SceneTitle) ? "Без названия" : GameSession.SceneTitle;
             _cut.ShowAir(result, cut, "Серия " + scene + ". «" + name + "»", episode.settledPay, coherence, episode.settledLine);
             var airTeach = new List<CoachStep>();
-            BossCoach.Line(airTeach, BossMood.Aside, "Вот их экран. Не квартира и не библиотека. Только кадры, которые ты оставил в кате.", _cut.WatchFocus);
-            BossCoach.Line(airTeach, BossMood.Stern, "Просмотры, лайки, связность, рейтинг. Черновики и вырезанное сюда не входят. Оценка кормит чек.", _cut.NumbersFocus);
-            BossCoach.Line(airTeach, BossMood.Grin, "Комментарии. Злые — это рецензия, не кнопка. Если кто-то увидел скрытую черту, напишут прямо здесь.", _cut.CommentsFocus);
-            BossCoach.Line(airTeach, BossMood.Smug, "Звезда и «взять» — заказ зрителей. Жми, и задача встанет на хаб и на карту следующего выпуска. Закроешь её кадром — чек ×1.3. Мимо — деньги есть, бонуса нет. Такой же заказ второй раз не берётся, мест четыре.", _cut.TaskFocus);
-            BossCoach.Line(airTeach, BossMood.Sigh, "Чек справа. Реклама в кате платит кр и злит их, рейтинг падает. Реклама, которую выкинул в монтаже, — тишина и минус к репутации. Дальше хаб: со следующего выпуска карта с развилками, магазин и апгрейды уже твои. Тон копится до концовки сезона.", _cut.PayFocus);
+            BossCoach.Line(airTeach, BossMood.Aside, "Реакция зрителей. Они видят только кат. Квартиру, черновики и вырезанное в эту арифметику я не кладу.", _cut.WatchFocus);
+            BossCoach.Line(airTeach, BossMood.Stern, "Просмотры. Сколько ад открыл серию. Растут вместе с оценкой: выше рейтинг — больше пришло.", _cut.ViewsFocus);
+            BossCoach.Line(airTeach, BossMood.Grin, "Нравится — та же оценка, только в процентах. Десять из десяти это сто. Это не отдельная кнопка и не деньги.", _cut.LikesFocus);
+            BossCoach.Line(airTeach, BossMood.Mad, "Рейтинг. Среднее их оценок из десяти. Вот эта цифра кормит чек. Пустой угол и реклама в кадре роняют оценки.", _cut.RatingFocus);
+            BossCoach.Line(airTeach, BossMood.Think, "Связность монтажа. Соседние кадры про одно — выше, про разное — каша. Сама на деньги не умножается, но они пишут, история это или нарезка.", _cut.AirCoherenceFocus);
+            BossCoach.Line(airTeach, BossMood.Annoyed, "Комментарии — это и есть оценки. Каждый со своим баллом, злость тоже считается. Увидели скрытую черту — напишут прямо здесь.", _cut.CommentsFocus);
+            BossCoach.Line(airTeach, BossMood.Smug, "Звезда и «взять» — заказ зрителей. Слёзы, если в кате кто-то плакал. Объятия — семейный кадр с человеком. Драка — если подрались. Держать тон — кадр в том тоне, который уже ведёт сезон.", _cut.TaskFocus);
+            BossCoach.Line(airTeach, BossMood.Grin, "Жми «взять». Задача встанет на хаб и на карту следующего выпуска. Закроешь её кадром в эфире — чек ×1.3. Мимо — деньги есть, бонуса нет. Такой же заказ второй раз не берётся, мест четыре.", _cut.TaskFocus);
+            BossCoach.Line(airTeach, BossMood.Sigh, "Доход. Считается от рейтинга, кастинг добавляет процент. Закрытая задача множит всё на 1.3. Реклама в кате докидывает кр спонсора и роняет оценки. Выкинул её из монтажа — выплаты нет, репутация падает. Дальше хаб.", _cut.IncomeFocus);
             if (airTeach.Count > 0)
                 BossCoach.Play(5, 6, airTeach.ToArray());
         }
@@ -973,20 +977,16 @@ namespace RealityDirector.UI.Hub
             SyncBed();
         }
 
-        // Меню — MainMenu.mp3. Обучение до входа в съёмку — Intro.mp3. Дальше тишина.
+        // Меню — MainMenu.mp3. Intro.mp3 — тема хаба, карты, монтажа и эфира. В съёмочных сценах тишина.
         void SyncBed()
         {
             var src = Bed();
             bool menuUp = menu != null && menu.gameObject.activeSelf
                 || settings != null && settings.gameObject.activeSelf && _back == menu.gameObject;
-            var state = GameSession.State;
-            bool introUp = !menuUp && state != null && state.wantsTutorial && state.tutorialBeat < 3;
             if (menuUp)
                 PlayBed(src, "Music/MainMenu");
-            else if (introUp)
-                PlayBed(src, "Music/Intro");
             else
-                StopBed();
+                PlayBed(src, "Music/Intro");
         }
 
         AudioSource Bed()

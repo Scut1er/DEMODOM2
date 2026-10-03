@@ -31,12 +31,21 @@ namespace RealityDirector.UI.Hub
         public RectTransform NumbersFocus => _numbers;
         public RectTransform CommentsFocus => _comments;
         public RectTransform PayFocus => _pay;
-        public RectTransform TaskFocus => _taskRow;
+        public RectTransform TaskFocus => _taskRow != null ? _taskRow : _comments;
+        public RectTransform ViewsFocus => _viewsStat != null ? _viewsStat : _numbers;
+        public RectTransform LikesFocus => _numbers;
+        public RectTransform RatingFocus => _ratingStat != null ? _ratingStat : _numbers;
+        public RectTransform AirCoherenceFocus => _linkStat != null ? _linkStat : _numbers;
+        public RectTransform IncomeFocus => _incomeStat != null ? _incomeStat : _pay;
         RectTransform _watch;
         RectTransform _numbers;
         RectTransform _comments;
         RectTransform _pay;
         RectTransform _taskRow;
+        RectTransform _viewsStat;
+        RectTransform _ratingStat;
+        RectTransform _linkStat;
+        RectTransform _incomeStat;
         RectTransform _cutRow;
         readonly List<FootageClip> _library = new List<FootageClip>();
         readonly List<string> _order = new List<string>();
@@ -395,10 +404,10 @@ namespace RealityDirector.UI.Hub
             side.sizeDelta = new Vector2(420f, 760f);
             var sideTitle = TextOn(side, "ИТОГИ ЭФИРА", 20, new Color(0.95f, 0.45f, 0.38f, 1f), TextAnchor.UpperLeft);
             Pin(sideTitle.rectTransform, 20f, 16f, 380f, 32f);
-            Stat(side, 64f, "Просмотры", Group(views));
-            Stat(side, 112f, "Рейтинг", Comma(result.score) + " / 10");
-            Stat(side, 160f, "Связность монтажа", coherence + "%");
-            Stat(side, 208f, "Доход", "+" + pay + " кр");
+            _viewsStat = Stat(side, 64f, "Просмотры", Group(views));
+            _ratingStat = Stat(side, 112f, "Рейтинг", Comma(result.score) + " / 10");
+            _linkStat = Stat(side, 160f, "Связность монтажа", coherence + "%");
+            _incomeStat = Stat(side, 208f, "Доход", "+" + pay + " кр");
             var note = TextOn(side, payLine ?? "", 16, new Color(0.96f, 0.78f, 0.22f, 1f), TextAnchor.UpperLeft);
             Pin(note.rectTransform, 20f, 260f, 380f, 80f);
             var list = TextOn(side, CutLines(cut), 16, new Color(0.9f, 0.86f, 0.8f, 1f), TextAnchor.UpperLeft);
@@ -481,8 +490,9 @@ namespace RealityDirector.UI.Hub
             return body;
         }
 
-        void Stat(RectTransform parent, float y, string label, string value)
+        RectTransform Stat(RectTransform parent, float y, string label, string value)
         {
+            var mark = Marker(parent, 12f, y, 396f, 36f);
             var left = TextOn(parent, label, 16, new Color(0.7f, 0.64f, 0.6f, 1f), TextAnchor.MiddleLeft);
             Pin(left.rectTransform, 20f, y, 220f, 32f);
             var right = TextOn(parent, value, 18, Color.white, TextAnchor.MiddleRight);
@@ -491,6 +501,7 @@ namespace RealityDirector.UI.Hub
             rect.pivot = new Vector2(1f, 1f);
             rect.anchoredPosition = new Vector2(-20f, -y);
             rect.sizeDelta = new Vector2(180f, 32f);
+            return mark;
         }
 
         GameObject Card(RectTransform parent, FootageClip clip, bool picked)
