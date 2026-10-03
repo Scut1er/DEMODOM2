@@ -522,31 +522,23 @@ namespace RealityDirector.UI.Hub
             RefreshDeals();
         }
 
-        // Предложения комнаты маркетинга из её ассета; пусто — стандартный набор.
+        // Пул маркетинга — OWM. Старый список комнаты больше не режет витрину.
         List<MarketingOffer> Deals()
         {
             int reputation = GameSession.State.sponsorReputation;
-            if (_marketing == null || _marketing.offers == null || _marketing.offers.Count == 0)
-                return JamContent.Offers(reputation);
-            var list = new List<MarketingOffer>();
-            foreach (var offer in _marketing.offers)
-            {
-                if (offer != null && !string.IsNullOrEmpty(offer.cardId) && reputation >= offer.minReputation)
-                    list.Add(offer);
-            }
-
-            return list;
+            return OwmOffers.All(reputation);
         }
 
         void RefreshDeals()
         {
             if (!_episode.Active)
                 return;
-            _screens.ShowDeals(_meta.ReputationLine(), Deals(), offer =>
+            string head = _meta.ReputationLine();
+            if (!string.IsNullOrEmpty(_meta.Reject))
+                head += "\n" + _meta.Reject;
+            _screens.ShowDeals(head, Deals(), offer =>
             {
-                bool ok = offer.kind == OfferKind.Contract
-                    ? _meta.TryTakeContract(offer.cardId, offer.payout, offer.scoreHit)
-                    : _meta.TryBuyRun(offer.cardId);
+                bool ok = _meta.TryBuyOffer(offer);
                 Sfx.Play(ok ? Cue.Coin : Cue.Miss, ok ? 0.5f : 0.45f);
                 if (ok)
                     GameSession.Save();
@@ -833,7 +825,12 @@ namespace RealityDirector.UI.Hub
                 else
                 {
                     contract.status = ContractStatus.Failed;
-                    GameSession.State.sponsorReputation = Mathf.Clamp(GameSession.State.sponsorReputation - 15, 0, 100);
+                    if (episode.HasFlag("SponsorShield"))
+                    {
+                        episode.flags.Remove("SponsorShield");
+                    }
+                    else
+                        GameSession.State.sponsorReputation = Mathf.Clamp(GameSession.State.sponsorReputation - 15, 0, 100);
                 }
             }
 

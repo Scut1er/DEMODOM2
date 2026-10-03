@@ -13,6 +13,7 @@ namespace RealityDirector.Meta
     [Serializable]
     public class MarketingOffer
     {
+        public string id;
         public string cardId;
         public string title;
         public string blurb;
@@ -21,6 +22,7 @@ namespace RealityDirector.Meta
         public int minReputation;
         public int payout;
         public int scoreHit;
+        public string flag;
     }
 
     // Покупка за нал и спонсорский контракт. Контракт не платит сразу.

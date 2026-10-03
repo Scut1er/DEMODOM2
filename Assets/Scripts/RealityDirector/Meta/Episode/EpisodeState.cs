@@ -139,11 +139,14 @@ namespace RealityDirector.Meta
         {
             if (hellMax <= 0)
                 hellMax = HellCap;
+            float pack = HasFlag("HellTokenPack") ? 2f : 0f;
             string room = roomId ?? "";
             if (hellRoom != room)
             {
                 hellRoom = room;
-                hell = hellMax;
+                hell = hellMax + pack;
+                if (pack > 0f)
+                    flags.Remove("HellTokenPack");
             }
         }
 
@@ -218,7 +221,9 @@ namespace RealityDirector.Meta
         {
             for (int i = 0; i < contracts.Count; i++)
             {
-                if (contracts[i].offerId == offerId && contracts[i].status == ContractStatus.Active)
+                if (contracts[i].status != ContractStatus.Active)
+                    continue;
+                if (string.IsNullOrEmpty(offerId) || contracts[i].offerId == offerId)
                     return true;
             }
 

@@ -90,7 +90,7 @@ namespace RealityDirector.UI
         readonly List<Tag> _tags = new List<Tag>();
         readonly List<Bubble> _bubbles = new List<Bubble>();
         readonly List<Card> _cards = new List<Card>();
-        readonly Slot[] _slots = new Slot[Progression.BaseCaptureSlots + 2];
+        readonly Slot[] _slots = new Slot[Progression.BaseCaptureSlots + 3];
         readonly Text[] _reviewAuthors = new Text[3];
         readonly Text[] _reviewBodies = new Text[3];
         readonly Text[] _reviewScores = new Text[3];

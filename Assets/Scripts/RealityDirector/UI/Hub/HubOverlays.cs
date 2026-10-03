@@ -513,23 +513,93 @@ namespace RealityDirector.UI.Hub
             Open();
             Title("МАРКЕТИНГ");
             Body(header);
-            float y = 250f;
+            var buys = new List<MarketingOffer>();
+            var deals = new List<MarketingOffer>();
             if (offers != null)
             {
                 for (int i = 0; i < offers.Count; i++)
                 {
-                    var offer = offers[i];
-                    string price = offer.kind == OfferKind.Contract ? "контракт" : offer.price + " нал";
-                    Button(_page.transform, offer.title + "  ·  " + price + "\n" + offer.blurb, new Vector2(80f, y), () => pick?.Invoke(offer));
-                    y += 72f;
+                    if (offers[i] == null)
+                        continue;
+                    if (offers[i].kind == OfferKind.Contract)
+                        deals.Add(offers[i]);
+                    else
+                        buys.Add(offers[i]);
                 }
             }
 
-            Button(_page.transform, "ЗАКРЫТЬ КОМНАТУ", new Vector2(80f, y + 12f), () =>
+            var view = new GameObject("deals", typeof(RectTransform), typeof(Image), typeof(RectMask2D), typeof(ScrollRect));
+            view.transform.SetParent(_page.transform, false);
+            var viewRect = view.GetComponent<RectTransform>();
+            viewRect.anchorMin = new Vector2(0f, 0f);
+            viewRect.anchorMax = new Vector2(1f, 1f);
+            viewRect.offsetMin = new Vector2(80f, 110f);
+            viewRect.offsetMax = new Vector2(-80f, -250f);
+            view.GetComponent<Image>().color = new Color(0f, 0f, 0f, 0.01f);
+
+            var contentGo = new GameObject("list", typeof(RectTransform), typeof(VerticalLayoutGroup), typeof(ContentSizeFitter));
+            contentGo.transform.SetParent(view.transform, false);
+            var content = contentGo.GetComponent<RectTransform>();
+            content.anchorMin = new Vector2(0f, 1f);
+            content.anchorMax = new Vector2(1f, 1f);
+            content.pivot = new Vector2(0.5f, 1f);
+            content.anchoredPosition = Vector2.zero;
+            content.sizeDelta = new Vector2(0f, 0f);
+            var layout = contentGo.GetComponent<VerticalLayoutGroup>();
+            layout.spacing = 10f;
+            layout.childAlignment = TextAnchor.UpperLeft;
+            layout.childForceExpandWidth = true;
+            layout.childForceExpandHeight = false;
+            layout.childControlWidth = true;
+            layout.childControlHeight = true;
+            contentGo.GetComponent<ContentSizeFitter>().verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+
+            var scroll = view.GetComponent<ScrollRect>();
+            scroll.viewport = viewRect;
+            scroll.content = content;
+            scroll.horizontal = false;
+            scroll.vertical = true;
+            scroll.movementType = ScrollRect.MovementType.Clamped;
+            scroll.scrollSensitivity = 40f;
+
+            DealHead(content, "ПОКУПКИ");
+            for (int i = 0; i < buys.Count; i++)
+                DealRow(content, buys[i], pick);
+            DealHead(content, "СПОНСОРСКИЕ КОНТРАКТЫ");
+            for (int i = 0; i < deals.Count; i++)
+                DealRow(content, deals[i], pick);
+
+            Button(_page.transform, "ЗАКРЫТЬ КОМНАТУ", new Vector2(80f, 980f), () =>
             {
                 Hide();
                 leave?.Invoke();
             });
+        }
+
+        void DealHead(Transform parent, string text)
+        {
+            var go = new GameObject("head", typeof(RectTransform), typeof(LayoutElement));
+            go.transform.SetParent(parent, false);
+            go.GetComponent<LayoutElement>().preferredHeight = 32f;
+            var label = Label(go.transform, text, 18, new Color(0.96f, 0.78f, 0.22f, 1f));
+            Stretch(label.rectTransform);
+        }
+
+        void DealRow(Transform parent, MarketingOffer offer, Action<MarketingOffer> pick)
+        {
+            string price = offer.kind == OfferKind.Contract
+                ? "контракт · +" + offer.payout + " кр"
+                : offer.price + " нал";
+            var go = new GameObject("deal", typeof(RectTransform), typeof(Image), typeof(Button), typeof(LayoutElement));
+            go.transform.SetParent(parent, false);
+            go.GetComponent<LayoutElement>().preferredHeight = 72f;
+            go.GetComponent<Image>().color = offer.kind == OfferKind.Contract
+                ? new Color(0.22f, 0.16f, 0.12f, 1f)
+                : new Color(0.2f, 0.16f, 0.22f, 1f);
+            var label = Label(go.transform, offer.title + "  ·  " + price + "\n" + offer.blurb, 16, Color.white);
+            Stretch(label.rectTransform);
+            var taken = offer;
+            go.GetComponent<Button>().onClick.AddListener(() => pick?.Invoke(taken));
         }
 
         void Open()
