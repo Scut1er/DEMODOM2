@@ -30,8 +30,11 @@ namespace RealityDirector
             Throw,
             Holding,
             Camera,
+            Second,
             TurnIn
         }
+
+        const int TutorialClips = 2;
 
         Lesson _lesson;
         bool _frozen;
@@ -756,8 +759,7 @@ namespace RealityDirector
             _capture.Capacity = Mathf.Max(1, Progression.CaptureSlots(_state.operatorLevel) + extra);
             _ui.SetCaptureCapacity(_capture.Capacity);
             string scene = string.IsNullOrEmpty(GameSession.SceneTitle) ? "" : "  ·  " + GameSession.SceneTitle;
-            string roles = _state.episode != null && !string.IsNullOrEmpty(_state.episode.roleBrief) ? "\n" + _state.episode.roleBrief : "";
-            _ui.SetEpisodeTitle("СЕРИЯ " + (_state.episodeIndex + 1) + scene + roles + "\nты режиссёр, не участник");
+            _ui.SetEpisodeTitle("СЕРИЯ " + (_state.episodeIndex + 1) + scene);
             _phase = PitchPhase.Play;
             _ui.ShowPlay();
             if (ShootLesson())
@@ -767,7 +769,7 @@ namespace RealityDirector
                 if (_state.played.Contains("fridge_fire"))
                 {
                     _lesson = Lesson.Camera;
-                    BossCoach.Ensure().Order("Жми C. Зажми левую и веди рамку по человеку три секунды, потом отпусти. Пустая стена тоже сожрёт слот и срежет тон.", _ui.CameraRect);
+                    BossCoach.Ensure().Order("Жми C. Рамка на лицо. Зажми левую на три секунды и отпусти.", _ui.CameraRect);
                 }
                 else
                 {
@@ -785,6 +787,11 @@ namespace RealityDirector
         {
             if (_phase != PitchPhase.Play)
                 return;
+            if (ShootLesson() && _capture.Moments.Count < TutorialClips)
+            {
+                _ui.Toast("Нужно два ролика. С одним в монтаже нечего клеить.");
+                return;
+            }
             if (_lesson != Lesson.None && _lesson != Lesson.TurnIn)
             {
                 _ui.Toast("Сначала доделай, что я сказал.");
@@ -916,11 +923,18 @@ namespace RealityDirector
 
         EventDefinition[] SelectedHand()
         {
+            var ids = new List<string>(_cast.Count);
+            for (int i = 0; i < _cast.Count; i++)
+            {
+                if (_cast[i] != null && !string.IsNullOrEmpty(_cast[i].Id))
+                    ids.Add(_cast[i].Id);
+            }
+
             var list = new List<EventDefinition>();
             for (int i = 0; i < GameSession.Hand.Count; i++)
             {
                 var def = _content.Find(GameSession.Hand[i]);
-                if (def != null)
+                if (def != null && MetaService.FitsCast(def, ids))
                     list.Add(def);
             }
 
@@ -957,7 +971,7 @@ namespace RealityDirector
 
             if (_lesson == Lesson.Throw && def.id != "fridge_fire")
                 return;
-            if (_lesson == Lesson.Holding || _lesson == Lesson.Camera || _lesson == Lesson.TurnIn)
+            if (_lesson == Lesson.Holding || _lesson == Lesson.Camera)
                 return;
             if (Time.unscaledTime < _handUntil)
             {
@@ -1019,7 +1033,7 @@ namespace RealityDirector
             if (_lesson == Lesson.Take && def.id == "fridge_fire")
             {
                 _lesson = Lesson.Throw;
-                BossCoach.Ensure().Order("Кинь её на холодильник. Прямо на дверцу. Цена спишется с бюджета, люди побегут. Пока они орут — снимай, эмоция не ждёт.", _ui.AimRect);
+                BossCoach.Ensure().Order("Кинь её на холодильник. Прямо на дверцу.", _ui.AimRect);
             }
         }
 
@@ -1030,7 +1044,7 @@ namespace RealityDirector
             if (keyboard == null || mouse == null)
                 return;
 
-            if (_lesson == Lesson.None || _lesson == Lesson.Take)
+            if (_lesson == Lesson.None || _lesson == Lesson.Take || _lesson == Lesson.Second || _lesson == Lesson.TurnIn)
             {
                 if (keyboard.digit1Key.wasPressedThisFrame)
                     ArmAt(0);
@@ -1044,7 +1058,7 @@ namespace RealityDirector
                     ArmAt(4);
             }
 
-            bool cameraOpen = _lesson == Lesson.None || _lesson == Lesson.Camera;
+            bool cameraOpen = _lesson == Lesson.None || _lesson == Lesson.Camera || _lesson == Lesson.Second || _lesson == Lesson.TurnIn;
             if (cameraOpen && keyboard.cKey.wasPressedThisFrame)
                 ToggleCamera();
 
@@ -1180,6 +1194,7 @@ namespace RealityDirector
             if (_lesson == Lesson.Throw && played.id == "fridge_fire")
             {
                 _lesson = Lesson.Holding;
+                BossCoach.Ensure().Order("Жди реакции. Сейчас кто-нибудь сорвётся.", _ui.AimRect);
                 StartCoroutine(WaitForReaction());
             }
         }
@@ -1326,8 +1341,8 @@ namespace RealityDirector
                 if (_capture.Moments.Count == 0)
                     return "Зажми ЛКМ и веди рамку. Пустой угол съест слот.";
                 if (_capture.IsFull)
-                    return "Слоты полные. Карты ещё можно кидать. СДАНО — на карту эпизода.";
-                return "Кадр есть. Сними ещё или жми СДАНО — вернёшься на карту эпизода.";
+                    return "Слоты полные. Карты ещё можно кидать. «СНЯТО!» — на карту выпуска.";
+                return "Кадр есть. Сними ещё или жми «СНЯТО!» — вернёшься на карту выпуска.";
             }
 
             if (Time.unscaledTime < _handUntil)
@@ -1357,9 +1372,11 @@ namespace RealityDirector
             if (_fridge.IsOnFire)
                 return "Ждут, кто заметит огонь. Ближний подойдёт первым.";
             if (_capture.IsFull)
-                return "Слоты полные. Карты ещё можно кидать. СДАНО — на карту эпизода.";
+                return "Слоты полные. Карты ещё можно кидать. «СНЯТО!» — на карту выпуска.";
+            if (ShootLesson() && _capture.Moments.Count > 0 && _capture.Moments.Count < TutorialClips)
+                return "Нужен ещё один ролик. Потом «СНЯТО!».";
             if (_capture.Moments.Count > 0)
-                return "Можно снять ещё или сдать комнату. Эфир будет после монтажа.";
+                return "Можно снять ещё или жми «СНЯТО!». Эфир будет после монтажа.";
             return "Карты внизу. C — камера, зажми ЛКМ — ролик до 3 секунд.";
         }
 
@@ -1655,17 +1672,21 @@ namespace RealityDirector
             StartCoroutine(HitStop());
             if (_lesson == Lesson.Camera)
             {
-                _lesson = Lesson.Holding;
-                StartCoroutine(FreezeSoon(0.7f, () => BossCoach.Ensure().Freeze(
-                    "Ролик в слоте. На сцене их пять, съёмочная может добавить ещё. Пустой угол занимает слот так же и режет драму, трэш и семью. В эфир попадут только три, которые оставишь в монтаже.",
-                    () =>
-                    {
-                        _frozen = false;
-                        Time.timeScale = 1f;
-                        _lesson = Lesson.TurnIn;
-                        BossCoach.Ensure().Order("СДАНО закрывает комнату. Клипы лягут в библиотеку, ты вернёшься на карту. Это ещё не эфир. ХАБ рядом сдаёт снятое и выкидывает с площадки, комнату при этом не закрывает.", _ui.DoneRect);
-                    },
-                    _ui.SlotRects())));
+                if (moment.grade == CaptureGrade.Blank)
+                {
+                    BossCoach.Ensure().Order("Пустой угол. Рамка на лицо, ещё раз.", _ui.CameraRect);
+                }
+                else
+                {
+                    _lesson = Lesson.Second;
+                    _ui.SetHandLocked(false);
+                    BossCoach.Ensure().Order("Ролик в слоте. Сними ещё один: с одним кадром в монтаже нечего сравнивать. Карты снова можно брать.", _ui.CardBarRect);
+                }
+            }
+            else if (_lesson == Lesson.Second && _capture.Moments.Count >= TutorialClips)
+            {
+                _lesson = Lesson.TurnIn;
+                BossCoach.Ensure().Order("Жми «СНЯТО!». Ролики лягут в библиотеку, вернёшься на карту выпуска. Это ещё не эфир.", _ui.DoneRect);
             }
 
             if (_capture.IsFull)
@@ -1726,14 +1747,14 @@ namespace RealityDirector
             _frozen = true;
             Time.timeScale = 0f;
             BossCoach.Ensure().Freeze(
-                "Вот. Подошёл и поехал. Эмоцию фиксируй, пока он не выдохся.",
+                "Реакция в кадре. Снимай, пока она не кончилась.",
                 () =>
                 {
                     _frozen = false;
                     Time.timeScale = 1f;
                     _reactFocus = null;
                     _lesson = Lesson.Camera;
-                    BossCoach.Ensure().Order("Жми C. Рамка на него. Зажал левую, три секунды, отпустил. Лицо в кадре — годный ролик. Стена — пустой слот и минус к тону.", _ui.CameraRect);
+                    BossCoach.Ensure().Order("Жми C. Рамка на лицо. Зажми левую на три секунды и отпусти.", _ui.CameraRect);
                 },
                 _ui.AimRect);
         }
@@ -1785,26 +1806,9 @@ namespace RealityDirector
 
         void BriefShoot()
         {
-            _frozen = true;
-            Time.timeScale = 0f;
-            BossCoach.Ensure().Freeze(
-                BossMood.Stern,
-                "Рука снизу — карты этой съёмки. Цифра на карте — цена в Hell Token. Кубик качает злость и отношения, это не бросок «попал / не попал». Навёл — справа написано, кого проймёт.",
-                () => BossCoach.Ensure().Freeze(
-                    BossMood.Think,
-                    "Полоска слева — бюджет на карты этого выпуска. Кончился — кидать нечем. На следующий выпуск он не переносится.",
-                    () => BossCoach.Ensure().Freeze(
-                        BossMood.Grin,
-                        "Справа драма, трэш и семья. Карты и годные кадры их качают, пустой угол режет. К концу сезона победивший тон выбирает концовку.",
-                        () =>
-                        {
-                            _frozen = false;
-                            Time.timeScale = 1f;
-                            BossCoach.Ensure().Order(BossMood.Mad, "Возьми «Поджог». Вот эта карта.", _ui.CardRect("fridge_fire"));
-                        },
-                        _ui.ToneRect),
-                    _ui.BudgetRect),
-                _ui.CardBarRect);
+            _frozen = false;
+            Time.timeScale = 1f;
+            BossCoach.Ensure().Order(BossMood.Mad, "Возьми «Поджог». Цена на карте спишется с бюджета слева — это Hell Token, доллары съёмки.", _ui.CardRect("fridge_fire"));
         }
 
         IEnumerator FreezeSoon(float wait, System.Action show)
@@ -1920,8 +1924,11 @@ namespace RealityDirector
                 case Lesson.Camera:
                     _ui.SetActionGates(false, null, true, false, false);
                     break;
+                case Lesson.Second:
+                    _ui.SetActionGates(true, null, true, false, false);
+                    break;
                 case Lesson.TurnIn:
-                    _ui.SetActionGates(false, null, false, true, false);
+                    _ui.SetActionGates(true, null, true, true, false);
                     break;
                 default:
                     _ui.SetActionGates(false, null, false, false, false);

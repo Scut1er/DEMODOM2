@@ -119,7 +119,7 @@ namespace RealityDirector.Meta
             if (c.costMoney > 0 && (ctx.season == null || ctx.season.money < c.costMoney))
                 return "Нужно " + c.costMoney + " кр";
             if (c.costCash > 0 && (ctx.episode == null || ctx.episode.cash < c.costCash))
-                return "Нужно " + c.costCash + " нал";
+                return "Нужно " + c.costCash + " в кассе выпуска";
             return null;
         }
 
@@ -129,7 +129,7 @@ namespace RealityDirector.Meta
             if (c.costMoney > 0)
                 parts.Add("−" + c.costMoney + " кр");
             if (c.costCash > 0)
-                parts.Add("−" + c.costCash + " нал");
+                parts.Add("−" + c.costCash + " касса");
             return string.Join("  ", parts);
         }
 

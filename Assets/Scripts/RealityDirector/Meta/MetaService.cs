@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using RealityDirector.Core;
 using RealityDirector.Events;
+using RealityDirector.NPC;
 using UnityEngine;
 
 namespace RealityDirector.Meta
@@ -147,7 +148,7 @@ namespace RealityDirector.Meta
 
             if (offer.price > 0 && ep.cash < offer.price)
             {
-                Reject = "Не хватает нала.";
+                Reject = "Не хватает кассы выпуска.";
                 return false;
             }
 
@@ -187,7 +188,7 @@ namespace RealityDirector.Meta
             int cost = def != null ? def.runPrice : 0;
             if (def == null || cost <= 0 || ep.cash < cost)
             {
-                Reject = "Не хватает нала.";
+                Reject = "Не хватает кассы выпуска.";
                 return false;
             }
 
@@ -314,6 +315,14 @@ namespace RealityDirector.Meta
             if (_state.wantsTutorial && _state.tutorialBeat < 4 && order.Remove(TutorialCard))
                 order.Insert(0, TutorialCard);
 
+            // Карта на участника без такой черты в касте не сдаётся: иначе «клик по Злому» лежит в руке впустую.
+            var castIds = ep != null ? ep.cast : null;
+            for (int i = order.Count - 1; i >= 0; i--)
+            {
+                if (!FitsCast(Find(order[i]), castIds))
+                    order.RemoveAt(i);
+            }
+
             int size = HandSize();
             for (int i = 0; i < order.Count; i++)
             {
@@ -328,6 +337,45 @@ namespace RealityDirector.Meta
         }
 
         public const string TutorialCard = "fridge_fire";
+
+        // Цель-участник с ограничением по черте играется, только если такая черта есть в касте.
+        public static bool FitsCast(EventDefinition def, IList<string> castIds)
+        {
+            if (def == null)
+                return false;
+            if (def.PlayTarget != TargetType.Actor || !def.limitTrait)
+                return true;
+            if (castIds == null || castIds.Count == 0)
+                return true;
+            for (int i = 0; i < castIds.Count; i++)
+            {
+                var trait = MainTrait(castIds[i]);
+                if (trait == def.targetTrait)
+                    return true;
+                if (def.targetTrait == TraitId.Panicker && trait == TraitId.Sentimental)
+                    return true;
+                if (def.targetTrait == TraitId.Sentimental && trait == TraitId.Panicker)
+                    return true;
+            }
+
+            return false;
+        }
+
+        static TraitId MainTrait(string id)
+        {
+            var all = ContentLibrary.All<ActorDefinition>();
+            for (int i = 0; i < all.Count; i++)
+            {
+                if (all[i] != null && all[i].Id == id)
+                    return all[i].mainTrait;
+            }
+
+            if (id == "npc_zloi")
+                return TraitId.Aggressive;
+            if (id == "npc_dobryak")
+                return TraitId.Panicker;
+            return TraitId.Sentimental;
+        }
 
         static void Shuffle(List<string> list)
         {
@@ -368,8 +416,9 @@ namespace RealityDirector.Meta
             int available = DeckCount();
             string writers = "ур. " + _state.writerLevel + "\nконтрактов: " + Progression.ContractSlots(_state.writerLevel);
             int hype = Mathf.RoundToInt(Progression.HypeBonus(_state.castLevel) * 100f);
-            string slotsLabel = "В колоде " + available + "  ·  на съёмке колода тасуется, в руке " + slots
-                                + ". Сыграл — карта в «Использовано», на её место — следующая.";
+            int draw = Mathf.Min(slots, available);
+            string slotsLabel = "В колоде " + available + ". На съёмке сдаётся " + draw
+                                + (available > draw ? ". Сыграл — на место приходит следующая." : ".");
             if (_state.episode != null && _state.episode.tempCards.Count > 0)
                 slotsLabel += "  ·  разовых карт выпуска: " + _state.episode.tempCards.Count + " (сдаются первыми)";
 
@@ -593,7 +642,7 @@ namespace RealityDirector.Meta
         {
             var prep = BuildPrep();
             prep.moneyText = MoneyLine();
-            prep.shopFooter = "Только до эфира этого выпуска, потом сгорят. Спонсор в кадре: больше кр, отзывы хуже.";
+            prep.shopFooter = "Касса выпуска — деньги только этого выпуска, не кр сезона. Карты сгорят после эфира. Спонсор в кадре: больше кр, отзывы хуже.";
             prep.shop = CollectRun();
             return prep;
         }
@@ -626,7 +675,7 @@ namespace RealityDirector.Meta
         {
             if (_state.episode == null)
                 return _state.money + " кр";
-            return _state.money + " кр   ·   " + _state.episode.cash + " нал";
+            return _state.money + " кр   ·   касса выпуска " + _state.episode.cash;
         }
 
         PrepCard CardOf(EventDefinition def, bool inHand, string unit)

@@ -137,12 +137,15 @@ namespace RealityDirector.Meta
             eligible.Sort(Compare);
             var picked = new List<HellTubeComment>();
             var groups = new HashSet<string>();
+            var people = new HashSet<string>();
             int generic = 0;
             for (int i = 0; i < eligible.Count && picked.Count < want; i++)
             {
                 var c = eligible[i];
                 string g = string.IsNullOrEmpty(c.group) ? c.id : c.group;
                 if (!groups.Add(g))
+                    continue;
+                if (!string.IsNullOrEmpty(c.persona) && !people.Add(c.persona))
                     continue;
                 bool filler = c.category == "Generic";
                 if (filler && generic >= 2)

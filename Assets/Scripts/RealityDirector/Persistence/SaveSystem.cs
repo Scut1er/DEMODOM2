@@ -40,6 +40,7 @@ namespace RealityDirector.Persistence
         public int sponsorReputation = 25;
         public bool wantsTutorial;
         public int tutorialBeat;
+        public List<string> tips = new List<string>();
         public List<string> hand = new List<string>();
         public bool embarked;
         public string roomNodeId;
@@ -103,6 +104,7 @@ namespace RealityDirector.Persistence
                 sponsorReputation = state.sponsorReputation,
                 wantsTutorial = state.wantsTutorial,
                 tutorialBeat = state.tutorialBeat,
+                tips = new List<string>(state.tips),
                 hand = new List<string>(state.hand),
                 embarked = state.embarked,
                 roomNodeId = state.roomNodeId,
@@ -163,6 +165,8 @@ namespace RealityDirector.Persistence
             state.sponsorReputation = data.sponsorReputation;
             state.wantsTutorial = data.wantsTutorial;
             state.tutorialBeat = data.tutorialBeat;
+            if (data.tips != null)
+                state.tips.AddRange(data.tips);
             if (data.hand != null)
                 state.hand.AddRange(data.hand);
             state.embarked = data.embarked;

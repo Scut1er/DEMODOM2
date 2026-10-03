@@ -1,4 +1,3 @@
-using System.Collections;
 using System.Collections.Generic;
 using Action = System.Action;
 using Func = System.Func<string, string>;
@@ -36,6 +35,7 @@ namespace RealityDirector.UI.Hub
         MarketingRoomDefinition _marketing;
         CutFlowUi _cut;
         HubOverlays _screens;
+        int _montageCoach;
         ViewerWishId _airWish;
         string _airWishLabel;
         CastMember[] _cast;
@@ -135,6 +135,7 @@ namespace RealityDirector.UI.Hub
             map.Shoot += Shoot;
             _cut = CutFlowUi.Create();
             _screens = HubOverlays.Create();
+            _cut.Edited += OnCutEdited;
             _cut.Confirm += ConfirmCut;
             _cut.Next += CloseAir;
         }
@@ -166,7 +167,7 @@ namespace RealityDirector.UI.Hub
                 talking = coach != null && coach.IsOpen && !coach.Ordering;
             }
             if (hub != null)
-                hub.ApplyTutorial(teach, talking, state != null && state.tutorialBeat >= 1);
+                hub.ApplyTutorial(teach, talking, true);
             if (map != null)
                 map.ApplyTutorial(teach, talking);
             if (_screens != null)
@@ -308,44 +309,9 @@ namespace RealityDirector.UI.Hub
             hub.Deck.Hide();
             hub.ClearSelection();
             RefreshHub();
-            var teach = new List<CoachStep>();
-            BossCoach.Line(teach, BossMood.Aside, "Сверху — кр, рейтинг и тон сезона. кр тратишь здесь, на людей и карты. Hell Token — отдельные деньги, их жгут карты уже на площадке.", hub.StatsFocus());
-            BossCoach.Line(teach, BossMood.Think, "Кастинг. Апгрейд даёт места в кадре и процент к чеку. С третьего уровня на карточке откроется скрытая черта. Раньше она закрыта.", hub.ZoneFocus(CrewTrack.Cast));
-            BossCoach.Line(teach, BossMood.Annoyed, "Съёмочная. На сцене всегда 5 слотов футажа. Два апгрейда, каждый добавляет ещё один слот на сцену. В монтаже берёшь 3 кадра из всего, что снял за выпуск. Со второго уровня здесь ещё и общий тег соседних кадров.", hub.ZoneFocus(CrewTrack.Operators));
-            BossCoach.Line(teach, BossMood.Smug, "Сценарная. Больше карт берут в серию и открываются новые типы. На четвёртом уровне — второй рекламный контракт за выпуск.", hub.ZoneFocus(CrewTrack.Writers));
-            BossCoach.Line(teach, BossMood.Shock, "Магазин. Платишь кр один раз. Карта остаётся в колоде до конца сезона. На площадке её сдадут в руку вместе с остальными.", hub.ShopFocus());
-            if (teach.Count > 0)
-                BossCoach.Guide(0, teach.ToArray(), () => StartCoroutine(ShowDeckLesson()));
-        }
-
-        IEnumerator ShowDeckLesson()
-        {
-            if (GameSession.State == null || !GameSession.State.wantsTutorial || GameSession.State.tutorialBeat != 0)
-                yield break;
-            hub.Deck.Open(DeckPanelView.DeckTab, _meta.BuildPrep(), false, true);
-            yield return null;
-            Canvas.ForceUpdateCanvases();
-            var steps = new List<CoachStep>();
-            BossCoach.Line(steps, BossMood.Stern, "Колода сезона. Стартовое и купленное. Сейчас только смотри, тыкать не надо.", hub.Deck.CardsFocus());
-            BossCoach.Line(steps, BossMood.Aside, "На съёмке её тасуют и сдают в руку. Сыграл карту — добираешь следующую. К следующей съёмке сыгранные возвращаются.", hub.Deck.ExplainFocus());
-            BossCoach.Line(steps, BossMood.Stern, "Счёт снизу. Сколько карт в колоде и сколько влезет в руку.", hub.Deck.FooterFocus());
-            BossCoach.Guide(0, steps.ToArray(), CloseDeckThenStart);
-        }
-
-        void CloseDeckThenStart()
-        {
-            if (hub.Deck != null && hub.Deck.IsOpen)
-                hub.Deck.Hide();
-            var start = new List<CoachStep>();
-            BossCoach.Line(start, BossMood.Mad, "Старт выпуска. Сначала каст — кого пустишь в кадр. Потом карта: комнаты по очереди, в конце монтаж и эфир. Назад по комнатам нельзя.", hub.StartFocus());
-            if (start.Count == 0 && GameSession.State != null)
-            {
-                GameSession.State.tutorialBeat = 1;
-                GameSession.Save();
-                return;
-            }
-
-            BossCoach.Play(0, 1, start.ToArray());
+            var state = GameSession.State;
+            if (state != null && state.wantsTutorial && state.tutorialBeat == 0)
+                BossCoach.Ensure().Order("Жми «Начать съёмку». Каст первого выпуска я уже собрал.", hub.StartFocus());
         }
 
         void RefreshHub()
@@ -360,8 +326,8 @@ namespace RealityDirector.UI.Hub
             var state = GameSession.State;
             int number = state.episodeIndex + 1;
             hub.SetStartCaption(_episode.Active
-                ? "Выпуск " + number + " из " + state.seasonLength + " идёт  ·  вернуться на карту эпизода"
-                : "Выпуск " + number + " из " + state.seasonLength + "  ·  дальше карта эпизода: комнаты и монтаж");
+                ? "Выпуск " + number + " из " + state.seasonLength + " идёт  ·  вернуться на карту выпуска"
+                : "Выпуск " + number + " из " + state.seasonLength + "  ·  дальше карта выпуска: комнаты и монтаж");
             hub.SetSubtitle("Сезон " + state.seasonNumber + "  ·  Выпуск " + number + " из " + state.seasonLength + "  ·  Продакшн-хаб"
                             + (string.IsNullOrEmpty(_hubNotice) ? "" : "\n" + _hubNotice));
         }
@@ -384,7 +350,22 @@ namespace RealityDirector.UI.Hub
                     BossCoach.Ensure().Hide();
                     ShowHub();
                 });
-                _screens.PickCast(_cast, state.castPick, min, seats, state.castLevel >= 3, ids =>
+                bool firstLesson = state.wantsTutorial && state.episodeIndex == 0;
+                CastMember[] roster = _cast;
+                List<string> prefill = state.castPick;
+                if (firstLesson)
+                {
+                    roster = TutorialCast(_cast);
+                    prefill = new List<string>();
+                    for (int i = 0; i < roster.Length; i++)
+                        prefill.Add(roster[i].id);
+                    min = roster.Length;
+                    seats = roster.Length;
+                }
+                else if (state.castLevel < 3)
+                    TipOnce("secret", "Скрытая черта закрыта, пока кастинг ниже третьего. Апгрейд кастинга — и на карточке будет видно, кто клептоман, а кто пранкер.");
+
+                _screens.PickCast(roster, prefill, min, seats, state.castLevel >= 3, ids =>
                 {
                     state.castPick.Clear();
                     state.castPick.AddRange(ids);
@@ -400,12 +381,8 @@ namespace RealityDirector.UI.Hub
                         OpenMap();
                     });
                 }, backToHub);
-                var castTeach = new List<CoachStep>();
-                BossCoach.Line(castTeach, BossMood.Grin, "Жми на карточку — взять или убрать. Минимум двое, больше мест даёт только апгрейд кастинга. Эти люди и будут в кадре весь выпуск.", _screens.Focus);
-                BossCoach.Line(castTeach, BossMood.Smug, "Строка под именем — как они ломаются. Это крючок для карт, не биография. Жми в них тем, на что они уже злые.", _screens.Focus);
-                BossCoach.Line(castTeach, BossMood.Aside, "Скрытая черта закрыта, пока кастинг ниже третьего. Апгрейд — и я шепну, кто клептоман, а кто пранкер. В кадре это потом всплывёт в комментариях.", _screens.Focus);
-                if (castTeach.Count > 0)
-                    BossCoach.Play(1, 2, castTeach.ToArray());
+                if (firstLesson)
+                    BossCoach.Ensure().Order("Злой и Добряк. На первом выпуске других нет. Жми «Утвердить каст».", _screens.ConfirmFocus != null ? _screens.ConfirmFocus : _screens.Focus);
                 return;
             }
 
@@ -418,16 +395,9 @@ namespace RealityDirector.UI.Hub
             _selected = _episode.Map.CurrentChoice;
             Show(map.gameObject);
             RefreshMap();
-            var mapTeach = new List<CoachStep>();
-            BossCoach.Line(mapTeach, BossMood.Smug, "Выпуск — маршрут. Сегодня короткий, я сам собрал: съёмка, событие, монтаж. Со следующего будут развилки. Светящаяся комната — единственная, куда можно.", map.BoardFocus);
-            BossCoach.Line(mapTeach, BossMood.Yell, "Съёмка. Колоду тасуют и сдают руку уже там. Карту кидаешь на человека или вещь, камера пишет ролик. Ролик — ещё не эфир.", map.NodeFocus(RoomType.Situation));
-            BossCoach.Line(mapTeach, BossMood.Think, "Событие. Текст и выбор между съёмками. В библиотеку футажа не падает. На кнопке бывает шанс — может не выйти.", map.NodeFocus(RoomType.Event));
-            BossCoach.Line(mapTeach, BossMood.Stern, "Монтаж — последняя дверь. Пока не соберёшь кат и не нажмёшь в эфир, выпуск не закрыт.", map.NodeFocus(RoomType.Montage));
-            BossCoach.Line(mapTeach, BossMood.Aside, "Маркетинга сегодня нет. На следующих картах будет: берёшь контракт, играешь карту спонсора и оставляешь этот ролик в кате. Выкинул из монтажа — выплаты нет, репутация падает.", map.InfoFocus);
-            BossCoach.Line(mapTeach, BossMood.Grin, "Справа цель выпуска и задачи зрителей. Задач пока нет. После эфира заказ можно взять в комментариях — тогда он появится здесь и на хабе.", map.PlanFocus);
-            BossCoach.Line(mapTeach, BossMood.Mad, "Жми на съёмку, потом входи. Назад по карте нельзя. В хаб можно выйти, выпуск от этого не сбросится.", map.EnterFocus);
-            if (mapTeach.Count > 0)
-                BossCoach.Play(2, 3, mapTeach.ToArray());
+            var state = GameSession.State;
+            if (state != null && state.wantsTutorial && state.tutorialBeat == 2)
+                BossCoach.Ensure().Order("Жми «Снимать». Светящаяся комната — единственная, куда можно. Назад по карте нельзя.", map.EnterFocus != null ? map.EnterFocus : map.NodeFocus(RoomType.Situation));
         }
 
         void RefreshMap()
@@ -536,6 +506,7 @@ namespace RealityDirector.UI.Hub
             string head = _meta.ReputationLine();
             if (!string.IsNullOrEmpty(_meta.Reject))
                 head += "\n" + _meta.Reject;
+            TipOnce("market", "Маркетинг. Касса — деньги этого выпуска. Кр копится на сезон и тратится в хабе. Контракт не платит сразу: сыграй карту спонсора и оставь этот ролик в монтаже.");
             _screens.ShowDeals(head, Deals(), offer =>
             {
                 bool ok = _meta.TryBuyOffer(offer);
@@ -599,12 +570,8 @@ namespace RealityDirector.UI.Hub
                 return;
             BossCoach.Ensure().Freeze(
                 BossMood.Think,
-                "Событие. Это не клип: в библиотеку футажа ничего не падает. Читаешь, что случилось между съёмками.",
-                () => BossCoach.Ensure().Freeze(
-                    BossMood.Stern,
-                    "Варианты справа. Если на кнопке процент — это шанс, может не выйти. «Уйти» закрывает комнату и ничего не меняет. Назад выбор не переигрывается.",
-                    () => BossCoach.Ensure().Order(BossMood.Mad, "Выбери одну.", _eventView.Focus),
-                    _eventView.Focus),
+                "Событие. Это не клип: в библиотеку футажа ничего не падает.",
+                () => BossCoach.Ensure().Order(BossMood.Mad, "Варианты снизу. Если на кнопке процент — это шанс. Выбери одну. Назад выбор не переигрывается.", _eventView.Focus),
                 _eventView.BodyFocus);
         }
 
@@ -635,6 +602,8 @@ namespace RealityDirector.UI.Hub
                     }
 
                     applied?.Invoke(index);
+                    if (map != null && map.gameObject.activeInHierarchy)
+                        RefreshMap();
                     Sfx.Play(outcome.success ? Cue.Coin : Cue.Miss, 0.5f, outcome.success ? 1.05f : 0.9f);
                     _eventView.ShowResult(outcome, chancy, () =>
                     {
@@ -720,14 +689,28 @@ namespace RealityDirector.UI.Hub
             Sfx.Play(Cue.Blip, 0.5f);
             int slots = Progression.AirSlots;
             _cut.ShowMontage(Library(_episode.Current), slots);
-            var cutTeach = new List<CoachStep>();
-            BossCoach.Line(cutTeach, BossMood.Sigh, "Сверху всё, что снял за выпуск. Клик кладёт ролик в один из трёх слотов эфира или убирает. Если ряд длинный — крути колёсико. ▶ смотрит черновик, в эфир от этого ничего не уезжает.", _cut.LibraryFocus);
-            BossCoach.Line(cutTeach, BossMood.Annoyed, "Снизу три кадра, которые увидит ад. Выдели кадр: РАНЬШЕ и ПОЗЖЕ меняют порядок, УБРАТЬ выкидывает. Соседние про одно и то же поднимают связность. Про разное — это нарезка.", _cut.CutFocus);
-            BossCoach.Line(cutTeach, BossMood.Grin, "Связность справа. Высокая — зритель видит историю. Низкая — крики без нитки. Со второго уровня съёмочной здесь ещё и общий тег соседей.", _cut.CoherenceFocus);
-            BossCoach.Line(cutTeach, BossMood.Yell, "Строчка сверху — это я ору. Не подсказка. Давление. Игнорируешь — я не замолкаю, просто злюсь.", _cut.BossFocus);
-            BossCoach.Line(cutTeach, BossMood.Mad, "В ЭФИР. Чего нет в кате — для зрителя не было. Рекламу, которую выкинул, я не оплачу, и репутация спонсора просядет.", _cut.AirFocus);
-            if (cutTeach.Count > 0)
-                BossCoach.Play(4, 5, cutTeach.ToArray());
+            var state = GameSession.State;
+            bool lesson = state != null && state.wantsTutorial && state.tutorialBeat == 4 && _cut.LibraryCount >= 2;
+            _cut.HoldAir(lesson);
+            if (!lesson)
+                return;
+            _montageCoach = 1;
+            BossCoach.Ensure().Order("Сверху снятое. Кликни ролик — он ляжет в слот снизу. Положи оба: мест три, РАНЬШЕ и ПОЗЖЕ меняют порядок.", _cut.LibraryFocus);
+        }
+
+        void OnCutEdited()
+        {
+            if (_montageCoach != 1 || _cut == null || _cut.CutCount < 2)
+                return;
+            var state = GameSession.State;
+            if (state == null || !state.wantsTutorial || state.tutorialBeat != 4)
+                return;
+            _montageCoach = 2;
+            _cut.HoldAir(false);
+            BossCoach.Ensure().Freeze(
+                "Оба в кате. Соседние про одно поднимают связность — цифра сверху справа. Про разное это нарезка.",
+                () => BossCoach.Ensure().Order("Жми «В ЭФИР». Чего нет в кате — для зрителя не было.", _cut.AirFocus),
+                _cut.CoherenceFocus);
         }
 
         void ConfirmCut(List<string> ids)
@@ -735,6 +718,11 @@ namespace RealityDirector.UI.Hub
             if (!_episode.Active)
                 return;
             _episode.Current.finalCut = ids != null ? new List<string>(ids) : new List<string>();
+            var state = GameSession.State;
+            if (state != null && state.wantsTutorial && state.tutorialBeat < 5)
+                state.tutorialBeat = 5;
+            _montageCoach = 0;
+            _cut.HoldAir(false);
             _episode.CompleteRoom();
             GameSession.Save();
             _cut.Hide();
@@ -778,18 +766,58 @@ namespace RealityDirector.UI.Hub
             int scene = episode.Number;
             string name = string.IsNullOrEmpty(GameSession.SceneTitle) ? "Без названия" : GameSession.SceneTitle;
             _cut.ShowAir(result, cut, "Серия " + scene + ". «" + name + "»", episode.settledPay, coherence, episode.settledLine);
-            var airTeach = new List<CoachStep>();
-            BossCoach.Line(airTeach, BossMood.Aside, "Реакция зрителей. Они видят только кат. Квартиру, черновики и вырезанное в эту арифметику я не кладу.", _cut.WatchFocus);
-            BossCoach.Line(airTeach, BossMood.Stern, "Просмотры. Сколько ад открыл серию. Растут вместе с оценкой: выше рейтинг — больше пришло.", _cut.ViewsFocus);
-            BossCoach.Line(airTeach, BossMood.Grin, "Нравится — та же оценка, только в процентах. Десять из десяти это сто. Это не отдельная кнопка и не деньги.", _cut.LikesFocus);
-            BossCoach.Line(airTeach, BossMood.Mad, "Рейтинг. Среднее их оценок из десяти. Вот эта цифра кормит чек. Пустой угол и реклама в кадре роняют оценки.", _cut.RatingFocus);
-            BossCoach.Line(airTeach, BossMood.Think, "Связность монтажа. Соседние кадры про одно — выше, про разное — каша. Сама на деньги не умножается, но они пишут, история это или нарезка.", _cut.AirCoherenceFocus);
-            BossCoach.Line(airTeach, BossMood.Annoyed, "Комментарии — это и есть оценки. Каждый со своим баллом, злость тоже считается. Увидели скрытую черту — напишут прямо здесь.", _cut.CommentsFocus);
-            BossCoach.Line(airTeach, BossMood.Smug, "Звезда и «взять» — заказ зрителей. Слёзы, если в кате кто-то плакал. Объятия — семейный кадр с человеком. Драка — если подрались. Держать тон — кадр в том тоне, который уже ведёт сезон.", _cut.TaskFocus);
-            BossCoach.Line(airTeach, BossMood.Grin, "Жми «взять». Задача встанет на хаб и на карту следующего выпуска. Закроешь её кадром в эфире — чек ×1.3. Мимо — деньги есть, бонуса нет. Такой же заказ второй раз не берётся, мест четыре.", _cut.TaskFocus);
-            BossCoach.Line(airTeach, BossMood.Sigh, "Доход. Считается от рейтинга, кастинг добавляет процент. Закрытая задача множит всё на 1.3. Реклама в кате докидывает кр спонсора и роняет оценки. Выкинул её из монтажа — выплаты нет, репутация падает. Дальше хаб.", _cut.IncomeFocus);
-            if (airTeach.Count > 0)
-                BossCoach.Play(5, 6, airTeach.ToArray());
+            var state = GameSession.State;
+            if (state == null || !state.wantsTutorial || state.tutorialBeat != 5)
+                return;
+            BossCoach.Ensure().Freeze(
+                "Эфир. Зрители видят только кат. «Нравится» — та же оценка в процентах, не отдельные деньги. Рейтинг кормит чек.",
+                () => BossCoach.Ensure().Freeze(
+                    "Обучение окончено. Дальше сам.",
+                    () =>
+                    {
+                        state.tutorialBeat = 6;
+                        state.wantsTutorial = false;
+                        GameSession.Save();
+                    }),
+                _cut.LikesFocus);
+        }
+
+        static CastMember[] TutorialCast(CastMember[] all)
+        {
+            var want = new[] { "npc_zloi", "npc_dobryak" };
+            var list = new List<CastMember>();
+            if (all != null)
+            {
+                for (int w = 0; w < want.Length; w++)
+                {
+                    for (int i = 0; i < all.Length; i++)
+                    {
+                        if (all[i] != null && all[i].id == want[w])
+                            list.Add(all[i]);
+                    }
+                }
+            }
+
+            if (list.Count >= 2)
+                return list.ToArray();
+            int n = all == null ? 0 : Mathf.Min(2, all.Length);
+            var fallback = new CastMember[n];
+            for (int i = 0; i < n; i++)
+                fallback[i] = all[i];
+            return fallback;
+        }
+
+        void TipOnce(string id, string line)
+        {
+            var state = GameSession.State;
+            if (state == null || state.wantsTutorial || state.tips.Contains(id))
+                return;
+            BossCoach.Ensure().Freeze(line, () =>
+            {
+                if (!state.tips.Contains(id))
+                    state.tips.Add(id);
+                GameSession.Save();
+            });
         }
 
         void Settle(EpisodeState episode, List<FootageClip> cut, List<CapturedMoment> moments, int coherence)

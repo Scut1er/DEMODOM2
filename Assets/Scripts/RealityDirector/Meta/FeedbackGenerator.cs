@@ -196,11 +196,18 @@ namespace RealityDirector.Meta
                 result.reviews = new List<ViewerReview>();
             var extra = HellTubeComments.Pick(cut, tone, coherence, sponsorAired, 4);
             var seen = new HashSet<string>();
+            var people = new HashSet<string>();
             for (int i = 0; i < result.reviews.Count; i++)
+            {
                 seen.Add(result.reviews[i].body ?? "");
+                if (!string.IsNullOrEmpty(result.reviews[i].author))
+                    people.Add(result.reviews[i].author);
+            }
             for (int i = 0; i < extra.Count && result.reviews.Count < 6; i++)
             {
                 if (!seen.Add(extra[i].body ?? ""))
+                    continue;
+                if (!string.IsNullOrEmpty(extra[i].author) && !people.Add(extra[i].author))
                     continue;
                 result.reviews.Add(extra[i]);
             }

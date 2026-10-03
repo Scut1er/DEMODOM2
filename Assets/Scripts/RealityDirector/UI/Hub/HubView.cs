@@ -134,6 +134,14 @@ namespace RealityDirector.UI.Hub
             var tasksRt = tasksPanel != null ? tasksPanel.transform as RectTransform : null;
             if (tasksRt != null)
                 UiKit.Place(tasksRt, Vector2.zero, Vector2.zero, new Vector2(20f, 150f), new Vector2(430f, 150f));
+            if (tasks != null)
+            {
+                var tasksText = tasks.rectTransform;
+                tasksText.offsetMin = new Vector2(28f, 20f);
+                tasksText.offsetMax = new Vector2(-28f, -20f);
+                tasks.horizontalOverflow = HorizontalWrapMode.Wrap;
+                tasks.verticalOverflow = VerticalWrapMode.Truncate;
+            }
 
             if (start != null)
             {
@@ -157,7 +165,11 @@ namespace RealityDirector.UI.Hub
             UiKit.Secondary(settingsButton);
             UiKit.Secondary(menuButton);
             if (roster != null)
-                UiKit.Secondary(roster.transform.Find("Invite")?.GetComponent<Button>());
+            {
+                var invite = roster.transform.Find("Invite");
+                UiKit.Secondary(invite != null ? invite.GetComponent<Button>() : null);
+                FitInvite(invite as RectTransform);
+            }
             if (detail != null)
                 UiKit.Primary(detail.transform.Find("Upgrade")?.GetComponent<Button>(), 20);
             if (stats != null)
@@ -254,7 +266,7 @@ namespace RealityDirector.UI.Hub
             if (shopButton != null)
                 shopButton.gameObject.SetActive(true);
             if (startCaption != null)
-                startCaption.text = "Выпуск " + prep.episodeNumber + "  ·  дальше карта эпизода";
+                startCaption.text = "Выпуск " + prep.episodeNumber + "  ·  дальше карта выпуска";
 
             if (deck != null && deck.IsOpen)
                 deck.Show(prep);
@@ -331,6 +343,42 @@ namespace RealityDirector.UI.Hub
                 start.interactable = canStart;
             if (deck != null)
                 deck.SetLocked(teach && talking);
+            LockExtras(teach);
+        }
+
+        void FitInvite(RectTransform button)
+        {
+            if (button == null)
+                return;
+            var label = button.GetComponentInChildren<Text>();
+            if (label == null)
+                return;
+            label.alignment = TextAnchor.MiddleCenter;
+            label.resizeTextForBestFit = true;
+            label.resizeTextMinSize = 11;
+            label.resizeTextMaxSize = Mathf.Max(14, label.fontSize);
+            label.horizontalOverflow = HorizontalWrapMode.Wrap;
+            label.verticalOverflow = VerticalWrapMode.Truncate;
+            label.rectTransform.offsetMin = new Vector2(16f, 6f);
+            label.rectTransform.offsetMax = new Vector2(-16f, -6f);
+        }
+
+        void LockExtras(bool teach)
+        {
+            var buttons = GetComponentsInChildren<Button>(true);
+            for (int i = 0; i < buttons.Length; i++)
+            {
+                var button = buttons[i];
+                if (button == null)
+                    continue;
+                bool invite = roster != null && button.name == "Invite" && button.transform.IsChildOf(roster.transform);
+                var label = button.GetComponentInChildren<Text>(true);
+                string text = label != null ? label.text : "";
+                bool random = text.IndexOf("Случайн", StringComparison.OrdinalIgnoreCase) >= 0;
+                if (!invite && !random)
+                    continue;
+                button.interactable = !teach;
+            }
         }
     }
 }

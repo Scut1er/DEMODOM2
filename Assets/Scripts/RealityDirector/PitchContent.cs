@@ -50,7 +50,7 @@ namespace RealityDirector
             content.SentimentalRules = content.RulesFor(TraitId.Sentimental);
             content.PanickerRules = content.RulesFor(TraitId.Panicker);
 
-            content.Provoke = Event("provoke", "Разозлить", "клик по Злому", TargetType.Actor, null,
+            content.Provoke = Event("provoke", "Разозлить", "клик по агрессивному", TargetType.Actor, null,
                 new Color(0.62f, 0.16f, 0.16f, 1f), 90f, false, IllustratedArt.IconAnger, MomentTags.Conflict);
             content.FridgeFire = Event("fridge_fire", "Поджог", "клик по холодильнику", TargetType.Object, "fridge",
                 new Color(0.72f, 0.32f, 0.12f, 1f), 0f, true, IllustratedArt.IconFire, MomentTags.Fire, MomentTags.Chaos);
@@ -74,7 +74,7 @@ namespace RealityDirector
                 new Color(0.28f, 0.22f, 0.38f, 1f), 0f, false, IllustratedArt.IconAnger, MomentTags.Conflict);
             content.MeditationBell = Event("meditation_bell", "Колокол", "сразу на весь дом", TargetType.Global, null,
                 new Color(0.2f, 0.42f, 0.28f, 1f), 0f, false, IllustratedArt.IconFamily, MomentTags.Warmth);
-            content.Confession = Event("confession_cam", "Исповедь", "клик по Добряку", TargetType.Actor, null,
+            content.Confession = Event("confession_cam", "Исповедь", "клик по паникёру", TargetType.Actor, null,
                 new Color(0.2f, 0.38f, 0.55f, 1f), 0f, false, IllustratedArt.IconTear, MomentTags.Crying);
             content.Confession.limitTrait = true;
             content.Confession.targetTrait = TraitId.Panicker;

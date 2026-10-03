@@ -202,7 +202,7 @@ namespace RealityDirector.Capture
             {
                 grade = CaptureGrade.Cast;
                 mood = ResolveMood(inside, tags, fridgeIn);
-                if (HugInFrame(inside))
+                if (mood == ShowMood.Family && RealHug(inside))
                     Add(tags, MomentTags.Hug);
                 if (mood == ShowMood.Family)
                     Add(tags, MomentTags.Warmth);
@@ -479,7 +479,7 @@ namespace RealityDirector.Capture
                     CapturedMoment.AddCue(cues, MomentTags.Crying, name);
                 }
 
-                if (inside[i].IsHugging || inside[i].IsSeekingComfort)
+                if (inside[i].IsHugging)
                 {
                     Add(tags, MomentTags.Hug);
                     CapturedMoment.AddCue(cues, MomentTags.Hug, name);
@@ -499,11 +499,16 @@ namespace RealityDirector.Capture
             }
         }
 
+        // Паника и огонь — не тепло. Семья только от объятия или явного тега тепла.
+        // Раньше «бежит за утешением» при двух людях в кадре считалось объятием и шло раньше пожара,
+        // поэтому ролик у горящего холодильника давал Family и уводил тон сезона.
         static ShowMood ResolveMood(List<NPCController> inside, List<string> tags, bool sceneOnFire)
         {
             bool fight = false;
             bool cry = false;
             bool rage = false;
+            bool panic = false;
+            bool hug = false;
             bool emoting = false;
             for (int i = 0; i < inside.Count; i++)
             {
@@ -513,39 +518,42 @@ namespace RealityDirector.Capture
                     cry = true;
                 if (inside[i].HasRage)
                     rage = true;
+                if (inside[i].Action == NpcActionId.Panic)
+                    panic = true;
+                if (inside[i].IsHugging)
+                    hug = true;
                 if (inside[i].Action == NpcActionId.Emote)
                     emoting = true;
             }
 
-            if (fight)
+            if (fight || rage)
                 return ShowMood.Trash;
-            if (HugInFrame(inside))
-                return ShowMood.Family;
-            if (cry)
+            if (sceneOnFire && !hug)
+                return ShowMood.Trash;
+            if (panic || cry)
                 return ShowMood.Drama;
-            if (rage || sceneOnFire)
+            if (hug && !sceneOnFire)
+                return ShowMood.Family;
+            if (sceneOnFire)
                 return ShowMood.Trash;
             if (emoting && tags.Contains(MomentTags.Misery))
                 return ShowMood.Drama;
             if (emoting && tags.Contains(MomentTags.Conflict))
                 return ShowMood.Trash;
-            return ShowMood.Family;
+            if (tags.Contains(MomentTags.Warmth) || tags.Contains(MomentTags.Hug))
+                return ShowMood.Family;
+            return ShowMood.Drama;
         }
 
-        static bool HugInFrame(List<NPCController> inside)
+        static bool RealHug(List<NPCController> inside)
         {
-            bool walk = false;
-            int n = 0;
             for (int i = 0; i < inside.Count; i++)
             {
-                n++;
                 if (inside[i].IsHugging)
                     return true;
-                if (inside[i].IsSeekingComfort)
-                    walk = true;
             }
 
-            return walk && n >= 2;
+            return false;
         }
 
         static HiddenTrait ExposedIn(List<NPCController> inside)
