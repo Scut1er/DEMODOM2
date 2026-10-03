@@ -1,7 +1,9 @@
 using System;
 using System.Collections.Generic;
+using RealityDirector.Core;
 using RealityDirector.Meta;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 
 namespace RealityDirector.UI
@@ -25,6 +27,7 @@ namespace RealityDirector.UI
 
         static BossCoach _instance;
         static Sprite _portrait;
+        static Sprite _head;
 
         Font _font;
         RectTransform _root;
@@ -95,9 +98,19 @@ namespace RealityDirector.UI
 
         public static Sprite Portrait()
         {
-            if (_portrait != null)
-                return _portrait;
-            var source = Resources.Load<Texture2D>("Art/Boss/boss_devil");
+            return Cutout("Art/Boss/boss_devil", ref _portrait);
+        }
+
+        public static Sprite Head()
+        {
+            return Cutout("Art/Boss/boss_head", ref _head) ?? Portrait();
+        }
+
+        static Sprite Cutout(string path, ref Sprite cached)
+        {
+            if (cached != null)
+                return cached;
+            var source = Resources.Load<Texture2D>(path);
             if (source == null)
                 return null;
             Texture2D tex = source;
@@ -123,9 +136,9 @@ namespace RealityDirector.UI
                 tex = source;
             }
 
-            _portrait = Sprite.Create(tex, new Rect(0f, 0f, tex.width, tex.height), new Vector2(0.5f, 0.5f), 100f);
-            _portrait.hideFlags = HideFlags.HideAndDontSave;
-            return _portrait;
+            cached = Sprite.Create(tex, new Rect(0f, 0f, tex.width, tex.height), new Vector2(0.5f, 0.5f), 100f);
+            cached.hideFlags = HideFlags.HideAndDontSave;
+            return cached;
         }
 
         void OnDestroy()
@@ -300,9 +313,10 @@ namespace RealityDirector.UI
             face.anchorMin = face.anchorMax = new Vector2(0f, 0.5f);
             face.pivot = new Vector2(0f, 0.5f);
             face.anchoredPosition = new Vector2(28f, 0f);
-            face.sizeDelta = new Vector2(180f, 220f);
+            bool shoot = SceneManager.GetActiveScene().name == SceneFlow.Episode;
+            face.sizeDelta = shoot ? new Vector2(200f, 200f) : new Vector2(180f, 220f);
             var img = portrait.GetComponent<Image>();
-            img.sprite = Portrait();
+            img.sprite = shoot ? Head() : Portrait();
             img.preserveAspect = true;
             img.raycastTarget = false;
 
