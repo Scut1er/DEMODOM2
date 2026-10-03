@@ -156,6 +156,7 @@ namespace RealityDirector.UI
             public Text Text;
             public Func<string> Pull;
             public Vector2 Offset;
+            public bool Fit;
         }
 
         class Bubble
@@ -260,21 +261,63 @@ namespace RealityDirector.UI
             if (plate)
             {
                 var bg = root.AddComponent<Image>();
-                bg.color = new Color(0f, 0f, 0f, 0.45f);
+                UiKit.Dress(bg, UiKit.Frame.Dark);
+                bg.color = new Color(1f, 1f, 1f, 0.88f);
                 bg.raycastTarget = false;
             }
 
             var text = MakeText(root.transform, "", size, color, TextAnchor.MiddleCenter);
             Stretch(text.rectTransform);
             text.raycastTarget = false;
+            if (plate)
+            {
+                // Табличка по размеру текста, строки не переносятся — так её ширину можно измерить.
+                text.horizontalOverflow = HorizontalWrapMode.Overflow;
+                text.supportRichText = true;
+            }
+
             _tags.Add(new Tag
             {
                 Target = target,
                 Rect = rect,
                 Text = text,
                 Pull = pull,
-                Offset = offset
+                Offset = offset,
+                Fit = plate
             });
+        }
+
+        // Таблички стоящих рядом участников не налезают друг на друга: нижнюю сдвигаем вниз.
+        void SpreadPlates()
+        {
+            for (int pass = 0; pass < 3; pass++)
+            {
+                bool moved = false;
+                for (int i = 0; i < _tags.Count; i++)
+                {
+                    var a = _tags[i];
+                    if (!a.Fit || a.Target == null || !a.Rect.gameObject.activeSelf)
+                        continue;
+                    for (int j = i + 1; j < _tags.Count; j++)
+                    {
+                        var b = _tags[j];
+                        if (!b.Fit || b.Target == null || !b.Rect.gameObject.activeSelf)
+                            continue;
+                        Vector2 pa = a.Rect.anchoredPosition, pb = b.Rect.anchoredPosition;
+                        Vector2 sa = a.Rect.sizeDelta, sb = b.Rect.sizeDelta;
+                        float overlapX = (sa.x + sb.x) * 0.5f - Mathf.Abs(pa.x - pb.x);
+                        float overlapY = (sa.y + sb.y) * 0.5f + 4f - Mathf.Abs(pa.y - pb.y);
+                        if (overlapX <= 0f || overlapY <= 0f)
+                            continue;
+                        var lower = pa.y <= pb.y ? a : b;
+                        lower.Rect.anchoredPosition -= new Vector2(0f, overlapY);
+                        moved = true;
+                    }
+                }
+
+                if (!moved)
+                    break;
+            }
         }
 
         public void AddBubble(Transform target, Func<string> pull, Func<bool> thought, Vector2 offset)
@@ -2488,10 +2531,14 @@ namespace RealityDirector.UI
                 if (!show)
                     continue;
                 tag.Text.text = value;
+                if (tag.Fit)
+                    tag.Rect.sizeDelta = new Vector2(tag.Text.preferredWidth + 26f, tag.Text.preferredHeight + 12f);
                 Vector3 screen = Camera.main.WorldToScreenPoint(tag.Target.position);
                 if (RectTransformUtility.ScreenPointToLocalPointInRectangle(_canvasRect, screen, null, out var local))
                     tag.Rect.anchoredPosition = local + tag.Offset;
             }
+
+            SpreadPlates();
 
             for (int i = 0; i < _bubbles.Count; i++)
             {

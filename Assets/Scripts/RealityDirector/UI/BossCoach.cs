@@ -391,14 +391,28 @@ namespace RealityDirector.UI
             img.preserveAspect = true;
             img.raycastTarget = false;
 
-            var who = Text(go.transform, "БОСС", 16, new Color(0.96f, 0.78f, 0.22f, 1f));
-            Pin(who.rectTransform, 230f, 18f, 400f, 28f);
+            // Как в интро: панель в золотой кромке, табличка «БОСС» из пака новеллы.
+            UiKit.DressSolid(go.GetComponent<Image>(), UiKit.Frame.Dialog, 8f);
+            var plate = new GameObject("nameplate", typeof(RectTransform), typeof(Image));
+            plate.transform.SetParent(go.transform, false);
+            var plateImage = plate.GetComponent<Image>();
+            plateImage.sprite = UiKit.Vn("nameplate_boss");
+            plateImage.type = Image.Type.Sliced;
+            plateImage.pixelsPerUnitMultiplier = 2.4f;
+            plateImage.raycastTarget = false;
+            Pin(plateImage.rectTransform, 222f, 14f, 220f, 40f);
+            var who = Text(go.transform, "БОСС", 18, new Color(0.96f, 0.78f, 0.22f, 1f));
+            who.fontStyle = FontStyle.Bold;
+            who.alignment = TextAnchor.MiddleCenter;
+            Pin(who.rectTransform, 222f, 14f, 220f, 40f);
             _line = Text(go.transform, "", 22, new Color(0.94f, 0.9f, 0.86f, 1f));
-            Pin(_line.rectTransform, 230f, 52f, 1280f, 140f);
+            Pin(_line.rectTransform, 236f, 66f, 1260f, 140f);
 
+            // Главная — «Дальше», крупно и сверху. Пропуск — мелко и честно: он закрывает всё обучение.
             if (!_wait)
-                DockButton("ДАЛЬШЕ", new Vector2(1540f, 150f), new Vector2(320f, 56f), new Color(0.72f, 0.22f, 0.18f, 1f), Advance);
-            var stop = DockButton("ХВАТИТ", new Vector2(1540f, 86f), new Vector2(320f, 48f), new Color(0.22f, 0.16f, 0.2f, 1f), Quit);
+                UiKit.Primary(DockButton("ДАЛЬШЕ", new Vector2(1540f, 52f), new Vector2(340f, 72f), Color.white, Advance).GetComponent<Button>(), 22);
+            var stop = DockButton("ПРОПУСТИТЬ ОБУЧЕНИЕ", new Vector2(1540f, 140f), new Vector2(340f, 46f), new Color(0.22f, 0.16f, 0.2f, 1f), Quit);
+            UiKit.Secondary(stop.GetComponent<Button>(), 15);
             stop.raycastTarget = true;
         }
 

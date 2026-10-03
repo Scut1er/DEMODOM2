@@ -319,15 +319,39 @@ namespace RealityDirector.NPC
 
         public string TraitName => !string.IsNullOrEmpty(TraitLabel) ? TraitLabel : Trait != null ? Trait.displayName : "";
 
+        // Табличка под ногами: две строки. Имя и черта; эмоция цветом и что ещё важно сейчас.
         public string Plate()
         {
             string trait = TraitName;
-            string emo = Mood();
-            string edge = Anger >= 70 && SelfControl <= 40 ? "\nна грани" : "";
-            string mem = string.IsNullOrEmpty(Memory) ? "" : "\n" + Memory;
-            string bond = Hostility >= 30 ? "\nзлость к соседу" : "";
-            string chain = Chain >= 2 ? "\nцепочка" : "";
-            return DisplayName + "\n" + trait + "\n" + emo + edge + mem + bond + chain;
+            string head = "<b>" + DisplayName + "</b>" + (string.IsNullOrEmpty(trait) ? "" : "  <color=#B9A4A8>" + trait + "</color>");
+            string line = "<color=" + MoodHex() + ">" + Mood() + "</color>";
+            var extra = new List<string>(4);
+            if (Anger >= 70 && SelfControl <= 40)
+                extra.Add("на грани");
+            if (!string.IsNullOrEmpty(Memory))
+                extra.Add(Memory);
+            if (Hostility >= 30)
+                extra.Add("злость к соседу");
+            if (Chain >= 2)
+                extra.Add("цепочка");
+            if (extra.Count > 0)
+                line += "  <color=#FFB347>· " + string.Join(" · ", extra) + "</color>";
+            return head + "\n" + line;
+        }
+
+        // Цвет самой громкой эмоции: злость — красный, стресс — оранжевый, грусть — синий, симпатия — розовый.
+        string MoodHex()
+        {
+            int top = Mathf.Max(Anger, Mathf.Max(Stress, Mathf.Max(Sadness, Attraction)));
+            if (top < MildMood)
+                return "#9E9AA6";
+            if (Anger == top)
+                return "#FF5A4E";
+            if (Stress == top)
+                return "#FFA23A";
+            if (Sadness == top)
+                return "#6FB6FF";
+            return "#FF7FC0";
         }
 
         public const int MildMood = 20;

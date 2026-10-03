@@ -62,6 +62,55 @@ namespace RealityDirector.UI.Hub
                 if (label != null)
                     label.text = "←  В ХАБ";
             }
+
+            Dress();
+        }
+
+        // Карта — план съёмки на фоне штаб-квартиры канала: панели в рамках, путь золотом, доступное — огнём.
+        void Dress()
+        {
+            UiKit.Backdrop((RectTransform)transform, "Art/Intro/bg/scene_1", new Rect(0f, 0.3f, 1f, 0.7f), 0.72f);
+            var self = GetComponent<Image>();
+            if (self != null)
+                self.color = UiKit.Ink;
+            if (board != null)
+            {
+                var plate = board.GetComponent<Image>();
+                UiKit.DressSolid(plate, UiKit.Frame.Dialog, 8f);
+                var solid = plate != null ? plate.transform.Find("Solid")?.GetComponent<Image>() : null;
+                if (solid != null)
+                    solid.color = new Color(0.06f, 0.03f, 0.05f, 0.82f);
+            }
+
+            UiKit.DressSolid(transform.Find("TitlePanel")?.GetComponent<Image>(), UiKit.Frame.Dialog);
+            UiKit.DressSolid(transform.Find("PlanPanel")?.GetComponent<Image>(), UiKit.Frame.Dialog);
+            UiKit.DressSolid(transform.Find("InfoPanel")?.GetComponent<Image>(), UiKit.Frame.Dialog);
+            // Рамка пака толще прежней плашки — тексты отодвигаем от кромки.
+            if (plan != null)
+            {
+                plan.rectTransform.offsetMin = new Vector2(30f, 14f);
+                plan.rectTransform.offsetMax = new Vector2(-30f, -16f);
+            }
+
+            if (infoTitle != null)
+                infoTitle.rectTransform.anchoredPosition = new Vector2(34f, -18f);
+            if (infoBody != null)
+                infoBody.rectTransform.anchoredPosition = new Vector2(34f, -54f);
+            UiKit.Primary(shoot, 22);
+            UiKit.Pulse(shoot);
+            UiKit.Secondary(back);
+            if (stats != null)
+                stats.Dress();
+            routeColor = UiKit.Gold;
+            openColor = UiKit.Ember;
+            idleColor = new Color(1f, 1f, 1f, 0.16f);
+            edgeWidth = Mathf.Max(edgeWidth, 7f);
+            var title = transform.Find("TitlePanel/Title")?.GetComponent<Text>();
+            if (title != null && UiKit.Display != null)
+            {
+                title.font = UiKit.Display;
+                UiKit.Shadow(title);
+            }
         }
 
         readonly List<MapNodeView> _spawned = new List<MapNodeView>();
@@ -222,7 +271,7 @@ namespace RealityDirector.UI.Hub
                         + MoodStyle.Paint("драму", ShowMood.Drama) + ", "
                         + MoodStyle.Paint("трэш", ShowMood.Trash) + " или "
                         + MoodStyle.Paint("семью", ShowMood.Family) + ".\n"
-                        + "<color=#FA6199>■</color> можно идти   <color=#7DDB9E>✓</color> снято   <color=#9E8F85>□</color> впереди   <color=#5A5560>■</color> путь закрыт   ·   в конце — монтаж";
+                        + "<color=#FF7329>●</color> можно идти   <color=#7DDB9E>✓</color> снято   <color=#9E8F85>□</color> впереди   <color=#5A5560>■</color> путь закрыт   ·   в конце — монтаж";
             }
             else
             {

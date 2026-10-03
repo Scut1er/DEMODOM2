@@ -52,6 +52,75 @@ namespace RealityDirector.UI.Hub
                 title.resizeTextForBestFit = true;
                 title.resizeTextMinSize = 12;
                 title.resizeTextMaxSize = title.fontSize;
+                // Без обрезки по высоте best fit не ужимает — длинное название налезало на подзаголовок.
+                title.verticalOverflow = VerticalWrapMode.Truncate;
+                title.fontStyle = FontStyle.Bold;
+                UiKit.Shadow(title);
+            }
+
+            Dress();
+        }
+
+        Image _header;
+        Image _medallion;
+
+        // Карточка комнаты: тёмная с золотой кромкой, цветная шапка по типу, иконка на светящемся медальоне.
+        void Dress()
+        {
+            UiKit.Dress(frame, UiKit.Frame.Dialog, 1.8f);
+            _header = frame != null ? frame.transform.Find("Header")?.GetComponent<Image>() : null;
+            if (_header != null)
+            {
+                var hr = _header.rectTransform;
+                hr.anchorMin = new Vector2(0f, 1f);
+                hr.anchorMax = new Vector2(1f, 1f);
+                hr.pivot = new Vector2(0.5f, 1f);
+                hr.offsetMin = new Vector2(5f, -54f);
+                hr.offsetMax = new Vector2(-5f, -5f);
+            }
+
+            if (art != null)
+            {
+                _medallion = UiKit.Img("Medallion", transform, UiKit.Halo(), Color.white);
+                _medallion.transform.SetSiblingIndex(art.transform.GetSiblingIndex());
+                var mr = _medallion.rectTransform;
+                mr.anchorMin = mr.anchorMax = art.rectTransform.anchorMin;
+                mr.anchoredPosition = art.rectTransform.anchoredPosition;
+                mr.sizeDelta = art.rectTransform.sizeDelta * 1.7f;
+                art.preserveAspect = true;
+            }
+
+            if (_openImage != null)
+            {
+                _openImage.sprite = UiKit.Halo();
+                ((RectTransform)openRing.transform).offsetMin = new Vector2(-34f, -34f);
+                ((RectTransform)openRing.transform).offsetMax = new Vector2(34f, 34f);
+            }
+
+            var ring = selectedRing != null ? selectedRing.GetComponent<Image>() : null;
+            if (ring != null)
+            {
+                UiKit.Dress(ring, UiKit.Frame.GoldTile);
+                ((RectTransform)selectedRing.transform).offsetMin = new Vector2(-9f, -9f);
+                ((RectTransform)selectedRing.transform).offsetMax = new Vector2(9f, 9f);
+            }
+
+            Badge(doneBadge, UiKit.Frame.TealTile);
+            Badge(currentBadge, UiKit.Frame.RedTile);
+            if (subtitle != null)
+                subtitle.color = UiKit.Paper;
+        }
+
+        static void Badge(GameObject badge, UiKit.Frame frame)
+        {
+            if (badge == null)
+                return;
+            UiKit.Dress(badge.GetComponent<Image>(), frame);
+            var text = badge.GetComponentInChildren<Text>(true);
+            if (text != null)
+            {
+                text.color = UiKit.Paper;
+                text.fontStyle = FontStyle.Bold;
             }
         }
 
@@ -83,8 +152,16 @@ namespace RealityDirector.UI.Hub
                     line += "  ·  " + MoodStyle.Paint(MoodStyle.Short(node.mood) + " +" + node.toneGain, node.mood);
                 subtitle.text = line;
             }
-            if (frame != null)
-                frame.color = state == MapNodeState.Locked ? lockedColor : node.color;
+            // Цвет типа — шапка и свечение медальона; тело карточки всегда тёмное, текст читается.
+            Color tint = state == MapNodeState.Locked ? lockedColor : node.color;
+            if (_header != null)
+                _header.color = new Color(tint.r * 0.8f, tint.g * 0.8f, tint.b * 0.8f, 0.95f);
+            else if (frame != null)
+                frame.color = tint;
+            if (_medallion != null)
+                _medallion.color = new Color(tint.r, tint.g, tint.b, 0.55f);
+            if (_openImage != null)
+                _openImage.color = UiKit.Ember;
             if (art != null)
                 art.sprite = node.art != null ? node.art : Icon(node.kind);
 

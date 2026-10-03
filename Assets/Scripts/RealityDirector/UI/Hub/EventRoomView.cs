@@ -124,6 +124,13 @@ namespace RealityDirector.UI.Hub
                 _onContinue = null;
                 next?.Invoke();
             });
+
+            // Окно события в рамке пака, иллюстрация в тонкой рамке, «Дальше» — главная кнопка.
+            UiKit.DressSolid(_panel.GetComponent<Image>(), UiKit.Frame.Gold, 10f);
+            _accent.gameObject.SetActive(false);
+            UiKit.Dress(_artFrame, UiKit.Frame.Dialog);
+            UiKit.Primary(_continue, 26);
+            UiKit.Shadow(_title, 3f);
         }
 
         public void Show(string kicker, string title, string body, Sprite art, Color color, List<EventChoiceModel> choices, string leaveLabel, Action<int> onPick)
@@ -165,6 +172,10 @@ namespace RealityDirector.UI.Hub
             var button = MakeButton(_choices, "Choice", "", c.available ? ChoiceColor : ChoiceLocked, Light, 26);
             var rect = (RectTransform)button.transform;
             rect.sizeDelta = new Vector2(0f, 98f);
+            var plate = button.GetComponent<Image>();
+            UiKit.Dress(plate, UiKit.Frame.Dialog, 1.6f);
+            if (!c.available && plate != null)
+                plate.color = new Color(0.55f, 0.5f, 0.52f, 0.8f);
             var label = button.GetComponentInChildren<Text>();
             label.text = c.label;
             label.alignment = TextAnchor.UpperLeft;

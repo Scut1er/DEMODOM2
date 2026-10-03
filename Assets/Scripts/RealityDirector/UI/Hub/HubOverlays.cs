@@ -165,12 +165,39 @@ namespace RealityDirector.UI.Hub
             return label;
         }
 
+        // Титр серии: хлопушка, крупный номер по центру, продюсер, одна главная кнопка.
         public void Slate(int number, string producer, Action done)
         {
             Open();
-            Title("СЕРИЯ " + number);
-            Body(string.IsNullOrEmpty(producer) ? "ONLY WHAT MATTERS" : producer + "  ·  ONLY WHAT MATTERS");
-            Button(_page.transform, "НА ПЛОЩАДКУ", new Vector2(80f, 320f), () =>
+            var page = _page.transform;
+            var clap = UiKit.Img("clap", page, UiKit.Icon("icon_clapperboard"), UiKit.Gold);
+            clap.preserveAspect = true;
+            UiKit.Place(clap.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0f, 230f), new Vector2(120f, 120f));
+
+            var kicker = UiKit.Txt("kicker", page, "ONLY WHAT MATTERS  ·  В ЭФИРЕ", 22, UiKit.Ember, TextAnchor.MiddleCenter, _font);
+            kicker.fontStyle = FontStyle.Bold;
+            UiKit.Place(kicker.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0f, 140f), new Vector2(1200f, 34f));
+
+            // В логотипном шрифте нет кириллицы — номер серии набираем основным, жирным.
+            var title = UiKit.Txt("title", page, "СЕРИЯ " + number, 150, UiKit.Gold, TextAnchor.MiddleCenter, _font);
+            title.fontStyle = FontStyle.Bold;
+            UiKit.Place(title.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0f, 20f), new Vector2(1400f, 190f));
+            UiKit.Shadow(title, 5f, 0.85f);
+
+            var who = UiKit.Txt("producer", page, string.IsNullOrEmpty(producer) || producer == "Продюсер" ? "продюсер — ты" : "продюсер  ·  " + producer, 26, UiKit.Paper, TextAnchor.MiddleCenter, _font);
+            UiKit.Place(who.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0f, -100f), new Vector2(1200f, 40f));
+            UiKit.Shadow(who);
+
+            var go = new GameObject("btn", typeof(RectTransform), typeof(Image), typeof(Button));
+            go.transform.SetParent(page, false);
+            UiKit.Place((RectTransform)go.transform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0f, -220f), new Vector2(460f, 86f));
+            var label = Label(go.transform, "НА ПЛОЩАДКУ", 24, Color.white);
+            Stretch(label.rectTransform);
+            label.alignment = TextAnchor.MiddleCenter;
+            var button = go.GetComponent<Button>();
+            UiKit.Primary(button, 26);
+            UiKit.Pulse(button);
+            button.onClick.AddListener(() =>
             {
                 Hide();
                 done?.Invoke();
@@ -218,9 +245,10 @@ namespace RealityDirector.UI.Hub
 
             // Карточки.
             int n = all.Length;
-            float width = Mathf.Min(270f, (1760f - (n - 1) * 20f) / Mathf.Max(1, n));
-            const float Height = 430f;
-            const float Top = 190f;
+            float width = Mathf.Min(330f, (1760f - (n - 1) * 20f) / Mathf.Max(1, n));
+            const float Height = 500f;
+            const float Top = 180f;
+            const float Photo = 270f;
             var cards = new List<(CastMember member, Image border, Image badge, Text hint, CanvasGroup group)>();
             for (int i = 0; i < n; i++)
             {
@@ -238,9 +266,11 @@ namespace RealityDirector.UI.Hub
 
                 var body = Box(border.transform, "body", CastCard);
                 Inset(body.rectTransform, 4f);
+                UiKit.DressSolid(body, UiKit.Frame.Dialog, 6f, 1.6f);
 
                 var photoBg = Box(body.transform, "photo", CastPhoto);
-                Pin(photoBg.rectTransform, 12f, 12f, width - 32f, 210f);
+                Pin(photoBg.rectTransform, 12f, 12f, width - 32f, Photo);
+                UiKit.Dress(photoBg, UiKit.Frame.Actor);
                 if (member.portrait != null)
                 {
                     var photo = Box(photoBg.transform, "img", Color.white);
@@ -259,11 +289,18 @@ namespace RealityDirector.UI.Hub
 
                 var name = Label(body.transform, member.name, 28, CastLight);
                 UiTypography.Apply(name, TextRole.Heading);
-                Pin(name.rectTransform, 14f, 236f, width - 36f, 38f);
+                if (UiKit.Display != null)
+                {
+                    name.font = UiKit.Display;
+                    name.fontSize = 36;
+                }
+
+                UiKit.Shadow(name);
+                Pin(name.rectTransform, 14f, Photo + 24f, width - 36f, 44f);
 
                 // Видимые черты — «чипы».
                 float chipX = 14f;
-                float chipY = 282f;
+                float chipY = Photo + 76f;
                 foreach (var trait in member.traits ?? new string[0])
                 {
                     if (string.IsNullOrEmpty(trait))
@@ -278,6 +315,7 @@ namespace RealityDirector.UI.Hub
                     }
 
                     var chip = Box(body.transform, "chip", CastChip);
+                    UiKit.Dress(chip, UiKit.Frame.RedTile);
                     Pin(chip.rectTransform, chipX, chipY, w, 28f);
                     chipText.transform.SetParent(chip.transform, false);
                     chipText.alignment = TextAnchor.MiddleCenter;
@@ -314,8 +352,9 @@ namespace RealityDirector.UI.Hub
 
             // Низ: кнопка «Утвердить» и подсказка.
             confirm = Box(_page.transform, "confirm", CastGold);
-            Pin(confirm.rectTransform, 80f, Top + Height + 40f, 420f, 64f);
+            Pin(confirm.rectTransform, 80f, Top + Height + 40f, 460f, 76f);
             confirmButton = confirm.gameObject.AddComponent<Button>();
+            UiKit.Primary(confirmButton);
             confirmText = Label(confirm.transform, "УТВЕРДИТЬ КАСТ", 20, CastInk);
             UiTypography.Apply(confirmText, TextRole.Button);
             confirmText.alignment = TextAnchor.MiddleCenter;
@@ -336,8 +375,9 @@ namespace RealityDirector.UI.Hub
             if (back != null)
             {
                 var backBox = Box(_page.transform, "back", CastChip);
-                Pin(backBox.rectTransform, 1440f, Top + Height + 40f, 400f, 64f);
+                Pin(backBox.rectTransform, 1440f, Top + Height + 40f, 400f, 76f);
                 var backButton = backBox.gameObject.AddComponent<Button>();
+                UiKit.Secondary(backButton);
                 var backText = Label(backBox.transform, "←  В ХАБ", 20, CastLight);
                 UiTypography.Apply(backText, TextRole.Button);
                 backText.alignment = TextAnchor.MiddleCenter;
@@ -373,8 +413,7 @@ namespace RealityDirector.UI.Hub
                     pips[i].color = i < picked.Count ? CastGold : CastChip;
                 meter.text = picked.Count + " / " + max;
                 bool ready = picked.Count >= min;
-                confirm.color = ready ? CastGold : CastChip;
-                confirmText.color = ready ? CastInk : CastMuted;
+                confirmText.color = ready ? CastLight : CastMuted;
                 confirmButton.interactable = ready;
                 int need = min - picked.Count;
                 status.text = ready
@@ -501,13 +540,22 @@ namespace RealityDirector.UI.Hub
             Stretch(go.GetComponent<RectTransform>());
             go.GetComponent<Image>().color = new Color(0.07f, 0.055f, 0.08f, 1f);
             _page = go;
+            // За любым листом — съёмочная площадка канала, приглушённая под текст.
+            UiKit.Backdrop(go.GetComponent<RectTransform>(), "Art/Intro/bg/scene_7", new Rect(0f, 0.3f, 1f, 0.7f), 0.74f);
         }
 
         void Title(string text)
         {
             var label = Label(_page.transform, text, 32, new Color(0.96f, 0.78f, 0.22f, 1f));
             UiTypography.Apply(label, TextRole.Title);
-            Pin(label.rectTransform, 80f, 48f, 1400f, 56f);
+            if (UiKit.Display != null)
+            {
+                label.font = UiKit.Display;
+                label.fontSize = 54;
+            }
+
+            UiKit.Shadow(label, 3f);
+            Pin(label.rectTransform, 80f, 36f, 1400f, 70f);
         }
 
         void Body(string text)
@@ -531,7 +579,10 @@ namespace RealityDirector.UI.Hub
             UiTypography.Apply(label, TextRole.Button);
             Stretch(label.rectTransform);
             label.alignment = TextAnchor.MiddleLeft;
-            label.rectTransform.offsetMin = new Vector2(16f, 0f);
+            label.rectTransform.offsetMin = new Vector2(22f, 0f);
+            label.rectTransform.offsetMax = new Vector2(-22f, 0f);
+            UiKit.Secondary(go.GetComponent<Button>());
+            label.color = UiKit.Paper;
             go.GetComponent<Button>().onClick.AddListener(() => click());
             return label;
         }

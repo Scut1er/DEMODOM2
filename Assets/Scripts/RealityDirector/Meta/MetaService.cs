@@ -514,6 +514,7 @@ namespace RealityDirector.Meta
                     affordable = _state.money >= def.price,
                     color = def.cardColor,
                     art = def.cardArt,
+                    category = def.category,
                     moods = moods
                 });
             }
@@ -595,6 +596,7 @@ namespace RealityDirector.Meta
                     : _state.money >= price,
                 color = def.cardColor,
                 art = def.cardArt,
+                category = def.category,
                 moods = moods
             };
         }

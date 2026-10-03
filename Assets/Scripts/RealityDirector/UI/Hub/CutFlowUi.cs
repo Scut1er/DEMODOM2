@@ -45,6 +45,8 @@ namespace RealityDirector.UI.Hub
         public bool AirVisible => _air != null && _air.activeSelf;
         public bool TaskTaken => _taken;
 
+        Image _meter;
+
         public static CutFlowUi Create()
         {
             var go = new GameObject("CutFlow");
@@ -130,8 +132,14 @@ namespace RealityDirector.UI.Hub
             Stretch(_montage.GetComponent<RectTransform>());
             var page = Panel(_montage.transform, new Color(0.07f, 0.055f, 0.08f, 1f));
             Stretch(page);
+            // Монтажная — та же диспетчерская канала, что и хаб, только темнее: смотрим на кадры.
+            UiKit.Backdrop(page, "Art/Intro/bg/scene_5", new Rect(0f, 0.3f, 1f, 0.7f), 0.86f);
             var head = TextOn(page, "МОНТАЖ", 28, new Color(0.96f, 0.78f, 0.22f, 1f), TextAnchor.UpperLeft);
-            Pin(head.rectTransform, 36f, 28f, 400f, 40f);
+            Pin(head.rectTransform, 36f, 18f, 600f, 60f);
+            if (UiKit.Display != null)
+                head.font = UiKit.Display;
+            head.fontSize = 48;
+            UiKit.Shadow(head, 3f);
             _boss = TextOn(page, "", 20, new Color(0.9f, 0.86f, 0.8f, 1f), TextAnchor.UpperLeft);
             Pin(_boss.rectTransform, 36f, 78f, 1400f, 64f);
             _coherence = TextOn(page, "", 20, new Color(0.42f, 0.82f, 0.48f, 1f), TextAnchor.UpperRight);
@@ -140,6 +148,20 @@ namespace RealityDirector.UI.Hub
             coh.pivot = new Vector2(1f, 1f);
             coh.anchoredPosition = new Vector2(-36f, -28f);
             coh.sizeDelta = new Vector2(420f, 40f);
+            _coherence.fontStyle = FontStyle.Bold;
+            // Связность — полоской: видно, насколько склейка держится, ещё до цифры.
+            var meterBack = Panel(page, new Color(1f, 1f, 1f, 0.12f));
+            meterBack.anchorMin = meterBack.anchorMax = new Vector2(1f, 1f);
+            meterBack.pivot = new Vector2(1f, 1f);
+            meterBack.anchoredPosition = new Vector2(-36f, -74f);
+            meterBack.sizeDelta = new Vector2(420f, 12f);
+            _meter = Panel(meterBack, Color.white).GetComponent<Image>();
+            var meterRect = _meter.rectTransform;
+            meterRect.anchorMin = Vector2.zero;
+            meterRect.anchorMax = new Vector2(0f, 1f);
+            meterRect.pivot = new Vector2(0f, 0.5f);
+            meterRect.offsetMin = Vector2.zero;
+            meterRect.offsetMax = Vector2.zero;
 
             var shot = TextOn(page, "ОТСНЯТО", 16, new Color(0.7f, 0.64f, 0.6f, 1f), TextAnchor.UpperLeft);
             Pin(shot.rectTransform, 36f, 160f, 400f, 28f);
@@ -155,8 +177,9 @@ namespace RealityDirector.UI.Hub
             var go = ButtonAt(page, "В ЭФИР", new Vector2(1560f, 78f), () => Confirm?.Invoke(new List<string>(_order)));
             _airButton = go.GetComponent<RectTransform>();
             var goRect = go.GetComponent<RectTransform>();
-            goRect.sizeDelta = new Vector2(280f, 56f);
-            go.GetComponent<Image>().color = new Color(0.72f, 0.22f, 0.18f, 1f);
+            goRect.sizeDelta = new Vector2(320f, 72f);
+            UiKit.Primary(go.GetComponent<Button>(), 24);
+            UiKit.Pulse(go.GetComponent<Button>());
         }
 
         void RebuildLibrary()
@@ -257,6 +280,13 @@ namespace RealityDirector.UI.Hub
             int coherence = MontageCut.Coherence(chosen);
             _boss.text = MontageCut.Boss(coherence, chosen.Count, _library.Count);
             _coherence.text = "связность " + coherence + "%";
+            if (_meter != null)
+            {
+                var r = _meter.rectTransform;
+                r.anchorMax = new Vector2(Mathf.Clamp01(coherence / 100f), 1f);
+                _meter.color = coherence >= 70 ? UiKit.Good : coherence >= 40 ? UiKit.Gold : UiKit.Ember;
+                _coherence.color = _meter.color;
+            }
             PaintLibrary();
         }
 
@@ -269,7 +299,7 @@ namespace RealityDirector.UI.Hub
                 if (image == null || card >= _library.Count)
                     continue;
                 bool on = _order.Contains(_library[card].id);
-                image.color = on ? new Color(0.45f, 0.32f, 0.12f, 1f) : new Color(0.14f, 0.11f, 0.16f, 1f);
+                image.color = on ? new Color(1f, 0.82f, 0.4f, 1f) : Color.white;
                 card++;
             }
         }
@@ -294,7 +324,14 @@ namespace RealityDirector.UI.Hub
             bar.sizeDelta = new Vector2(0f, 52f);
             bar.anchoredPosition = Vector2.zero;
             var logo = TextOn(bar, "HELLTUBE", 22, new Color(0.96f, 0.78f, 0.22f, 1f), TextAnchor.MiddleLeft);
-            Pin(logo.rectTransform, 28f, 8f, 220f, 36f);
+            Pin(logo.rectTransform, 28f, 4f, 220f, 44f);
+            if (UiKit.Display != null)
+            {
+                logo.font = UiKit.Display;
+                logo.fontSize = 32;
+            }
+
+            UiKit.Shadow(logo);
             var tag = TextOn(bar, "смотри, пока горишь", 14, new Color(0.7f, 0.64f, 0.6f, 1f), TextAnchor.MiddleLeft);
             Pin(tag.rectTransform, 250f, 10f, 320f, 32f);
 
@@ -342,12 +379,40 @@ namespace RealityDirector.UI.Hub
             {
                 var review = result.reviews[i];
                 var row = Panel(page, new Color(0.12f, 0.1f, 0.14f, 1f));
+                UiKit.Dress(row.GetComponent<Image>(), review.offer ? UiKit.Frame.GoldTile : UiKit.Frame.Dark);
                 Pin(row, 36f, top, 1180f, review.offer ? 78f : 64f);
                 string author = review.author ?? "";
+                // Аватар с буквой и оценка зрителя сердцем: доволен — зелёное, так себе — золото, зол — красное.
+                Color mood = review.score >= 7 ? UiKit.Good : review.score >= 4 ? UiKit.Gold : UiKit.Ember;
+                var avatar = Panel(row, mood);
+                var avatarImage = avatar.GetComponent<Image>();
+                avatarImage.sprite = UiKit.Circle();
+                Pin(avatar, 16f, 12f, 40f, 40f);
+                var letter = TextOn(avatar, author.Length > 0 ? author.Substring(0, 1).ToUpperInvariant() : "?", 20, UiKit.Ink, TextAnchor.MiddleCenter);
+                letter.fontStyle = FontStyle.Bold;
+                Stretch(letter.rectTransform);
                 var who = TextOn(row, (review.offer ? "★  " : "") + author, 16, Color.white, TextAnchor.UpperLeft);
-                Pin(who.rectTransform, 16f, 6f, 700f, 24f);
+                who.fontStyle = FontStyle.Bold;
+                Pin(who.rectTransform, 70f, 8f, 700f, 24f);
                 var body = TextOn(row, review.body ?? "", 16, new Color(0.9f, 0.86f, 0.8f, 1f), TextAnchor.UpperLeft);
-                Pin(body.rectTransform, 16f, 30f, review.offer ? 900f : 1100f, 40f);
+                Pin(body.rectTransform, 70f, 32f, review.offer ? 840f : 1000f, 40f);
+                if (!review.offer)
+                {
+                    var heart = Panel(row, mood);
+                    var heartImage = heart.GetComponent<Image>();
+                    heartImage.sprite = UiKit.Icon("icon_heart");
+                    heartImage.preserveAspect = true;
+                    heart.anchorMin = heart.anchorMax = new Vector2(1f, 0.5f);
+                    heart.pivot = new Vector2(1f, 0.5f);
+                    heart.anchoredPosition = new Vector2(-64f, 0f);
+                    heart.sizeDelta = new Vector2(24f, 24f);
+                    var score = TextOn(row, review.score + "/10", 16, mood, TextAnchor.MiddleRight);
+                    score.fontStyle = FontStyle.Bold;
+                    score.rectTransform.anchorMin = score.rectTransform.anchorMax = new Vector2(1f, 0.5f);
+                    score.rectTransform.pivot = new Vector2(1f, 0.5f);
+                    score.rectTransform.anchoredPosition = new Vector2(-14f, 0f);
+                    score.rectTransform.sizeDelta = new Vector2(48f, 24f);
+                }
                 if (review.offer)
                 {
                     var take = ButtonAt(row, "☆ взять", new Vector2(980f, 16f), ToggleTask);
@@ -359,6 +424,7 @@ namespace RealityDirector.UI.Hub
 
             _comments = comments > 0 ? Marker(page, 36f, commentTop, 1180f, top - commentTop) : null;
             var side = Panel(page, new Color(0.1f, 0.08f, 0.12f, 1f));
+            UiKit.DressSolid(side.GetComponent<Image>(), UiKit.Frame.Gold, 10f);
             _pay = side;
             side.anchorMin = new Vector2(1f, 1f);
             side.anchorMax = new Vector2(1f, 1f);
@@ -369,6 +435,14 @@ namespace RealityDirector.UI.Hub
             Pin(sideTitle.rectTransform, 20f, 16f, 380f, 32f);
             Stat(side, 64f, "Просмотры", Group(views));
             Stat(side, 112f, "Рейтинг", Comma(result.score) + " / 10");
+            // Рейтинг полоской под цифрой, цвет — насколько эфир удался.
+            var ratingBack = Panel(side, new Color(1f, 1f, 1f, 0.1f));
+            Pin(ratingBack, 20f, 146f, 380f, 8f);
+            var ratingFill = Panel(ratingBack, result.score >= 7f ? UiKit.Good : result.score >= 4f ? UiKit.Gold : UiKit.Ember);
+            ratingFill.anchorMin = Vector2.zero;
+            ratingFill.anchorMax = new Vector2(Mathf.Clamp01(result.score / 10f), 1f);
+            ratingFill.offsetMin = Vector2.zero;
+            ratingFill.offsetMax = Vector2.zero;
             Stat(side, 160f, "Связность монтажа", coherence + "%");
             Stat(side, 208f, "Доход", "+" + pay + " кр");
             var note = TextOn(side, payLine ?? "", 16, new Color(0.96f, 0.78f, 0.22f, 1f), TextAnchor.UpperLeft);
@@ -380,8 +454,9 @@ namespace RealityDirector.UI.Hub
             nextRect.anchorMin = nextRect.anchorMax = new Vector2(0f, 1f);
             nextRect.pivot = new Vector2(0f, 1f);
             nextRect.anchoredPosition = new Vector2(20f, -680f);
-            nextRect.sizeDelta = new Vector2(380f, 52f);
-            next.GetComponent<Image>().color = new Color(0.2f, 0.55f, 0.32f, 1f);
+            nextRect.sizeDelta = new Vector2(380f, 64f);
+            UiKit.Primary(next.GetComponent<Button>(), 20);
+            UiKit.Pulse(next.GetComponent<Button>());
         }
 
         static RectTransform Marker(RectTransform parent, float x, float y, float w, float h)
@@ -435,7 +510,16 @@ namespace RealityDirector.UI.Hub
             var element = go.GetComponent<LayoutElement>();
             element.preferredWidth = 200f;
             element.preferredHeight = 230f;
-            go.GetComponent<Image>().color = picked ? new Color(0.55f, 0.38f, 0.12f, 1f) : new Color(0.14f, 0.11f, 0.16f, 1f);
+            var plate = go.GetComponent<Image>();
+            UiKit.Dress(plate, picked ? UiKit.Frame.GoldTile : UiKit.Frame.Dialog, picked ? 1f : 1.6f);
+            // Полоска тона кадра сверху — по ней склейку читают с одного взгляда.
+            var stripe = Panel(go.transform, MoodStyle.ColorOf(clip.mood));
+            stripe.anchorMin = new Vector2(0f, 1f);
+            stripe.anchorMax = new Vector2(1f, 1f);
+            stripe.pivot = new Vector2(0.5f, 1f);
+            stripe.offsetMin = new Vector2(10f, -6f);
+            stripe.offsetMax = new Vector2(-10f, -2f);
+            stripe.GetComponent<Image>().raycastTarget = false;
             if (clip.photo != null)
             {
                 var raw = new GameObject("photo", typeof(RectTransform), typeof(RawImage));
@@ -453,8 +537,8 @@ namespace RealityDirector.UI.Hub
             string name = clip.title ?? "КАДР";
             if (clip.tags != null && clip.tags.Contains(MomentTags.Sponsor))
                 name = "РЕКЛАМА · " + name;
-            var label = TextOn(go.transform, name + "\n" + Comma(clip.duration) + " с", 16, Color.white, TextAnchor.UpperLeft);
-            Pin(label.rectTransform, 8f, 156f, 184f, 64f);
+            var label = TextOn(go.transform, "<b>" + name + "</b>\n<color=#B9A4A8>" + Comma(clip.duration) + " с  ·  " + MoodStyle.Short(clip.mood) + "</color>", 16, Color.white, TextAnchor.UpperLeft);
+            Pin(label.rectTransform, 12f, 156f, 176f, 64f);
             return go;
         }
 
@@ -465,7 +549,10 @@ namespace RealityDirector.UI.Hub
             var element = go.GetComponent<LayoutElement>();
             element.preferredWidth = 200f;
             element.preferredHeight = 230f;
-            go.GetComponent<Image>().color = new Color(0.1f, 0.09f, 0.12f, 1f);
+            var slot = go.GetComponent<Image>();
+            slot.sprite = UiKit.Load("Art/UI/CoreGameplay/UI/HUD/capture_frame_corners");
+            slot.type = Image.Type.Simple;
+            slot.color = new Color(0.95f, 0.76f, 0.36f, 0.3f);
             var label = TextOn(go.transform, "КАДР " + number, 16, new Color(0.45f, 0.4f, 0.42f, 1f), TextAnchor.MiddleCenter);
             Stretch(label.rectTransform);
             return go;
@@ -499,6 +586,7 @@ namespace RealityDirector.UI.Hub
             go.GetComponent<Image>().color = new Color(0.2f, 0.18f, 0.22f, 1f);
             var text = TextOn(go.transform, label, 16, Color.white, TextAnchor.MiddleCenter);
             Stretch(text.rectTransform);
+            UiKit.Secondary(go.GetComponent<Button>());
             go.GetComponent<Button>().onClick.AddListener(() => click());
             return go;
         }

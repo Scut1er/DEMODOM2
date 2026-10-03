@@ -16,6 +16,7 @@ namespace RealityDirector.Meta
         public Color color;
         public Sprite art;
         public ShowMood[] moods;
+        public string category;
     }
 
     public class CrewButton

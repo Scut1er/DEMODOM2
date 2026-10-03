@@ -21,6 +21,16 @@ namespace RealityDirector.UI.Hub
                 invite.onClick.AddListener(() => Invite?.Invoke());
         }
 
+        static string Places(int n)
+        {
+            int m10 = n % 10, m100 = n % 100;
+            if (m10 == 1 && m100 != 11)
+                return "место";
+            if (m10 >= 2 && m10 <= 4 && (m100 < 12 || m100 > 14))
+                return "места";
+            return "мест";
+        }
+
         public void Show(CastMember[] members, int castLevel)
         {
             int seats = CastRoster.Seats(castLevel);
@@ -37,7 +47,9 @@ namespace RealityDirector.UI.Hub
                 Destroy(old);
             }
 
-            for (int i = 0; i < CastRoster.MaxSeats; i++)
+            // Закрытые места — одной строкой: сколько ещё и с какого уровня кастинга первое.
+            int rows = Mathf.Min(CastRoster.MaxSeats, seats + 1);
+            for (int i = 0; i < rows; i++)
             {
                 var row = Instantiate(rowPrefab, list);
                 if (i < filled)
@@ -58,7 +70,8 @@ namespace RealityDirector.UI.Hub
                 else
                 {
                     row.name = rowPrefab.name + "_locked" + i;
-                    row.Show("Закрыто", "Кастинг ур. " + (i), null, true);
+                    int more = CastRoster.MaxSeats - seats;
+                    row.Show("Ещё " + more + " " + Places(more), "с Кастинга ур. " + i, null, true);
                 }
             }
         }

@@ -63,6 +63,47 @@ namespace RealityDirector.UI.Hub
                 cancel.onClick.AddListener(() => Cancel?.Invoke());
             _deckScroll = Scrollable(deckRoot);
             _shopScroll = Scrollable(shopRoot);
+            Dress();
+        }
+
+        // Окно в рамке пака, вкладки — второстепенные кнопки, закрыть — главная. Сетка под размер карт съёмки.
+        void Dress()
+        {
+            var window = transform.Find("Window")?.GetComponent<Image>();
+            UiKit.DressSolid(window, UiKit.Frame.Gold, 10f);
+            var shade = GetComponent<Image>();
+            if (shade != null)
+                shade.color = new Color(0.03f, 0.01f, 0.02f, 0.86f);
+            foreach (var root in new[] { deckRoot, shopRoot })
+            {
+                var grid = root != null ? root.GetComponent<GridLayoutGroup>() : null;
+                if (grid == null)
+                    continue;
+                grid.cellSize = EventCardView.Size;
+                grid.spacing = new Vector2(18f, 18f);
+                grid.padding = new RectOffset(12, 12, 8, 12);
+                grid.childAlignment = TextAnchor.UpperCenter;
+            }
+
+            for (int i = 0; i < tabButtons.Length; i++)
+                UiKit.Secondary(tabButtons[i]);
+            for (int i = 0; i < tabSelected.Length; i++)
+            {
+                var bar = tabSelected[i] != null ? tabSelected[i].GetComponent<Image>() : null;
+                if (bar != null)
+                    bar.color = UiKit.Ember;
+            }
+
+            UiKit.Primary(close);
+            UiKit.Secondary(cancel);
+            if (money != null)
+            {
+                money.fontStyle = FontStyle.Bold;
+                UiKit.Shadow(money);
+            }
+
+            if (footer != null)
+                footer.color = UiKit.Muted;
         }
 
         ScrollRect _deckScroll;

@@ -203,8 +203,11 @@ namespace RealityDirector
         {
             var cam = Camera.main;
             cam.orthographic = true;
-            cam.orthographicSize = 7.45f;
-            cam.transform.position = new Vector3(0.2f, 3.35f, -10f);
+            // Дом (≈16.6 юнита в ширину) занимает ~80% ширины экрана при любом соотношении сторон,
+            // а не теряется посреди пустого поля. Чуть правее центра — слева панель каста.
+            float fit = 16.6f / (2f * Mathf.Max(1f, cam.aspect) * 0.8f);
+            cam.orthographicSize = Mathf.Clamp(fit, 5.9f, 7.45f);
+            cam.transform.position = new Vector3(-0.35f, 2.75f, -10f);
             cam.backgroundColor = new Color(0.1f, 0.08f, 0.07f, 1f);
             _shake = cam.gameObject.AddComponent<CameraShake>();
             _shake.Base = cam.transform.position;
@@ -675,7 +678,8 @@ namespace RealityDirector
                 if (npc == null)
                     continue;
                 float side = i % 2 == 0 ? -18f : 18f;
-                _ui.AddTag(npc.transform, npc.Plate, paper, new Vector2(0f, 78f), 16, true);
+                // Табличка под ногами — над головой место пузырям реплик.
+                _ui.AddTag(npc.transform, npc.Plate, paper, new Vector2(0f, -78f), 15, true);
                 _ui.AddBubble(npc.transform, () => npc.Emote, () => npc.Thought, new Vector2(side, 148f));
             }
         }

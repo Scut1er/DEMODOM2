@@ -34,6 +34,31 @@ namespace RealityDirector.UI.Hub
                 });
             if (back != null)
                 back.onClick.AddListener(Close);
+            Dress();
+        }
+
+        // Окно настроек — та же рамка пака на фоне офиса канала.
+        void Dress()
+        {
+            UiKit.Backdrop((RectTransform)transform, "Art/Intro/bg/scene_2", new Rect(0f, 0.3f, 1f, 0.7f), 0.7f);
+            var card = transform.Find("Card");
+            if (card == null)
+                return;
+            UiKit.DressSolid(card.GetComponent<Image>(), UiKit.Frame.Gold, 10f);
+            var accent = card.Find("Accent");
+            if (accent != null)
+                accent.gameObject.SetActive(false);
+            foreach (var row in new[] { "VolumeRow", "FullscreenRow" })
+                UiKit.Dress(card.Find(row)?.GetComponent<Image>(), UiKit.Frame.Dark);
+            var title = card.Find("Title")?.GetComponent<Text>();
+            if (title != null && UiKit.Display != null)
+            {
+                title.font = UiKit.Display;
+                title.fontSize = 48;
+                UiKit.Shadow(title);
+            }
+
+            UiKit.Primary(back, 22);
         }
 
         void Update()

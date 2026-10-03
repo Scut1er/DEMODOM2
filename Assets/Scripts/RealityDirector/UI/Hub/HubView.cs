@@ -97,7 +97,71 @@ namespace RealityDirector.UI.Hub
                 settingsButton.onClick.AddListener(() => OpenSettings?.Invoke());
             if (menuButton != null)
                 menuButton.onClick.AddListener(() => Menu?.Invoke());
+            DressChrome();
             DressHover();
+        }
+
+        // Хаб — диспетчерская канала: арт за экраном, станции в ряд, панели в рамках пака, старт — главный.
+        void DressChrome()
+        {
+            var screen = (RectTransform)transform;
+            UiKit.Backdrop(screen, "Art/Intro/bg/scene_5", new Rect(0f, 0.3f, 1f, 0.7f), 0.5f);
+            var hint = transform.Find("BackgroundHint");
+            if (hint != null)
+                hint.gameObject.SetActive(false);
+            var flat = transform.Find("Background")?.GetComponent<Image>();
+            if (flat != null)
+                flat.enabled = false;
+            var self = GetComponent<Image>();
+            if (self != null)
+                self.color = UiKit.Ink;
+
+            UiKit.DressSolid(transform.Find("TitlePanel")?.GetComponent<Image>(), UiKit.Frame.Dialog);
+            UiKit.DressSolid(transform.Find("TasksPanel")?.GetComponent<Image>(), UiKit.Frame.Dialog);
+            UiKit.DressSolid(transform.Find("ZonePanel")?.GetComponent<Image>(), UiKit.Frame.Dialog);
+            UiKit.DressSolid(transform.Find("RosterPanel")?.GetComponent<Image>(), UiKit.Frame.Dialog);
+
+            // Станции — ряд карточек в свободной части экрана (правую треть держат панели).
+            for (int i = 0; i < zones.Length; i++)
+            {
+                if (zones[i] == null)
+                    continue;
+                int slot = zones[i].Track == CrewTrack.Cast ? 0 : zones[i].Track == CrewTrack.Writers ? 1 : 2;
+                UiKit.Place((RectTransform)zones[i].transform, new Vector2(0f, 1f), new Vector2(0f, 1f),
+                    new Vector2(48f + slot * (ZoneButtonView.CardSize.x + 58f), -470f), ZoneButtonView.CardSize);
+            }
+
+            var tasksRt = tasksPanel != null ? tasksPanel.transform as RectTransform : null;
+            if (tasksRt != null)
+                UiKit.Place(tasksRt, Vector2.zero, Vector2.zero, new Vector2(20f, 150f), new Vector2(430f, 150f));
+
+            if (start != null)
+            {
+                UiKit.Primary(start, 26);
+                UiKit.Place((RectTransform)start.transform, Vector2.zero, new Vector2(0.5f, 0.5f), new Vector2(810f, 78f), new Vector2(560f, 92f));
+                UiKit.Pulse(start);
+                var clap = UiKit.Img("Clap", start.transform, UiKit.Icon("icon_clapperboard"), UiKit.Paper);
+                clap.preserveAspect = true;
+                UiKit.Place(clap.rectTransform, new Vector2(0f, 0.5f), new Vector2(0f, 0.5f), new Vector2(44f, 2f), new Vector2(44f, 44f));
+            }
+
+            if (startCaption != null)
+            {
+                UiKit.Place(startCaption.rectTransform, Vector2.zero, new Vector2(0.5f, 0.5f), new Vector2(810f, 18f), new Vector2(700f, 26f));
+                startCaption.color = UiKit.Muted;
+                UiKit.Shadow(startCaption);
+            }
+
+            UiKit.Secondary(deckButton);
+            UiKit.Secondary(shopButton);
+            UiKit.Secondary(settingsButton);
+            UiKit.Secondary(menuButton);
+            if (roster != null)
+                UiKit.Secondary(roster.transform.Find("Invite")?.GetComponent<Button>());
+            if (detail != null)
+                UiKit.Primary(detail.transform.Find("Upgrade")?.GetComponent<Button>(), 20);
+            if (stats != null)
+                stats.Dress();
         }
 
         void LateUpdate()
@@ -158,7 +222,7 @@ namespace RealityDirector.UI.Hub
                 if (zones[i] == null)
                     continue;
                 var info = crew[(int)zones[i].Track];
-                zones[i].Show(info.level, zones[i].Track == _selected && !_lockZones);
+                zones[i].Show(info, zones[i].Track == _selected && !_lockZones);
             }
 
             if (detail != null)

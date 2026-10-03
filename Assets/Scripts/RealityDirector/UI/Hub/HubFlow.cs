@@ -604,7 +604,10 @@ namespace RealityDirector.UI.Hub
             Func nameOf = ActorName;
             var choices = EventResolver.Choices(def, ctx, roles, nameOf);
             Sfx.Play(Cue.Bell, 0.35f, 1.2f);
-            _eventView.Show("СОБЫТИЕ" + (string.IsNullOrEmpty(def.subtitle) ? "" : "  ·  " + def.subtitle.ToUpperInvariant()),
+            // Подзаголовок «Событие» не повторяем после «СОБЫТИЕ».
+            string sub = def.subtitle != null ? def.subtitle.Trim() : "";
+            bool echo = sub.Length == 0 || sub.Equals("событие", System.StringComparison.OrdinalIgnoreCase);
+            _eventView.Show("СОБЫТИЕ" + (echo ? "" : "  ·  " + sub.ToUpperInvariant()),
                 EventResolver.Fill(def.title, roles, nameOf), EventResolver.Fill(def.body, roles, nameOf),
                 def.art != null ? def.art : MapNodeView.Icon(def.icon), def.color, choices, "Уйти", index =>
                 {

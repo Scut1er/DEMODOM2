@@ -27,6 +27,61 @@ namespace RealityDirector.UI.Hub
             _family = PaintLabel("Mood2", ShowMood.Family);
         }
 
+        bool _dressed;
+
+        // Панель в рамке пака, тоны — иконка + цветная полоса на подложке.
+        public void Dress()
+        {
+            if (_dressed)
+                return;
+            _dressed = true;
+            UiKit.DressSolid(GetComponent<Image>(), UiKit.Frame.Dialog);
+            DressMood("Mood0", "Bar0", dramaBar, ShowMood.Drama);
+            DressMood("Mood1", "Bar1", trashBar, ShowMood.Trash);
+            DressMood("Mood2", "Bar2", familyBar, ShowMood.Family);
+            foreach (var value in new[] { rating, budget, episode })
+            {
+                if (value == null)
+                    continue;
+                value.fontStyle = FontStyle.Bold;
+                value.color = UiKit.Gold;
+            }
+        }
+
+        void DressMood(string labelName, string barName, Image fill, ShowMood mood)
+        {
+            var label = transform.Find(labelName) as RectTransform;
+            var bar = transform.Find(barName) as RectTransform;
+            if (label == null || bar == null)
+                return;
+            var icon = UiKit.Img("Icon", transform, UiKit.MoodIcon(mood), MoodStyle.ColorOf(mood));
+            icon.preserveAspect = true;
+            UiKit.Place(icon.rectTransform, new Vector2(0f, 1f), new Vector2(0f, 0.5f), new Vector2(label.anchoredPosition.x, label.anchoredPosition.y - 12f), new Vector2(18f, 18f));
+            label.anchoredPosition += new Vector2(24f, 0f);
+            var labelText = label.GetComponent<Text>();
+            if (labelText != null)
+                labelText.fontStyle = FontStyle.Bold;
+
+            bar.sizeDelta = new Vector2(bar.sizeDelta.x, 14f);
+            var bg = bar.GetComponent<Image>();
+            var back = UiKit.Load("Art/UI/CoreGameplay/UI/HUD/stat_bar_bg");
+            if (bg != null && back != null)
+            {
+                bg.sprite = back;
+                bg.type = Image.Type.Simple;
+                bg.color = Color.white;
+            }
+
+            var white = UiKit.Load("Art/UI/CoreGameplay/UI/HUD/stat_bar_fill_white");
+            if (fill != null && white != null)
+            {
+                fill.sprite = white;
+                fill.type = Image.Type.Filled;
+                fill.fillMethod = Image.FillMethod.Horizontal;
+                fill.color = MoodStyle.ColorOf(mood);
+            }
+        }
+
         public void Show(StatsModel stats)
         {
             if (rating != null)
