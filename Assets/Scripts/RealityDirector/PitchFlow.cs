@@ -1121,7 +1121,7 @@ namespace RealityDirector
         {
             if (_phase != PitchPhase.Play)
                 return;
-            if (_lesson != Lesson.None && _lesson != Lesson.Camera)
+            if (!CameraOpen())
                 return;
             _armed = null;
             _ui.SetArmed(null);
@@ -1234,7 +1234,7 @@ namespace RealityDirector
                     ArmAt(4);
             }
 
-            bool cameraOpen = _lesson == Lesson.None || _lesson == Lesson.Camera || _lesson == Lesson.Second || _lesson == Lesson.TurnIn;
+            bool cameraOpen = CameraOpen();
             if (cameraOpen && keyboard.cKey.wasPressedThisFrame)
                 ToggleCamera();
 
@@ -1271,6 +1271,12 @@ namespace RealityDirector
                 else if (_armed != null)
                     TryCommitTarget();
             }
+        }
+
+        // Камера доступна вне обучения и на шагах урока, где снимают (первый ролик, второй, сдача).
+        bool CameraOpen()
+        {
+            return _lesson == Lesson.None || _lesson == Lesson.Camera || _lesson == Lesson.Second || _lesson == Lesson.TurnIn;
         }
 
         void TryCommitTarget()
@@ -1884,7 +1890,7 @@ namespace RealityDirector
                 {
                     _lesson = Lesson.Second;
                     _ui.SetHandLocked(false);
-                    BossCoach.Ensure().Order("Ролик в слоте. Сними ещё один: с одним кадром в монтаже нечего сравнивать. Карты снова можно брать.", _ui.CardBarRect);
+                    BossCoach.Ensure().Order("Ролик в слоте. Сними ещё один: сыграй карту, потом C — и рамку на реакцию. С одним кадром в монтаже нечего сравнивать.", _ui.CardBarRect);
                 }
             }
             else if (_lesson == Lesson.Second && _capture.Moments.Count >= TutorialClips)

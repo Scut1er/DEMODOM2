@@ -4,6 +4,7 @@ using RealityDirector.Capture;
 using RealityDirector.Core;
 using RealityDirector.Meta;
 using UnityEngine;
+using UnityEngine.EventSystems;
 using UnityEngine.UI;
 
 namespace RealityDirector.UI.Hub
@@ -23,9 +24,12 @@ namespace RealityDirector.UI.Hub
         RectTransform _libraryRow;
         RectTransform _libraryView;
         RectTransform _airButton;
+        RectTransform _moveButtons;
         public RectTransform LibraryFocus => _libraryView != null ? _libraryView : _libraryRow;
         public RectTransform CutFocus => _cutRow;
         public RectTransform AirFocus => _airButton;
+        // Кнопки порядка (РАНЬШЕ, ПОЗЖЕ, УБРАТЬ) — для подсветки в обучении.
+        public RectTransform MoveFocus => _moveButtons;
         public RectTransform BossFocus => _boss != null ? _boss.transform as RectTransform : null;
         public RectTransform CoherenceFocus => _coherence != null ? _coherence.transform as RectTransform : null;
         public int CutCount => _order.Count;
@@ -217,18 +221,25 @@ namespace RealityDirector.UI.Hub
             meterRect.offsetMin = Vector2.zero;
             meterRect.offsetMax = Vector2.zero;
 
-            var shot = TextOn(page, "ОТСНЯТО ЗА ВЫПУСК  ·  клик — в слот, наведи — почему кадр интересен, колёсико листает ряд, ▶ смотрит ролик", 16, new Color(0.7f, 0.64f, 0.6f, 1f), TextAnchor.UpperLeft);
+            var shot = TextOn(page, "ОТСНЯТО ЗА ВЫПУСК  ·  клик — в слот, ПКМ — убрать, наведи — почему кадр интересен, колёсико листает ряд, ▶ смотрит ролик", 16, new Color(0.7f, 0.64f, 0.6f, 1f), TextAnchor.UpperLeft);
             Pin(shot.rectTransform, 36f, 150f, 1600f, 28f);
             _libraryView = ScrollRow(page, 36f, 178f, 1848f, 288f, out _libraryRow);
 
-            var airLabel = TextOn(page, "В ЭФИР  ·  порядок имеет значение: стрелка между кадрами — сила связи (наведи — почему)", 16, new Color(0.7f, 0.64f, 0.6f, 1f), TextAnchor.UpperLeft);
+            var airLabel = TextOn(page, "В ЭФИР  ·  порядок имеет значение: стрелка между кадрами — сила связи (наведи — почему)  ·  ПКМ по кадру — убрать", 16, new Color(0.7f, 0.64f, 0.6f, 1f), TextAnchor.UpperLeft);
             Pin(airLabel.rectTransform, 36f, 474f, 1380f, 28f);
             _cutRow = Row(page, 36f, 502f, 1380f, 284f);
             _panel = MontagePanel.Build(page, _font);
 
-            ButtonAt(page, "РАНЬШЕ", new Vector2(36f, 78f), () => Move(-1));
+            var earlier = ButtonAt(page, "РАНЬШЕ", new Vector2(36f, 78f), () => Move(-1));
             ButtonAt(page, "ПОЗЖЕ", new Vector2(220f, 78f), () => Move(1));
             ButtonAt(page, "УБРАТЬ", new Vector2(404f, 78f), RemovePicked);
+            // Рамка вокруг трёх кнопок порядка: подсветка обучения, сама ничего не ловит.
+            _moveButtons = new GameObject("MoveFocus", typeof(RectTransform)).GetComponent<RectTransform>();
+            _moveButtons.SetParent(page, false);
+            _moveButtons.anchorMin = _moveButtons.anchorMax = Vector2.zero;
+            _moveButtons.pivot = Vector2.zero;
+            _moveButtons.anchoredPosition = earlier.GetComponent<RectTransform>().anchoredPosition;
+            _moveButtons.sizeDelta = new Vector2(538f, 48f);
             var go = ButtonAt(page, "В ЭФИР", new Vector2(1560f, 78f), () => Confirm?.Invoke(new List<string>(_order)));
             _airButton = go.GetComponent<RectTransform>();
             var goRect = go.GetComponent<RectTransform>();
@@ -246,6 +257,7 @@ namespace RealityDirector.UI.Hub
                 var clip = _library[i];
                 var card = Card(_libraryRow, clip, false);
                 card.GetComponent<Button>().onClick.AddListener(() => ToggleLibrary(index));
+                card.AddComponent<RightClick>().click = () => RemoveAt(_order.IndexOf(clip.id));
             }
 
             if (_library.Count == 0)
@@ -294,10 +306,19 @@ namespace RealityDirector.UI.Hub
 
         void RemovePicked()
         {
-            if (_picked < 0 || _picked >= _order.Count)
+            RemoveAt(_picked);
+        }
+
+        // Убрать кадр из эфира: «УБРАТЬ» — выбранный, ПКМ — тот, по которому кликнули.
+        void RemoveAt(int at)
+        {
+            if (at < 0 || at >= _order.Count)
                 return;
-            _order.RemoveAt(_picked);
-            _picked = -1;
+            _order.RemoveAt(at);
+            if (_picked == at)
+                _picked = -1;
+            else if (_picked > at)
+                _picked--;
             RefreshCut();
             Edited?.Invoke();
         }
@@ -331,6 +352,7 @@ namespace RealityDirector.UI.Hub
                     _picked = index;
                     RefreshCut();
                 });
+                card.AddComponent<RightClick>().click = () => RemoveAt(index);
                 if (i < _order.Count - 1 && linkIndex < report.links.Count && _panel != null)
                     _panel.LinkMark(_cutRow, report.links[linkIndex++]);
             }
@@ -911,6 +933,22 @@ namespace RealityDirector.UI.Hub
             rect.anchorMax = Vector2.one;
             rect.offsetMin = Vector2.zero;
             rect.offsetMax = Vector2.zero;
+        }
+
+        // ПКМ по карточке кадра. Заблокированная кнопка (босс говорит) — ПКМ тоже не срабатывает.
+        class RightClick : MonoBehaviour, IPointerClickHandler
+        {
+            public Action click;
+
+            public void OnPointerClick(PointerEventData eventData)
+            {
+                if (eventData.button != PointerEventData.InputButton.Right)
+                    return;
+                var button = GetComponent<Button>();
+                if (button != null && !button.interactable)
+                    return;
+                click?.Invoke();
+            }
         }
 
         static void Clear(Transform parent)

@@ -314,7 +314,7 @@ namespace RealityDirector.UI.Hub
                 else if (state == MapNodeState.Future)
                     body += "\nОткроется позже.";
                 else if (state == MapNodeState.Done)
-                    body += "\nУже снято.";
+                    body += selected.type == RoomType.Situation ? "\nУже снято." : "\nУже пройдено.";
                 else if (state == MapNodeState.Skipped)
                     body += "\nЭтот путь уже не пройти.";
                 if (infoTitle != null)

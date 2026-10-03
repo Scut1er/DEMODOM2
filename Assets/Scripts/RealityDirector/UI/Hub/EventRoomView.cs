@@ -46,6 +46,7 @@ namespace RealityDirector.UI.Hub
         // Куда указывает обучение (BossCoach) — блок вариантов.
         public RectTransform Focus => _choices;
         public RectTransform BodyFocus => _body != null ? _body.rectTransform : _choices;
+        public RectTransform ResultFocus => _result;
 
         public static EventRoomView Create(Transform canvas, Font titleFont)
         {
