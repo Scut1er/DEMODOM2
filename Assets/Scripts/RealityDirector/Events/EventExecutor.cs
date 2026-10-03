@@ -1,3 +1,4 @@
+using RealityDirector.Cards;
 using RealityDirector.Core;
 using RealityDirector.NPC;
 using UnityEngine;
@@ -6,7 +7,10 @@ namespace RealityDirector.Events
 {
     public class EventExecutor : MonoBehaviour
     {
-        public void Play(EventDefinition def, Interactable targetObject, NPCController targetActor)
+        // Постановка карты на площадке: кубики, эффекты из таблицы, реквизит, действия людей.
+        public CardStage Stage;
+
+        public void Play(EventDefinition def, Interactable targetObject, NPCController targetActor, Vector2? point = null)
         {
             if (def == null)
                 return;
@@ -17,7 +21,8 @@ namespace RealityDirector.Events
             if (def.rageSeconds > 0f && targetActor != null)
                 targetActor.ApplyRage(def.rageSeconds);
 
-            bool placed = targetObject != null;
+            bool placed = targetObject != null || point.HasValue;
+            Vector2 locus = targetObject != null ? (Vector2)targetObject.transform.position : point ?? Vector2.zero;
             EventBus.Publish(new WorldEvent
             {
                 eventId = def.id,
@@ -25,9 +30,12 @@ namespace RealityDirector.Events
                 targetActorId = targetActor != null ? targetActor.Id : null,
                 targetObjectId = targetObject != null ? targetObject.Id : null,
                 hasLocus = placed,
-                locus = placed ? (Vector2)targetObject.transform.position : Vector2.zero,
+                locus = locus,
                 time = Time.time
             });
+
+            if (Stage != null)
+                Stage.Play(def, targetObject, targetActor, point);
         }
     }
 }

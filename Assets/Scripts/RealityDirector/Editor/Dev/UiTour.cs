@@ -30,6 +30,66 @@ namespace RealityDirector.EditorTools
             return sb.ToString();
         }
 
+        // Сыграть карту в квартире без руки и денег: на участника (actorId) или в точку (x, y).
+        public static string PlayCard(string cardId, string actorId = null, float x = float.NaN, float y = float.NaN)
+        {
+            var executor = Object.FindAnyObjectByType<RealityDirector.Events.EventExecutor>();
+            if (executor == null)
+                return "no executor";
+            RealityDirector.Events.EventDefinition def = null;
+            foreach (var d in Resources.LoadAll<RealityDirector.Events.EventDefinition>("Content/Cards"))
+            {
+                if (d.id == cardId)
+                    def = d;
+            }
+
+            if (def == null)
+                return "no card " + cardId;
+            RealityDirector.NPC.NPCController actor = null;
+            foreach (var n in Object.FindObjectsByType<RealityDirector.NPC.NPCController>())
+            {
+                if (n.Id == actorId)
+                    actor = n;
+            }
+
+            RealityDirector.Events.Interactable obj = null;
+            if (!string.IsNullOrEmpty(def.requiredObjectId))
+            {
+                foreach (var i in Object.FindObjectsByType<RealityDirector.Events.Interactable>())
+                {
+                    if (i.Id == def.requiredObjectId)
+                        obj = i;
+                }
+            }
+
+            Vector2? point = float.IsNaN(x) ? (Vector2?)null : new Vector2(x, y);
+            executor.Play(def, obj, actor, point);
+            return "played " + def.displayName;
+        }
+
+        // Серия снимков с интервалом — видно, как карта разыгрывается во времени.
+        public static void Burst(string prefix, int count, float interval)
+        {
+            int done = 0;
+            double next = UnityEditor.EditorApplication.timeSinceStartup;
+            UnityEditor.EditorApplication.CallbackFunction tick = null;
+            tick = () =>
+            {
+                if (!Application.isPlaying || done >= count)
+                {
+                    UnityEditor.EditorApplication.update -= tick;
+                    return;
+                }
+
+                if (UnityEditor.EditorApplication.timeSinceStartup < next)
+                    return;
+                next = UnityEditor.EditorApplication.timeSinceStartup + interval;
+                Shot(prefix + "_" + done, Screen.width, Screen.height);
+                done++;
+            };
+            UnityEditor.EditorApplication.update += tick;
+        }
+
         // Клик по кнопке, чей путь заканчивается на key или чья подпись содержит key.
         public static string Click(string key)
         {

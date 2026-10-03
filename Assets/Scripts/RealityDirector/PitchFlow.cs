@@ -1,5 +1,6 @@
 using System.Collections;
 using System.Collections.Generic;
+using RealityDirector.Cards;
 using RealityDirector.Capture;
 using RealityDirector.Core;
 using RealityDirector.Events;
@@ -41,6 +42,7 @@ namespace RealityDirector
         PitchUi _ui;
         EpisodeContext _context;
         EventExecutor _executor;
+        CardStage _stage;
         CaptureSystem _capture;
         CameraShake _shake;
         Interactable _fridge;
@@ -82,6 +84,10 @@ namespace RealityDirector
             BuildApartment();
             WireTags();
             _executor = gameObject.AddComponent<EventExecutor>();
+            // Карты играют на площадке по своим данным: кубики, реквизит, действия людей.
+            _stage = gameObject.AddComponent<CardStage>();
+            _stage.Init(_cast, () => _bedOpen, () => _bathOpen, _ui.Toast, _shake, _fridge.transform);
+            _executor.Stage = _stage;
             _capture = gameObject.AddComponent<CaptureSystem>();
             _capture.Init(_context, _cast, () => _fridge != null && _fridge.IsOnFire, _fridge.transform, _bathroom.transform, () => _bathOpen);
             _capture.Captured += OnCaptured;
@@ -168,6 +174,11 @@ namespace RealityDirector
             }
 
             RefreshTargeting();
+            if (_stage != null)
+            {
+                bool zone = _phase == PitchPhase.Play && _armed != null && _armed.targetType == TargetType.Zone && Mouse.current != null;
+                _stage.Preview(zone ? _armed : null, zone ? MouseWorld() : Vector2.zero);
+            }
         }
 
         void LateUpdate()
@@ -878,6 +889,8 @@ namespace RealityDirector
                     _cast[i].ResetState();
             }
             _capture.ResetCapture();
+            if (_stage != null)
+                _stage.ClearAll();
             _ui.ClearUsed();
             _ui.SetArmed(null);
             _ui.ClearSlots();
@@ -976,16 +989,19 @@ namespace RealityDirector
                 return;
             }
 
-            if (def.PlayTarget == TargetType.Global)
+            // Карта на комнату ставится кликом по полу — видно, куда встанет реквизит и докуда достанет.
+            if (def.PlayTarget == TargetType.Global && def.targetType != TargetType.Zone)
             {
                 if (!Pay(def))
                     return;
                 _armed = null;
                 _ui.SetArmed(null);
                 _executor.Play(def, null, null);
+                Echo(def, null, null, null);
                 _ui.MarkUsed(def.id);
                 NoteCard(def);
-                _ui.Toast(def.sponsor ? "Сними кадр. В эфир реклама попадёт только из монтажа." : def.displayName);
+                if (!DeckPlay(def))
+                    _ui.Toast(def.sponsor ? "Сними кадр. В эфир реклама попадёт только из монтажа." : def.displayName);
                 return;
             }
 
@@ -1061,6 +1077,29 @@ namespace RealityDirector
         void TryCommitTarget()
         {
             Vector2 world = MouseWorld();
+            if (_armed.targetType == TargetType.Zone)
+            {
+                if (!_stage.CanPlace(world))
+                {
+                    _ui.Toast("Кликни по полу открытой комнаты.");
+                    Sfx.Play(Cue.Miss, 0.4f);
+                    return;
+                }
+
+                if (!Pay(_armed))
+                    return;
+                EventDefinition placed = _armed;
+                JuiceCard(placed, world);
+                _executor.Play(placed, null, null, world);
+                Echo(placed, null, null, world);
+                _ui.MarkUsed(placed.id);
+                NoteCard(placed);
+                _armed = null;
+                _ui.SetArmed(null);
+                _stage.Preview(null, Vector2.zero);
+                return;
+            }
+
             var hits = Physics2D.OverlapPointAll(world);
             if (_armed.PlayTarget == TargetType.Actor)
             {
@@ -1090,6 +1129,7 @@ namespace RealityDirector
                     return;
                 JuiceCard(_armed, npc.transform.position);
                 _executor.Play(_armed, null, npc);
+                Echo(_armed, null, npc, null);
                 _ui.MarkUsed(_armed.id);
                 NoteCard(_armed);
                 _armed = null;
@@ -1119,6 +1159,7 @@ namespace RealityDirector
             EventDefinition played = _armed;
             JuiceCard(played, obj.transform.position);
             _executor.Play(played, obj, null);
+            Echo(played, obj, null, null);
             _ui.MarkUsed(played.id);
             NoteCard(played);
             _armed = null;
@@ -1283,6 +1324,8 @@ namespace RealityDirector
             if (Time.unscaledTime < _handUntil)
                 return "Колода на паузе. Сними реакцию. Следующая карта перебьёт то, что ещё не кончилось.";
 
+            if (_armed != null && _armed.targetType == TargetType.Zone)
+                return "«" + _armed.displayName + "» — кликни по полу комнаты: круг показывает, докуда достанет. ПКМ отмена.";
             if (_armed != null)
                 return "«" + _armed.displayName + "» — " + _armed.hint + ". " + Forecast() + " ПКМ отмена.";
 
@@ -1767,14 +1810,20 @@ namespace RealityDirector
 
         bool CanPay(EventDefinition def)
         {
-            if (def == null || def.cost <= 0)
+            if (def == null || Cost(def) <= 0)
                 return true;
             var ep = _state != null ? _state.episode : null;
-            if (ep == null || ep.hell + 0.001f >= def.cost)
+            if (ep == null || ep.hell + 0.001f >= Cost(def))
                 return true;
-            _ui.Toast("Мало Hell Token. Нужно " + HellToken.Format(def.cost) + ".");
+            _ui.Toast("Мало Hell Token. Нужно " + HellToken.Format(Cost(def)) + ".");
             Sfx.Play(Cue.Miss, 0.4f);
             return false;
+        }
+
+        // Цена с учётом «Сэкономить токены»: скидка уходит на первую же оплаченную карту.
+        float Cost(EventDefinition def)
+        {
+            return def == null ? 0f : Mathf.Max(0f, def.cost - _discount);
         }
 
         bool Pay(EventDefinition def)
@@ -1784,9 +1833,15 @@ namespace RealityDirector
             var ep = _state != null ? _state.episode : null;
             if (ep == null)
                 return true;
-            if (ep.SpendHell(def.cost))
+            float cost = Cost(def);
+            if (cost <= 0f || ep.SpendHell(cost))
+            {
+                if (_discount > 0f && !HasDeckEffect(def, CardEffectType.ReduceCost))
+                    _discount = 0f;
                 return true;
-            _ui.Toast("Мало Hell Token. Нужно " + HellToken.Format(def.cost) + ".");
+            }
+
+            _ui.Toast("Мало Hell Token. Нужно " + HellToken.Format(cost) + ".");
             Sfx.Play(Cue.Miss, 0.4f);
             return false;
         }
@@ -1878,6 +1933,214 @@ namespace RealityDirector
                 return true;
             return EventSystem.current.IsPointerOverGameObject();
         }
+
+        // ---------- Колодные карты (GDD §16): добор, сброс, возврат — видно в руке ----------
+
+        float _discount;
+        bool _duplicate;
+
+        // «Копия сценария»: следующая карта действия срабатывает второй раз на ту же цель.
+        void Echo(EventDefinition def, Interactable obj, NPCController npc, Vector2? point)
+        {
+            if (!_duplicate || def == null || HasDeckEffect(def, CardEffectType.DuplicateEffect) || def.category == "DeckManagement")
+                return;
+            _duplicate = false;
+            StartCoroutine(EchoLater(def, obj, npc, point));
+        }
+
+        IEnumerator EchoLater(EventDefinition def, Interactable obj, NPCController npc, Vector2? point)
+        {
+            yield return new WaitForSeconds(1.6f);
+            _ui.Toast("Копия сценария: «" + def.displayName + "» ещё раз!");
+            _executor.Play(def, obj, npc, point);
+        }
+
+        static bool HasDeckEffect(EventDefinition def, CardEffectType type)
+        {
+            if (def == null || def.effects == null)
+                return false;
+            for (int i = 0; i < def.effects.Count; i++)
+            {
+                if (def.effects[i] != null && def.effects[i].type == type)
+                    return true;
+            }
+
+            return false;
+        }
+
+        // Карты в руке, кроме только что сыгранной.
+        List<int> OtherSlots(EventDefinition played)
+        {
+            var slots = new List<int>();
+            for (int i = 0; i < GameSession.Hand.Count; i++)
+            {
+                string id = GameSession.Hand[i];
+                if (string.IsNullOrEmpty(id) || (played != null && id == played.id) || _state.played.Contains(id))
+                    continue;
+                slots.Add(i);
+            }
+
+            return slots;
+        }
+
+        // Самая дорогая карта среди первых n библиотеки — «лучшая находка».
+        int BestInLibrary(int n)
+        {
+            int best = -1;
+            float bestCost = -1f;
+            int count = n <= 0 ? _state.library.Count : Mathf.Min(n, _state.library.Count);
+            for (int i = 0; i < count; i++)
+            {
+                var def = _content.Find(_state.library[i]);
+                if (def != null && def.cost > bestCost)
+                {
+                    bestCost = def.cost;
+                    best = i;
+                }
+            }
+
+            return best;
+        }
+
+        // Новая карта в руку: в свободный конец руки, с анимацией раздачи.
+        bool TakeIntoHand(string id)
+        {
+            var def = _content.Find(id);
+            if (def == null)
+                return false;
+            int slot = GameSession.Hand.Count;
+            GameSession.Hand.Add(id);
+            var grown = new EventDefinition[slot + 1];
+            for (int i = 0; i < _hand.Length && i < slot; i++)
+                grown[i] = _hand[i];
+            grown[slot] = def;
+            _hand = grown;
+            _ui.PutCard(slot, def, Arm);
+            return true;
+        }
+
+        bool DeckPlay(EventDefinition def)
+        {
+            if (def == null || def.effects == null || def.category != "DeckManagement")
+                return false;
+            var notes = new List<string>();
+            int peek = 0;
+            bool took = false;
+            foreach (var e in def.effects)
+            {
+                if (e == null)
+                    continue;
+                int n = Mathf.Max(1, Mathf.RoundToInt(e.amount));
+                switch (e.type)
+                {
+                    case CardEffectType.MoveHandCardToUsed:
+                    case CardEffectType.ReturnHandCardToLibrary:
+                    {
+                        var slots = OtherSlots(def);
+                        for (int k = 0; k < n && slots.Count > 0; k++)
+                        {
+                            int pick = slots[Random.Range(0, slots.Count)];
+                            slots.Remove(pick);
+                            var gone = _content.Find(GameSession.Hand[pick]);
+                            if (gone == null)
+                                continue;
+                            _ui.MarkUsed(gone.id);
+                            if (e.type == CardEffectType.MoveHandCardToUsed)
+                            {
+                                _state.played.Add(gone.id);
+                                notes.Add("«" + gone.displayName + "» — в использованные");
+                            }
+                            else
+                            {
+                                _state.library.Add(gone.id);
+                                notes.Add("«" + gone.displayName + "» — обратно в колоду");
+                            }
+
+                            DrawInto(gone);
+                        }
+
+                        break;
+                    }
+                    case CardEffectType.DrawRandom:
+                        for (int k = 0; k < n && _state.library.Count > 0; k++)
+                        {
+                            int at = Random.Range(0, _state.library.Count);
+                            string id = _state.library[at];
+                            _state.library.RemoveAt(at);
+                            if (TakeIntoHand(id))
+                                notes.Add("+ «" + _content.Find(id).displayName + "»");
+                        }
+
+                        break;
+                    case CardEffectType.PeekLibrary:
+                        peek = n;
+                        break;
+                    case CardEffectType.SearchLibrary:
+                    case CardEffectType.ChooseOneToHand:
+                    case CardEffectType.TakeSelectedIntoHand:
+                    {
+                        if (took)
+                            break;
+                        int at = BestInLibrary(peek);
+                        if (at < 0)
+                            break;
+                        string id = _state.library[at];
+                        _state.library.RemoveAt(at);
+                        if (TakeIntoHand(id))
+                        {
+                            took = true;
+                            notes.Add("в руку: «" + _content.Find(id).displayName + "»");
+                        }
+
+                        break;
+                    }
+                    case CardEffectType.RecoverUsedCard:
+                    {
+                        // Возвращается самая сильная (дорогая) из сыгранных — её и захочется повторить.
+                        string best = null;
+                        float bestCost = -1f;
+                        foreach (var id in _state.played)
+                        {
+                            var used = _content.Find(id);
+                            if (id == def.id || used == null || used.category == "DeckManagement")
+                                continue;
+                            if (used.cost > bestCost)
+                            {
+                                bestCost = used.cost;
+                                best = id;
+                            }
+                        }
+
+                        if (best != null)
+                        {
+                            _state.played.Remove(best);
+                            _state.library.Insert(0, best);
+                            notes.Add("«" + _content.Find(best).displayName + "» снова в колоде — сверху");
+                        }
+
+                        break;
+                    }
+                    case CardEffectType.ReduceCost:
+                        _discount = Mathf.Max(_discount, e.amount > 0f ? e.amount : 1f);
+                        notes.Add("следующая карта дешевле на " + HellToken.Format(_discount));
+                        break;
+                    case CardEffectType.DuplicateEffect:
+                        _duplicate = true;
+                        notes.Add("следующая карта сработает дважды");
+                        break;
+                    case CardEffectType.RetainCard:
+                    case CardEffectType.ProtectCard:
+                        if (!notes.Contains("держим в запасе"))
+                            notes.Add("держим в запасе");
+                        break;
+                }
+            }
+
+            _ui.Toast(def.displayName + ": " + (notes.Count > 0 ? string.Join(" · ", notes) : "колода без изменений"));
+            Checkpoint();
+            return true;
+        }
+
 
         static Vector2 MouseWorld()
         {
