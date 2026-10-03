@@ -15,6 +15,7 @@ MonoBehaviour:
   id: provoke
   displayName: "\u0420\u0430\u0437\u043E\u0437\u043B\u0438\u0442\u044C"
   hint: "\u043A\u043B\u0438\u043A \u043F\u043E \u0417\u043B\u043E\u043C\u0443"
+  category: Provocation
   targetType: 1
   requiredObjectId: 
   cardColor: {r: 0.62, g: 0.16, b: 0.16, a: 1}
@@ -34,7 +35,6 @@ MonoBehaviour:
   limitTrait: 1
   targetTrait: 0
   status: 2
-  category: Provocation
   tier: 0
   rarity: 0
   targetFilters: []
@@ -42,6 +42,7 @@ MonoBehaviour:
   effects: []
   diceEffects: []
   environmentPrefab: {fileID: 0}
+  environmentId: 
   environmentLifetime: 0
   environmentSeconds: 30
   aura:
@@ -55,6 +56,7 @@ MonoBehaviour:
     tags: []
     valueBonus: 0
     commercialValue: 0
+    technicalQuality: 0
   sponsorId: 
   lifetime: 0
   specialRules: 
@@ -63,3 +65,12 @@ MonoBehaviour:
   upgradeTier3: {fileID: 0}
   craftBudgetTier3: 0
   designIntent: "\u0417\u043B\u043E\u0439 \u0441\u0440\u044B\u0432\u0430\u0435\u0442\u0441\u044F \u043D\u0430 \u043F\u0440\u043E\u0432\u043E\u043A\u0430\u0446\u0438\u044E \u2014 \u0431\u0430\u0437\u043E\u0432\u044B\u0439 \u0438\u0441\u0442\u043E\u0447\u043D\u0438\u043A \u043A\u043E\u043D\u0444\u043B\u0438\u043A\u0442\u0430."
+  sheet:
+    targetFilters: 
+    effects: 
+    dice: 
+    aura: 
+    footage: 
+    lifecycle: 
+    upgradeTier2: 
+    upgradeTier3: 

@@ -15,6 +15,7 @@ MonoBehaviour:
   id: open_bathroom
   displayName: "\u0412\u0430\u043D\u043D\u0430\u044F"
   hint: "\u043A\u043B\u0438\u043A \u043F\u043E \u0437\u0430\u043A\u043E\u043B\u043E\u0447\u0435\u043D\u043D\u043E\u0439 \u0434\u0432\u0435\u0440\u0438"
+  category: Environment
   targetType: 0
   requiredObjectId: bath_door
   cardColor: {r: 0.45, g: 0.3, b: 0.16, a: 1}
@@ -33,7 +34,6 @@ MonoBehaviour:
   limitTrait: 0
   targetTrait: 0
   status: 2
-  category: Environment
   tier: 0
   rarity: 0
   targetFilters: []
@@ -41,6 +41,7 @@ MonoBehaviour:
   effects: []
   diceEffects: []
   environmentPrefab: {fileID: 0}
+  environmentId: 
   environmentLifetime: 0
   environmentSeconds: 30
   aura:
@@ -54,6 +55,7 @@ MonoBehaviour:
     tags: []
     valueBonus: 0
     commercialValue: 0
+    technicalQuality: 0
   sponsorId: 
   lifetime: 0
   specialRules: 
@@ -62,3 +64,12 @@ MonoBehaviour:
   upgradeTier3: {fileID: 0}
   craftBudgetTier3: 0
   designIntent: "\u041E\u0442\u043A\u0440\u044B\u0432\u0430\u0435\u0442 \u043D\u043E\u0432\u0443\u044E \u043A\u043E\u043C\u043D\u0430\u0442\u0443 \u2014 \u0431\u043E\u043B\u044C\u0448\u0435 \u043C\u0435\u0441\u0442\u0430 \u0434\u043B\u044F \u0441\u0446\u0435\u043D."
+  sheet:
+    targetFilters: 
+    effects: 
+    dice: 
+    aura: 
+    footage: 
+    lifecycle: 
+    upgradeTier2: 
+    upgradeTier3: 

@@ -26,7 +26,8 @@ namespace RealityDirector.Events
         [InspectorName("Обычная")] Common,
         [InspectorName("Необычная")] Uncommon,
         [InspectorName("Редкая")] Rare,
-        [InspectorName("Легендарная")] Legendary
+        [InspectorName("Легендарная")] Legendary,
+        [InspectorName("Спонсорская")] Sponsor
     }
 
     // Эмоции и SelfControl актёра (GDD §6).
@@ -90,7 +91,30 @@ namespace RealityDirector.Events
         [InspectorName("Колода: снизить цену")] ReduceCost,
         [InspectorName("Колода: повысить цену")] IncreaseCost,
         [InspectorName("Колода: усилить следующую карту")] ModifyNextCard,
-        [InspectorName("Колода: повторить эффект")] DuplicateEffect
+        [InspectorName("Колода: повторить эффект")] DuplicateEffect,
+        [InspectorName("Колода: сбросить карту из руки в использованные")] MoveHandCardToUsed,
+        [InspectorName("Колода: посмотреть случайные из библиотеки")] PeekLibrary,
+        [InspectorName("Колода: одну из просмотренных — в руку")] ChooseOneToHand,
+        [InspectorName("Колода: выбранную карту — в руку")] TakeSelectedIntoHand,
+        [InspectorName("Изменить сильнейшую негативную эмоцию")] ChangeHighestNegative,
+        [InspectorName("Окружение: поставить объект")] SpawnObject,
+        [InspectorName("Окружение: аура объекта")] CreateAura,
+        [InspectorName("Окружение: зона-ловушка (при входе)")] TriggerZone,
+        [InspectorName("Окружение: NPC могут взаимодействовать")] NpcInteraction,
+        [InspectorName("Поведение: изменить веса")] BehaviourWeights,
+        [InspectorName("Контекст: добавить")] AddContext,
+        [InspectorName("Контекст: снизить публичность")] LowerPublicContext,
+        [InspectorName("Комната: запереть выход")] LockExit,
+        [InspectorName("Комната: тише, меньше вмешательств")] QuietRoom,
+        [InspectorName("Спонсор: кадр с объектом — бренду")] SponsorVisibility,
+        [InspectorName("Проверка кубиком")] Check,
+        [InspectorName("Раскрыть секрет")] RevealSecret,
+        [InspectorName("Позвать актёра (бывший, третий)")] InviteActor,
+        [InspectorName("Прервать слабую цепочку")] InterruptChain,
+        [InspectorName("Случайный исход из таблицы")] RandomOutcome,
+        [InspectorName("Актёры меняют позицию")] ForceMovement,
+        [InspectorName("Кандидат на событие")] EventCandidate,
+        [InspectorName("Съёмка: бонус следующему кадру")] NextCaptureBonus
     }
 
     public enum EffectReceiver
@@ -124,6 +148,8 @@ namespace RealityDirector.Events
         public StateDuration duration;
         [Tooltip("Секунд — для «По таймеру».")]
         public float seconds;
+        [Tooltip("Срабатывает, только если у цели есть эта черта / состояние / контекст. Пусто — всегда.")]
+        public string onlyIf;
     }
 
     // ---------- Dice ----------
@@ -164,10 +190,26 @@ namespace RealityDirector.Events
         public int steps = 1;
     }
 
+    // Что меняет бросок.
+    public enum DiceSubject
+    {
+        [InspectorName("Эмоция")] Stat,
+        [InspectorName("Отношения")] Relationship,
+        [InspectorName("Проверка / сила события")] Check
+    }
+
     [Serializable]
     public class DiceEffect
     {
+        public DiceSubject subject;
         public ActorStat stat;
+        public RelationshipAxis axis;
+        [Tooltip("Для проверки: что бросаем — Reveal, Performance, Outcome, Interaction...")]
+        public string check;
+        [Tooltip("Бросок снижает значение (Stress −1d6).")]
+        public bool lower;
+        [Tooltip("Только если у цели черта / состояние / контекст. Пусто — всегда.")]
+        public string onlyIf;
         public DieSize die = DieSize.D6;
         [Min(1)] public int count = 1;
         public DiceRoll roll;
@@ -229,6 +271,33 @@ namespace RealityDirector.Events
         public int valueBonus;
         [Tooltip("Коммерческая ценность (для спонсорских целей).")]
         public int commercialValue;
+        [Tooltip("Прибавка к техническому качеству кадра.")]
+        public int technicalQuality;
+    }
+
+    // Колонки таблицы дизайна (.xlsx) как они есть. Структурные поля карты заполняются из них при импорте;
+    // текст остаётся спецификацией для кора там, где структура пока не всё выражает.
+    [Serializable]
+    public class CardSheetSpec
+    {
+        [TextArea(1, 3)] public string targetFilters;
+        [TextArea(1, 3)] public string effects;
+        [TextArea(1, 3)] public string dice;
+        [TextArea(1, 3)] public string aura;
+        [TextArea(1, 3)] public string footage;
+        [TextArea(1, 3)] public string lifecycle;
+        [TextArea(1, 3)] public string upgradeTier2;
+        [TextArea(1, 3)] public string upgradeTier3;
+    }
+
+    // HellToken — доллары с центами: $0.75, $2.
+    public static class HellToken
+    {
+        public static string Format(float value)
+        {
+            var c = System.Globalization.CultureInfo.InvariantCulture;
+            return "$" + (Mathf.Approximately(value, Mathf.Round(value)) ? Mathf.RoundToInt(value).ToString(c) : value.ToString("0.00", c));
+        }
     }
 
     // ---------- Жизненный цикл ----------

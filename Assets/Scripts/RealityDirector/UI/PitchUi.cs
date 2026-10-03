@@ -137,7 +137,7 @@ namespace RealityDirector.UI
         Text _handCount;
         Text _cash;
         RectTransform _hellFill;
-        int _hell = 10;
+        float _hell = 10f;
         bool _handLocked;
         Text _frameBody;
         GameObject _framePlate;
@@ -457,7 +457,7 @@ namespace RealityDirector.UI
 
         bool Poor(Card card)
         {
-            return card.Def != null && card.Def.cost > _hell;
+            return card.Def != null && card.Def.cost > _hell + 0.001f;
         }
 
         // Урок: жива только та кнопка, которую босс только что потребовал.
@@ -726,15 +726,15 @@ namespace RealityDirector.UI
                 _usedCount.text = used.ToString();
         }
 
-        public void SetHell(int current, int max)
+        public void SetHell(float current, float max)
         {
             _hell = current;
-            if (max < 1)
-                max = 1;
+            if (max < 1f)
+                max = 1f;
             if (_cash != null)
-                _cash.text = "HELL  " + current + " / " + max;
+                _cash.text = "HELL  " + HellToken.Format(current) + " / " + HellToken.Format(max);
             if (_hellFill != null)
-                _hellFill.sizeDelta = new Vector2(160f * Mathf.Clamp01(current / (float)max), 8f);
+                _hellFill.sizeDelta = new Vector2(160f * Mathf.Clamp01(current / max), 8f);
             if (!_gated)
                 SetHandLocked(_handLocked);
             else
@@ -1368,14 +1368,6 @@ namespace RealityDirector.UI
             innerRect.offsetMax = new Vector2(-8f, -8f);
             inner.raycastTarget = false;
 
-            var price = MakeText(frame.transform, def.cost.ToString(), 18, new Color(0.95f, 0.82f, 0.28f, 1f), TextAnchor.MiddleRight);
-            var priceRect = price.rectTransform;
-            priceRect.anchorMin = new Vector2(1f, 1f);
-            priceRect.anchorMax = new Vector2(1f, 1f);
-            priceRect.pivot = new Vector2(1f, 1f);
-            priceRect.anchoredPosition = new Vector2(-10f, -8f);
-            priceRect.sizeDelta = new Vector2(48f, 24f);
-            price.raycastTarget = false;
 
             var badge = Panel("badge", frame.transform, new Color(0.14f, 0.09f, 0.08f, 1f));
             var badgeRect = badge.rectTransform;
@@ -1388,14 +1380,19 @@ namespace RealityDirector.UI
             var number = MakeText(badge.transform, (index + 1).ToString(), 18, Paper, TextAnchor.MiddleCenter);
             Stretch(number.rectTransform);
 
-            int moodCount = def.moods != null ? def.moods.Count : 0;
             var title = MakeText(inner.transform, def.displayName.ToUpperInvariant(), 18, new Color(0.18f, 0.12f, 0.1f), TextAnchor.MiddleCenter);
             var titleRect = title.rectTransform;
             titleRect.anchorMin = new Vector2(0f, 1f);
             titleRect.anchorMax = new Vector2(1f, 1f);
             titleRect.pivot = new Vector2(0.5f, 1f);
-            titleRect.anchoredPosition = new Vector2(moodCount > 0 ? -6f : 0f, -6f);
-            titleRect.sizeDelta = new Vector2(moodCount > 0 ? -28f : -8f, 36f);
+            // Название — своей строкой под номером и значками тона.
+            titleRect.anchoredPosition = new Vector2(0f, -34f);
+            // Длинные названия из таблицы карт: шрифт уменьшается, чтобы влезть в две строки.
+            title.resizeTextForBestFit = true;
+            title.resizeTextMinSize = 10;
+            title.resizeTextMaxSize = 18;
+            title.verticalOverflow = VerticalWrapMode.Truncate;
+            titleRect.sizeDelta = new Vector2(-8f, 36f);
             StampMoods(frame.transform, def);
 
             var art = Panel("art", inner.transform, new Color(0.9f, 0.86f, 0.78f, 1f));
@@ -1403,13 +1400,25 @@ namespace RealityDirector.UI
             artRect.anchorMin = new Vector2(0f, 1f);
             artRect.anchorMax = new Vector2(1f, 1f);
             artRect.pivot = new Vector2(0.5f, 1f);
-            artRect.anchoredPosition = new Vector2(0f, -44f);
-            artRect.sizeDelta = new Vector2(-16f, 150f);
+            artRect.anchoredPosition = new Vector2(0f, -72f);
+            artRect.sizeDelta = new Vector2(-16f, 122f);
             art.raycastTarget = false;
             art.preserveAspect = true;
             art.color = Color.white;
             if (def.cardArt != null)
                 art.sprite = def.cardArt;
+
+            // Цена в HellToken — плашкой в углу арта (верхний угол карты заняли значки тона).
+            var pill = Panel("cost", art.transform, new Color(0.14f, 0.09f, 0.08f, 0.92f));
+            var pillRect = pill.rectTransform;
+            pillRect.anchorMin = new Vector2(1f, 0f);
+            pillRect.anchorMax = new Vector2(1f, 0f);
+            pillRect.pivot = new Vector2(1f, 0f);
+            pillRect.anchoredPosition = new Vector2(-4f, 4f);
+            pillRect.sizeDelta = new Vector2(62f, 26f);
+            pill.raycastTarget = false;
+            var price = MakeText(pill.transform, HellToken.Format(def.cost), 18, new Color(0.95f, 0.82f, 0.28f, 1f), TextAnchor.MiddleCenter);
+            Stretch(price.rectTransform);
 
             var body = MakeText(inner.transform, def.hint, 15, new Color(0.35f, 0.26f, 0.2f), TextAnchor.MiddleCenter);
             var bodyRect = body.rectTransform;

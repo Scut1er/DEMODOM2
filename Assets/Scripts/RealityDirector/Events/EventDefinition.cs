@@ -5,11 +5,16 @@ using UnityEngine;
 
 namespace RealityDirector.Events
 {
+    // Значения сериализуются числом — новые только в конец.
     public enum TargetType
     {
         Object,
         Actor,
-        Global
+        Global,
+        ActorPair,
+        Zone,
+        CardInHand,
+        UsedCard
     }
 
     // Карта продюсера. Поля по GDD §30 (CardDefinition); типы данных — в CardData.cs.
@@ -29,8 +34,8 @@ namespace RealityDirector.Events
         public List<ShowMood> moods = new List<ShowMood>();
         public float rageSeconds;
         public bool ignite;
-        [Tooltip("Hell Token, чтобы сыграть карту на съёмке.")]
-        public int cost;
+        [Tooltip("HellToken в долларах ($0.75), чтобы сыграть карту на съёмке.")]
+        public float cost;
         public int price;
         [Tooltip("Цена в магазине выпуска (нал). 0 — в этот магазин не попадает. Карта живёт только до эфира выпуска.")]
         public int runPrice;
@@ -63,6 +68,8 @@ namespace RealityDirector.Events
         [Header("Окружение")]
         [Tooltip("Префаб, который карта ставит в мир (environment card).")]
         public GameObject environmentPrefab;
+        [Tooltip("Id объекта окружения из таблицы (AlcoholCrate) — пока префаба нет.")]
+        public string environmentId;
         public EnvironmentLifetime environmentLifetime;
         [Min(0f)] public float environmentSeconds = 30f;
         public AuraDefinition aura = new AuraDefinition();
@@ -87,5 +94,24 @@ namespace RealityDirector.Events
         [Header("Для команды")]
         [Tooltip("Зачем эта карта в игре, какую ситуацию должна создавать.")]
         [TextArea(2, 6)] public string designIntent;
+
+        [Tooltip("Колонки таблицы дизайна как есть (импорт из .xlsx).")]
+        public CardSheetSpec sheet = new CardSheetSpec();
+
+        // Как карта наводится в квартире сейчас: пара — клик по одному участнику, зона и карты колоды — сразу.
+        public TargetType PlayTarget
+        {
+            get
+            {
+                switch (targetType)
+                {
+                    case TargetType.ActorPair: return TargetType.Actor;
+                    case TargetType.Zone:
+                    case TargetType.CardInHand:
+                    case TargetType.UsedCard: return TargetType.Global;
+                    default: return targetType;
+                }
+            }
+        }
     }
 }

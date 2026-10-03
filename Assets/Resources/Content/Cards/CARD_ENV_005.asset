@@ -1,0 +1,129 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ecce9cb9c05ae3c44af21d675601e171, type: 3}
+  m_Name: CARD_ENV_005
+  m_EditorClassIdentifier: Assembly-CSharp::RealityDirector.Events.EventDefinition
+  id: CARD_ENV_005
+  displayName: "\u041A\u0430\u0440\u0430\u043E\u043A\u0435-\u043C\u0430\u0448\u0438\u043D\u0430"
+  hint: "\u0441\u0440\u0430\u0437\u0443 \u043D\u0430 \u043A\u043E\u043C\u043D\u0430\u0442\u0443"
+  category: Environment
+  targetType: 4
+  requiredObjectId: 
+  cardColor: {r: 0.3, g: 0.4, b: 0.22, a: 1}
+  cardArt: {fileID: 0}
+  tags:
+  - Party
+  - Comedy
+  - Public
+  - Attention
+  - Warmth
+  moods: 01000000i
+  rageSeconds: 0
+  ignite: 0
+  cost: 2
+  price: 140
+  runPrice: 40
+  sponsor: 0
+  sponsorPay: 0
+  sponsorScoreHit: 0
+  starter: 0
+  limitTrait: 0
+  targetTrait: 0
+  status: 2
+  tier: 0
+  rarity: 1
+  targetFilters: []
+  description: "\u041F\u043E\u0441\u0442\u0430\u0432\u044C \u043A\u0430\u0440\u0430\u043E\u043A\u0435. NPC \u043C\u043E\u0433\u0443\u0442 \u0432\u044B\u0439\u0442\u0438 \u043F\u0435\u0442\u044C \u0438 \u043F\u0440\u0438\u0432\u043B\u0435\u0447\u044C \u0432\u043D\u0438\u043C\u0430\u043D\u0438\u0435 \u043A\u043E\u043C\u043D\u0430\u0442\u044B."
+  effects:
+  - type: 21
+    receiver: 0
+    stat: 0
+    axis: 0
+    amount: 0
+    key: 
+    duration: 0
+    seconds: 0
+    onlyIf: 
+  - type: 24
+    receiver: 0
+    stat: 0
+    axis: 0
+    amount: 0
+    key: 
+    duration: 0
+    seconds: 0
+    onlyIf: 
+  - type: 37
+    receiver: 0
+    stat: 0
+    axis: 0
+    amount: 0
+    key: Singing
+    duration: 0
+    seconds: 0
+    onlyIf: 
+  diceEffects:
+  - subject: 2
+    stat: 0
+    axis: 0
+    check: Performance intensity
+    lower: 0
+    onlyIf: 
+    die: 2
+    count: 1
+    roll: 0
+    bonus: 0
+    stepUps: []
+  environmentPrefab: {fileID: 0}
+  environmentId: KaraokeMachine
+  environmentLifetime: 0
+  environmentSeconds: 30
+  aura:
+    enabled: 1
+    radius: 3
+    tags:
+    - Public
+    - Party
+    - Attention
+    - Comedy
+    actorModifiers: []
+    diceModifiers: []
+    behaviourWeights:
+    - behaviour: Vain
+      multiplier: 1.5
+    - behaviour: AttentionSeeker
+      multiplier: 1.5
+  footage:
+    tags:
+    - Singing
+    - Embarrassment
+    - Comedy
+    valueBonus: 1
+    commercialValue: 0
+    technicalQuality: 0
+  sponsorId: 
+  lifetime: 0
+  specialRules: 05000000i
+  upgradeTier2: {fileID: 0}
+  craftBudgetTier2: 0
+  upgradeTier3: {fileID: 0}
+  craftBudgetTier3: 0
+  designIntent: "\u0413\u0435\u043D\u0435\u0440\u0430\u0442\u043E\u0440 \u043F\u0443\u0431\u043B\u0438\u0447\u043D\u044B\u0445 \u0441\u043C\u0435\u0448\u043D\u044B\u0445 \u0438\u043B\u0438 \u0443\u043D\u0438\u0437\u0438\u0442\u0435\u043B\u044C\u043D\u044B\u0445 \u043C\u043E\u043C\u0435\u043D\u0442\u043E\u0432."
+  sheet:
+    targetFilters: "\u0421\u0432\u043E\u0431\u043E\u0434\u043D\u044B\u0439 Production Slot"
+    effects: SpawnEnvironmentObject; EnableNPCInteraction; CreateWorldEventCandidate(Singing)
+    dice: Performance intensity 1d8
+    aura: "Attention/Public aura; Vain/AttentionSeeker weights \u2191"
+    footage: Singing/Embarrassment/Comedy footage Value +1.
+    lifecycle: "\u0417\u0430\u043D\u0438\u043C\u0430\u0435\u0442 1 Production Slot."
+    upgradeTier2: "Performance 1d10; \u0431\u043E\u043B\u044C\u0448\u0435 \u0448\u0430\u043D\u0441 AudienceReaction."
+    upgradeTier3: "\u041A\u0440\u0438\u0442 \u0443\u0441\u043F\u0435\u0445\u0430 \u0434\u0430\u0451\u0442 Highlight tag; \u043F\u0440\u043E\u0432\u0430\u043B \u2014 Embarrassment +1d8 Stress."

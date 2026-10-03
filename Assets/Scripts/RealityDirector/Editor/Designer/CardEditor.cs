@@ -32,13 +32,16 @@ namespace RealityDirector.EditorTools
             DrawMoods();
             Field("tier", "Tier ◇", "Ступень улучшения. Улучшенные версии — отдельные карты (блок «Улучшения»).");
             Field("rarity", "Редкость ◇", "");
-            Number("cost", "HellToken", "Сколько HellToken съедает розыгрыш на съёмке. Не хватает — карту не сыграть.");
+            Number("cost", "HellToken $", "Сколько долларов HellToken съедает розыгрыш на съёмке ($0.75). Не хватает — карту не сыграть.");
 
             Section("Цель", false);
             var targetType = serializedObject.FindProperty("targetType");
             targetType.enumValueIndex = EditorGUILayout.Popup(new GUIContent("Цель", "Объект — клик по предмету, участник — клик по человеку, весь дом — сразу."),
                 targetType.enumValueIndex, CardInsight.TargetNames);
-            switch ((TargetType)targetType.enumValueIndex)
+            var playAs = card.PlayTarget;
+            if (playAs != card.targetType)
+                EditorGUILayout.LabelField("◇ В квартире пока играется как «" + CardInsight.TargetNames[(int)playAs] + "».", EditorStyles.miniLabel);
+            switch (playAs)
             {
                 case TargetType.Object:
                     DesignerData.PickerField(EditorGUILayout.GetControlRect(), new GUIContent("Объект", "Пусто — любой объект квартиры."),
@@ -59,9 +62,9 @@ namespace RealityDirector.EditorTools
             Field("description", "Описание ◇", "Полный текст карты для игрока.");
 
             Section("Эффекты / правила", false);
-            if (card.targetType == TargetType.Actor)
+            if (card.PlayTarget == TargetType.Actor)
                 Number("rageSeconds", "Злость, сек", "Сколько секунд цель злится (0 — не злит). Злость открывает реакции «если уже злится».");
-            if (card.targetType == TargetType.Object)
+            if (card.PlayTarget == TargetType.Object)
                 Field("ignite", "Поджигает", "Объект загорается.");
             Field("effects", "Эффекты ◇", "Эмоции, отношения, временные состояния, события, управление колодой.");
 
@@ -72,7 +75,8 @@ namespace RealityDirector.EditorTools
 
             Section("Environment / Prefab", true);
             Field("environmentPrefab", "Префаб", "Объект, который карта ставит в мир.");
-            if (card.environmentPrefab != null)
+            Field("environmentId", "Id объекта", "Имя объекта из таблицы (AlcoholCrate). Нужен, пока префаба нет.");
+            if (card.environmentPrefab != null || !string.IsNullOrEmpty(card.environmentId))
             {
                 Field("environmentLifetime", "Живёт", "");
                 if (card.environmentLifetime == EnvironmentLifetime.Seconds)
@@ -99,6 +103,7 @@ namespace RealityDirector.EditorTools
             Sub(footage, "tags", "Теги кадра");
             Sub(footage, "valueBonus", "Ценность +");
             Sub(footage, "commercialValue", "Коммерческая");
+            Sub(footage, "technicalQuality", "Тех. качество +");
 
             Section("Sponsor", false);
             var sponsor = serializedObject.FindProperty("sponsor");
@@ -132,6 +137,8 @@ namespace RealityDirector.EditorTools
             Section("Design intent", false);
             Field("designIntent", "Зачем карта", "Для команды: какую ситуацию карта должна создавать. В игре не видно.");
 
+            DrawSheet();
+
             serializedObject.ApplyModifiedProperties();
 
             EditorGUILayout.Space(8);
@@ -147,6 +154,31 @@ namespace RealityDirector.EditorTools
 
             Warnings(card);
             Buttons(card);
+        }
+
+        static bool _showSheet;
+
+        // Колонки таблицы дизайна как есть: спецификация для кора там, где структурные поля пока не всё выражают.
+        void DrawSheet()
+        {
+            var sheet = serializedObject.FindProperty("sheet");
+            if (sheet == null)
+                return;
+            EditorGUILayout.Space(8);
+            _showSheet = EditorGUILayout.Foldout(_showSheet, new GUIContent("Из таблицы дизайна (текст колонок)",
+                "Заполняется импортом из .xlsx. Структурные поля выше собраны из этого текста; повторный импорт перезапишет оба."), true);
+            if (!_showSheet)
+                return;
+            EditorGUI.indentLevel++;
+            Sub(sheet, "targetFilters", "Фильтры цели");
+            Sub(sheet, "effects", "Эффекты / правила");
+            Sub(sheet, "dice", "Dice effects");
+            Sub(sheet, "aura", "Aura");
+            Sub(sheet, "footage", "Footage");
+            Sub(sheet, "lifecycle", "Lifecycle");
+            Sub(sheet, "upgradeTier2", "Upgrade Tier II");
+            Sub(sheet, "upgradeTier3", "Upgrade Tier III");
+            EditorGUI.indentLevel--;
         }
 
         // Категория открывает карту уровнем Сценаристов (как считает игра).
@@ -357,7 +389,7 @@ namespace RealityDirector.EditorTools
                 EditorGUILayout.HelpBox("Без тона карта не двигает тон сезона, рамка будет «трэш».", MessageType.Info);
             if (card.moods != null && card.moods.Count > CardInsight.MoodLimit)
                 EditorGUILayout.HelpBox("Тон считается только по первым двум меткам.", MessageType.Info);
-            if (card.targetType == TargetType.Object && string.IsNullOrEmpty(card.requiredObjectId))
+            if (card.PlayTarget == TargetType.Object && string.IsNullOrEmpty(card.requiredObjectId))
                 EditorGUILayout.HelpBox("Объект не выбран — карту можно навести на любой объект.", MessageType.Info);
             if (card.sponsor && card.sponsorPay <= 0)
                 EditorGUILayout.HelpBox("Спонсор, который ничего не платит.", MessageType.Warning);

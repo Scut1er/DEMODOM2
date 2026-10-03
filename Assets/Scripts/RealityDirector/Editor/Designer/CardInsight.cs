@@ -12,7 +12,8 @@ namespace RealityDirector.EditorTools
     // Карта человеческим языком: что произойдёт при розыгрыше, где её взять, кто как отреагирует.
     public static class CardInsight
     {
-        public static readonly string[] TargetNames = { "Объект в квартире", "Участник", "Весь дом сразу" };
+        // По порядку TargetType.
+        public static readonly string[] TargetNames = { "Объект в квартире", "Участник", "Весь дом сразу", "Пара участников", "Зона / комната", "Карта в руке", "Использованная карта" };
 
         static List<ReactionRule> _rules;
         static List<TraitId> _ruleTraits;
@@ -67,7 +68,12 @@ namespace RealityDirector.EditorTools
             {
                 if (d == null)
                     continue;
-                string line = Enum(d.stat) + " +" + Mathf.Max(1, d.count) + "d" + Dice.Faces(d.die) + (d.bonus != 0 ? (d.bonus > 0 ? " +" : " ") + d.bonus : "");
+                string what = d.subject == DiceSubject.Relationship ? Enum(d.axis)
+                    : d.subject == DiceSubject.Check ? (string.IsNullOrEmpty(d.check) ? "Проверка" : d.check)
+                    : Enum(d.stat);
+                string line = what + (d.lower ? " −" : " +") + Mathf.Max(1, d.count) + "d" + Dice.Faces(d.die) + (d.bonus != 0 ? (d.bonus > 0 ? " +" : " ") + d.bonus : "");
+                if (!string.IsNullOrEmpty(d.onlyIf))
+                    line += (d.onlyIf.StartsWith("при ") ? ", " : ", только если ") + d.onlyIf;
                 if (d.roll == DiceRoll.Advantage)
                     line += ", преимущество";
                 else if (d.roll == DiceRoll.Disadvantage)
@@ -90,20 +96,22 @@ namespace RealityDirector.EditorTools
 
         public static string Passport(EventDefinition c)
         {
-            return c.cost + " HellToken  ·  " + CategoryName(c.category) + "  ·  Tier " + c.tier + "  ·  " + Enum(c.rarity) + "  ·  " + Enum(c.status);
+            return HellToken.Format(c.cost) + " HellToken  ·  " + CategoryName(c.category) + "  ·  Tier " + c.tier + "  ·  " + Enum(c.rarity) + "  ·  " + Enum(c.status);
         }
 
         // Категории карт — те, что понимает игра (Progression.CategoryOpen): по ним карты открываются уровнем Сценаристов.
-        public static readonly string[] Categories = { "", "Provocation", "Environment", "Comedy", "Social", "Confession", "Reveal", "Sponsor" };
+        public static readonly string[] Categories = { "", "Provocation", "Environment", "Comedy", "Control", "Social", "Confession", "DeckManagement", "Reveal", "Sponsor" };
         public static readonly string[] CategoryNames =
         {
             "Без категории — открыта сразу",
             "Провокация — открыта сразу",
             "Окружение — открыта сразу",
-            "Комедия — открыта сразу",
+            "Хаос / комедия — открыта сразу",
+            "Контроль — открыта сразу",
             "Социальная — Сценаристы ур. 2",
             "Исповедь — Сценаристы ур. 2",
-            "Раскрытие — Сценаристы ур. 3",
+            "Управление колодой — Сценаристы ур. 2",
+            "Раскрытие / секрет — Сценаристы ур. 3",
             "Спонсор — открыта сразу"
         };
 
@@ -136,7 +144,9 @@ namespace RealityDirector.EditorTools
             var lines = new List<string>();
             if (c.status == CardStatus.Disabled)
                 lines.Add("Карта выключена — её нет в игре.");
-            switch (c.targetType)
+            if (c.PlayTarget != c.targetType)
+                lines.Add("Цель «" + TargetNames[(int)c.targetType] + "» квартира пока не умеет — сейчас карта играется как «" + TargetNames[(int)c.PlayTarget] + "».");
+            switch (c.PlayTarget)
             {
                 case TargetType.Global:
                     lines.Add("Играется сразу на весь дом — без клика по цели.");
@@ -154,9 +164,9 @@ namespace RealityDirector.EditorTools
             }
 
             if (c.ignite)
-                lines.Add(c.targetType == TargetType.Object ? "Объект загорается." : "Поджог работает только при цели «объект» — здесь не сработает.");
+                lines.Add(c.PlayTarget == TargetType.Object ? "Объект загорается." : "Поджог работает только при цели «объект» — здесь не сработает.");
             if (c.rageSeconds > 0f)
-                lines.Add(c.targetType == TargetType.Actor ? "Цель злится " + c.rageSeconds.ToString("0.#") + " сек." : "Злость работает только при цели «участник» — здесь не сработает.");
+                lines.Add(c.PlayTarget == TargetType.Actor ? "Цель злится " + c.rageSeconds.ToString("0.#") + " сек." : "Злость работает только при цели «участник» — здесь не сработает.");
             if (c.tags != null && c.tags.Count > 0)
                 lines.Add("В доме происходит событие с тегами: " + string.Join(", ", c.tags) + ".");
             if (c.moods != null && c.moods.Count > 0)
@@ -192,7 +202,7 @@ namespace RealityDirector.EditorTools
                     when += " если карту сыграли на него";
                 if (rule.requireRage)
                     when += (when.Length > 0 ? " и" : " если") + " он уже злится";
-                if (rule.requireTargetSelf && c.targetType != TargetType.Actor)
+                if (rule.requireTargetSelf && c.PlayTarget != TargetType.Actor)
                     when += " (у этой карты не участник — не сработает)";
                 lines.Add(who + " — " + ActionName(rule.action) + (string.IsNullOrEmpty(rule.emote) ? "" : " «" + rule.emote + "»") + when + ".");
             }

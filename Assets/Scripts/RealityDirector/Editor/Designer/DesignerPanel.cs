@@ -136,6 +136,8 @@ namespace RealityDirector.EditorTools
             {
                 if (GUILayout.Button("Синхронизировать с кодом"))
                     ContentMenu.SyncCards();
+                if (GUILayout.Button(new GUIContent("Импорт из таблицы (.xlsx)", "Лист «Карты»: строка = карта. Повторный импорт обновит карты по таблице.")))
+                    CardSheetImport.ImportWithDialog();
                 if (GUILayout.Button("+ Новая карта"))
                     CardWorkshop.Open(CardActions.Create());
             }

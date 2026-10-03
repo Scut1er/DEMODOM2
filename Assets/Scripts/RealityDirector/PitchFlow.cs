@@ -958,7 +958,7 @@ namespace RealityDirector
                 return;
             }
 
-            if (def.targetType == TargetType.Global)
+            if (def.PlayTarget == TargetType.Global)
             {
                 if (!Pay(def))
                     return;
@@ -1048,7 +1048,7 @@ namespace RealityDirector
         {
             Vector2 world = MouseWorld();
             var hits = Physics2D.OverlapPointAll(world);
-            if (_armed.targetType == TargetType.Actor)
+            if (_armed.PlayTarget == TargetType.Actor)
             {
                 NPCController npc = null;
                 for (int i = 0; i < hits.Length; i++)
@@ -1243,8 +1243,8 @@ namespace RealityDirector
 
         void RefreshTargeting()
         {
-            bool actors = _phase == PitchPhase.Play && _armed != null && _armed.targetType == TargetType.Actor;
-            bool objects = _phase == PitchPhase.Play && _armed != null && _armed.targetType == TargetType.Object;
+            bool actors = _phase == PitchPhase.Play && _armed != null && _armed.PlayTarget == TargetType.Actor;
+            bool objects = _phase == PitchPhase.Play && _armed != null && _armed.PlayTarget == TargetType.Object;
             for (int i = 0; i < _cast.Count; i++)
             {
                 var npc = _cast[i];
@@ -1650,9 +1650,9 @@ namespace RealityDirector
             if (def == null || def.cost <= 0)
                 return true;
             var ep = _state != null ? _state.episode : null;
-            if (ep == null || ep.hell >= def.cost)
+            if (ep == null || ep.hell + 0.001f >= def.cost)
                 return true;
-            _ui.Toast("Мало Hell Token. Нужно " + def.cost + ".");
+            _ui.Toast("Мало Hell Token. Нужно " + HellToken.Format(def.cost) + ".");
             Sfx.Play(Cue.Miss, 0.4f);
             return false;
         }
@@ -1666,7 +1666,7 @@ namespace RealityDirector
                 return true;
             if (ep.SpendHell(def.cost))
                 return true;
-            _ui.Toast("Мало Hell Token. Нужно " + def.cost + ".");
+            _ui.Toast("Мало Hell Token. Нужно " + HellToken.Format(def.cost) + ".");
             Sfx.Play(Cue.Miss, 0.4f);
             return false;
         }

@@ -102,6 +102,12 @@ namespace RealityDirector.EditorTools
                 _filter = EditorGUILayout.Popup(_filter, Filters, EditorStyles.toolbarPopup, GUILayout.Width(170));
                 _search = EditorGUILayout.TextField(_search, EditorStyles.toolbarSearchField, GUILayout.MinWidth(120));
                 GUILayout.FlexibleSpace();
+                if (GUILayout.Button(new GUIContent("Импорт из таблицы", "Карты из .xlsx (лист «Карты»). Повторный импорт обновит их по таблице."), EditorStyles.toolbarButton))
+                {
+                    CardSheetImport.ImportWithDialog();
+                    Reload();
+                }
+
                 if (GUILayout.Button("+ Новая карта", EditorStyles.toolbarButton))
                     Select(CardActions.Create());
                 using (new EditorGUI.DisabledScope(_selected == null))
@@ -316,13 +322,13 @@ namespace RealityDirector.EditorTools
                     Int(so, "sponsorScoreHit", Columns[9].width);
                 }
 
-                using (new EditorGUI.DisabledScope(card.targetType != TargetType.Actor))
+                using (new EditorGUI.DisabledScope(card.PlayTarget != TargetType.Actor))
                 {
                     var rage = so.FindProperty("rageSeconds");
                     rage.floatValue = Mathf.Max(0f, EditorGUILayout.FloatField(rage.floatValue, GUILayout.Width(Columns[10].width)));
                 }
 
-                using (new EditorGUI.DisabledScope(card.targetType != TargetType.Object))
+                using (new EditorGUI.DisabledScope(card.PlayTarget != TargetType.Object))
                     Toggle(so, "ignite", Columns[11].width);
                 EditorGUILayout.PropertyField(so.FindProperty("status"), GUIContent.none, GUILayout.Width(Columns[12].width));
                 var cat = so.FindProperty("category");
@@ -333,7 +339,7 @@ namespace RealityDirector.EditorTools
                 EditorGUILayout.PropertyField(so.FindProperty("tier"), GUIContent.none, GUILayout.Width(Columns[14].width));
                 EditorGUILayout.PropertyField(so.FindProperty("rarity"), GUIContent.none, GUILayout.Width(Columns[15].width));
                 var cost = so.FindProperty("cost");
-                cost.intValue = Mathf.Max(0, EditorGUILayout.IntField(cost.intValue, GUILayout.Width(Columns[16].width)));
+                cost.floatValue = Mathf.Max(0f, EditorGUILayout.FloatField(cost.floatValue, GUILayout.Width(Columns[16].width)));
                 if (!CardInsight.Obtainable(card))
                     GUILayout.Label(new GUIContent("⚠", "Карту негде взять."), GUILayout.Width(16));
             }
@@ -422,7 +428,7 @@ namespace RealityDirector.EditorTools
                 {
                     var inCat = all.Where(c => c.category == cat && c.status != CardStatus.Disabled).ToList();
                     string costs = inCat.Count > 0
-                        ? inCat.Average(c => c.cost).ToString("0.0") + " HellToken в среднем (от " + inCat.Min(c => c.cost) + " до " + inCat.Max(c => c.cost) + ")"
+                        ? HellToken.Format(inCat.Average(c => c.cost)) + " HellToken в среднем (от " + HellToken.Format(inCat.Min(c => c.cost)) + " до " + HellToken.Format(inCat.Max(c => c.cost)) + ")"
                         : "нет карт";
                     Row(CardInsight.CategoryName(cat), inCat.Count, costs);
                 }

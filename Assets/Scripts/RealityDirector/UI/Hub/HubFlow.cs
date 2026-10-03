@@ -32,6 +32,7 @@ namespace RealityDirector.UI.Hub
         MapNode _selected;
         string _hubNotice;
         bool _runShop;
+        MarketingRoomDefinition _marketing;
         CutFlowUi _cut;
         HubOverlays _screens;
         ViewerWishId _airWish;
@@ -468,16 +469,33 @@ namespace RealityDirector.UI.Hub
             }
 
             _meta.ClearReject();
+            _marketing = node.room as MarketingRoomDefinition;
             Sfx.Play(Cue.Coin, 0.4f);
             GameSession.Save();
             RefreshDeals();
+        }
+
+        // Предложения комнаты маркетинга из её ассета; пусто — стандартный набор.
+        List<MarketingOffer> Deals()
+        {
+            int reputation = GameSession.State.sponsorReputation;
+            if (_marketing == null || _marketing.offers == null || _marketing.offers.Count == 0)
+                return JamContent.Offers(reputation);
+            var list = new List<MarketingOffer>();
+            foreach (var offer in _marketing.offers)
+            {
+                if (offer != null && !string.IsNullOrEmpty(offer.cardId) && reputation >= offer.minReputation)
+                    list.Add(offer);
+            }
+
+            return list;
         }
 
         void RefreshDeals()
         {
             if (!_episode.Active)
                 return;
-            _screens.ShowDeals(_meta.ReputationLine(), JamContent.Offers(GameSession.State.sponsorReputation), offer =>
+            _screens.ShowDeals(_meta.ReputationLine(), Deals(), offer =>
             {
                 bool ok = offer.kind == OfferKind.Contract
                     ? _meta.TryTakeContract(offer.cardId, offer.payout, offer.scoreHit)

@@ -91,10 +91,10 @@ namespace RealityDirector.Meta
         public int budgetAtStart;
         [Tooltip("Нал выпуска. Тратится в магазине на карте, в хаб не переносится.")]
         public int cash;
-        public const int HellCap = 10;
-        [Tooltip("Мана съёмки. Тратится на cost карт. Новый заход в комнату заливает пул заново.")]
-        public int hell;
-        public int hellMax;
+        public const float HellCap = 10f;
+        [Tooltip("HellToken съёмки ($). Тратится на cost карт. Новый заход в комнату заливает пул заново.")]
+        public float hell;
+        public float hellMax;
         public string hellRoom;
         public string setRoom;
         public bool setOnFire;
@@ -141,13 +141,13 @@ namespace RealityDirector.Meta
             }
         }
 
-        public bool SpendHell(int cost)
+        public bool SpendHell(float cost)
         {
-            if (cost <= 0)
+            if (cost <= 0f)
                 return true;
-            if (hell < cost)
+            if (hell + 0.001f < cost)
                 return false;
-            hell -= cost;
+            hell = Mathf.Max(0f, hell - cost);
             return true;
         }
 

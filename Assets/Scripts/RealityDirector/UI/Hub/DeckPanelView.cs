@@ -57,11 +57,62 @@ namespace RealityDirector.UI.Hub
                 close.onClick.AddListener(() => Close?.Invoke());
             if (cancel != null)
                 cancel.onClick.AddListener(() => Cancel?.Invoke());
+            _deckScroll = Scrollable(deckRoot);
+            _shopScroll = Scrollable(shopRoot);
+        }
+
+        ScrollRect _deckScroll;
+        ScrollRect _shopScroll;
+
+        // Сетка карт прокручивается колесом и перетаскиванием: карт может быть сколько угодно.
+        static ScrollRect Scrollable(RectTransform content)
+        {
+            if (content == null)
+                return null;
+            var existing = content.GetComponentInParent<ScrollRect>(true);
+            if (existing != null)
+                return existing;
+
+            var view = new GameObject(content.name + "View", typeof(RectTransform), typeof(RectMask2D), typeof(Image), typeof(ScrollRect));
+            var viewRect = (RectTransform)view.transform;
+            viewRect.SetParent(content.parent, false);
+            viewRect.SetSiblingIndex(content.GetSiblingIndex());
+            viewRect.anchorMin = content.anchorMin;
+            viewRect.anchorMax = content.anchorMax;
+            viewRect.pivot = content.pivot;
+            viewRect.offsetMin = content.offsetMin;
+            viewRect.offsetMax = content.offsetMax;
+            // Прозрачный фон ловит колесо мыши между карт.
+            view.GetComponent<Image>().color = new Color(0f, 0f, 0f, 0f);
+
+            content.SetParent(viewRect, false);
+            content.anchorMin = new Vector2(0f, 1f);
+            content.anchorMax = new Vector2(1f, 1f);
+            content.pivot = new Vector2(0.5f, 1f);
+            content.anchoredPosition = Vector2.zero;
+            content.sizeDelta = Vector2.zero;
+            var fitter = content.GetComponent<ContentSizeFitter>();
+            if (fitter == null)
+                fitter = content.gameObject.AddComponent<ContentSizeFitter>();
+            fitter.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+
+            var scroll = view.GetComponent<ScrollRect>();
+            scroll.viewport = viewRect;
+            scroll.content = content;
+            scroll.horizontal = false;
+            scroll.vertical = true;
+            scroll.movementType = ScrollRect.MovementType.Clamped;
+            scroll.scrollSensitivity = 40f;
+            return scroll;
         }
 
         public void Open(int tab, PrepModel model, bool shopOpen = false, bool browse = false)
         {
             gameObject.SetActive(true);
+            if (_deckScroll != null)
+                _deckScroll.verticalNormalizedPosition = 1f;
+            if (_shopScroll != null)
+                _shopScroll.verticalNormalizedPosition = 1f;
             _shopOpen = shopOpen;
             _browse = browse;
             var closeLabel = close != null ? close.GetComponentInChildren<Text>(true) : null;

@@ -1,0 +1,122 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ecce9cb9c05ae3c44af21d675601e171, type: 3}
+  m_Name: CARD_CHAOS_003
+  m_EditorClassIdentifier: Assembly-CSharp::RealityDirector.Events.EventDefinition
+  id: CARD_CHAOS_003
+  displayName: "\u041F\u043E\u0436\u0430\u0440\u043D\u0430\u044F \u0441\u0438\u0440\u0435\u043D\u0430"
+  hint: "\u0441\u0440\u0430\u0437\u0443 \u043D\u0430 \u0432\u0435\u0441\u044C \u0434\u043E\u043C"
+  category: Comedy
+  targetType: 2
+  requiredObjectId: 
+  cardColor: {r: 0.78, g: 0.52, b: 0.12, a: 1}
+  cardArt: {fileID: 0}
+  tags:
+  - Chaos
+  - Panic
+  - Movement
+  - Public
+  - Misery
+  moods: 01000000i
+  rageSeconds: 0
+  ignite: 0
+  cost: 2.5
+  price: 200
+  runPrice: 60
+  sponsor: 0
+  sponsorPay: 0
+  sponsorScoreHit: 0
+  starter: 0
+  limitTrait: 0
+  targetTrait: 0
+  status: 1
+  tier: 0
+  rarity: 2
+  targetFilters: []
+  description: "\u0412\u043A\u043B\u044E\u0447\u0438 \u043F\u043E\u0436\u0430\u0440\u043D\u0443\u044E \u0441\u0438\u0440\u0435\u043D\u0443. \u0412\u0441\u0435 \u0430\u043A\u0442\u0451\u0440\u044B \u043F\u043E\u043B\u0443\u0447\u0430\u044E\u0442 \u0441\u0442\u0440\u0435\u0441\u0441 \u0438 \u043F\u044B\u0442\u0430\u044E\u0442\u0441\u044F \u0441\u043C\u0435\u043D\u0438\u0442\u044C \u043F\u043E\u0437\u0438\u0446\u0438\u044E."
+  effects:
+  - type: 4
+    receiver: 1
+    stat: 0
+    axis: 0
+    amount: 0
+    key: Alarm,Chaos
+    duration: 0
+    seconds: 0
+    onlyIf: 
+  - type: 0
+    receiver: 1
+    stat: 0
+    axis: 0
+    amount: 0
+    key: 
+    duration: 0
+    seconds: 0
+    onlyIf: 
+  - type: 36
+    receiver: 0
+    stat: 0
+    axis: 0
+    amount: 0
+    key: 
+    duration: 0
+    seconds: 0
+    onlyIf: 
+  diceEffects:
+  - subject: 0
+    stat: 0
+    axis: 0
+    check: 
+    lower: 0
+    onlyIf: 
+    die: 1
+    count: 1
+    roll: 0
+    bonus: 0
+    stepUps: []
+  environmentPrefab: {fileID: 0}
+  environmentId: 
+  environmentLifetime: 0
+  environmentSeconds: 30
+  aura:
+    enabled: 0
+    radius: 3
+    tags: []
+    actorModifiers: []
+    diceModifiers: []
+    behaviourWeights: []
+  footage:
+    tags:
+    - Panic
+    - Collision
+    - UnexpectedMeeting
+    - Chaos
+    valueBonus: 0
+    commercialValue: 0
+    technicalQuality: 0
+  sponsorId: 
+  lifetime: 0
+  specialRules: 
+  upgradeTier2: {fileID: 0}
+  craftBudgetTier2: 0
+  upgradeTier3: {fileID: 0}
+  craftBudgetTier3: 0
+  designIntent: "\u0413\u043B\u043E\u0431\u0430\u043B\u044C\u043D\u044B\u0439 \u0445\u0430\u043E\u0441-\u0438\u043D\u0441\u0442\u0440\u0443\u043C\u0435\u043D\u0442, \u043A\u043E\u0442\u043E\u0440\u044B\u0439 \u043F\u0435\u0440\u0435\u043C\u0435\u0448\u0438\u0432\u0430\u0435\u0442 \u0441\u0446\u0435\u043D\u0443 \u0438 \u0441\u043E\u0437\u0434\u0430\u0451\u0442 \u043D\u043E\u0432\u044B\u0435 \u0432\u0441\u0442\u0440\u0435\u0447\u0438."
+  sheet:
+    targetFilters: 
+    effects: CreateGlobalWorldEvent(Alarm,Chaos); ModifyEmotionAll(Stress); ForceMovementCandidate
+    dice: "Stress +1d6 \u0432\u0441\u0435\u043C \u0430\u043A\u0442\u0451\u0440\u0430\u043C"
+    aura: 
+    footage: "Panic/Collision/UnexpectedMeeting footage \u043F\u043E\u043B\u0443\u0447\u0430\u0435\u0442 Chaos tag."
+    lifecycle: "\u041F\u043E\u0441\u043B\u0435 \u0440\u043E\u0437\u044B\u0433\u0440\u044B\u0448\u0430 \u2192 \u0418\u0441\u043F\u043E\u043B\u044C\u0437\u043E\u0432\u0430\u043D\u043E."
+    upgradeTier2: "Stress +1d8; movement \u0431\u043E\u043B\u0435\u0435 \u0440\u0435\u0437\u043A\u0438\u0439."
+    upgradeTier3: "Stress +1d10; Sensitive/Cowardly \u043F\u043E\u043B\u0443\u0447\u0430\u044E\u0442 Disadvantage \u043A SelfControl."

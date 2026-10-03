@@ -49,9 +49,9 @@ namespace RealityDirector.Meta
                 return true;
             if (writerLevel >= 4)
                 return true;
-            if (category == "Provocation" || category == "Environment" || category == "Comedy")
+            if (category == "Provocation" || category == "Environment" || category == "Comedy" || category == "Control")
                 return true;
-            if (writerLevel >= 2 && (category == "Social" || category == "Confession"))
+            if (writerLevel >= 2 && (category == "Social" || category == "Confession" || category == "DeckManagement"))
                 return true;
             if (writerLevel >= 3 && category == "Reveal")
                 return true;

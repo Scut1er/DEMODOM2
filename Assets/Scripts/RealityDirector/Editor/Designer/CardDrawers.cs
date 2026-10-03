@@ -102,8 +102,84 @@ namespace RealityDirector.EditorTools
         public override float GetPropertyHeight(SerializedProperty property, GUIContent label)
         {
             var type = (CardEffectType)property.FindPropertyRelative("type").enumValueIndex;
-            bool state = type == CardEffectType.AddState;
-            return Row.Line * (state ? 3 : 2) + Row.Gap * (state ? 4 : 3);
+            int lines = type == CardEffectType.AddState ? 4 : Kind(type) == EffectKind.Flag ? 2 : 3;
+            return Row.Line * lines + Row.Gap * (lines + 1);
+        }
+
+        enum EffectKind
+        {
+            Stat,
+            Relationship,
+            State,
+            Key,
+            Amount,
+            Flag
+        }
+
+        // Какие параметры нужны эффекту.
+        static EffectKind Kind(CardEffectType t)
+        {
+            switch (t)
+            {
+                case CardEffectType.ChangeStat:
+                case CardEffectType.ChangeHighestNegative:
+                    return EffectKind.Stat;
+                case CardEffectType.ChangeRelationship:
+                    return EffectKind.Relationship;
+                case CardEffectType.AddState:
+                case CardEffectType.RemoveState:
+                    return EffectKind.State;
+                case CardEffectType.WorldEvent:
+                case CardEffectType.MoveActor:
+                case CardEffectType.AddContext:
+                case CardEffectType.Check:
+                case CardEffectType.RevealSecret:
+                case CardEffectType.InviteActor:
+                case CardEffectType.EventCandidate:
+                case CardEffectType.BehaviourWeights:
+                case CardEffectType.NextCaptureBonus:
+                    return EffectKind.Key;
+                case CardEffectType.ReturnHandCardToLibrary:
+                case CardEffectType.DrawRandom:
+                case CardEffectType.SearchLibrary:
+                case CardEffectType.RecoverUsedCard:
+                case CardEffectType.ProtectCard:
+                case CardEffectType.RetainCard:
+                case CardEffectType.ReduceCost:
+                case CardEffectType.IncreaseCost:
+                case CardEffectType.ModifyNextCard:
+                case CardEffectType.DuplicateEffect:
+                case CardEffectType.MoveHandCardToUsed:
+                case CardEffectType.PeekLibrary:
+                    return EffectKind.Amount;
+                default:
+                    return EffectKind.Flag;
+            }
+        }
+
+        static bool ToActors(CardEffectType t)
+        {
+            var k = Kind(t);
+            return k == EffectKind.Stat || k == EffectKind.Relationship || k == EffectKind.State
+                   || t == CardEffectType.WorldEvent || t == CardEffectType.MoveActor || t == CardEffectType.AddContext
+                   || t == CardEffectType.Check || t == CardEffectType.RevealSecret || t == CardEffectType.InviteActor;
+        }
+
+        static string KeyLabel(CardEffectType t)
+        {
+            switch (t)
+            {
+                case CardEffectType.WorldEvent: return "Теги";
+                case CardEffectType.MoveActor: return "Куда (id)";
+                case CardEffectType.AddContext: return "Контекст";
+                case CardEffectType.Check: return "Что";
+                case CardEffectType.RevealSecret: return "Как";
+                case CardEffectType.InviteActor: return "Кого";
+                case CardEffectType.EventCandidate: return "Событие";
+                case CardEffectType.BehaviourWeights: return "Поведение";
+                case CardEffectType.NextCaptureBonus: return "Бонус";
+                default: return "Ключ";
+            }
         }
 
         public override void OnGUI(Rect position, SerializedProperty p, GUIContent label)
@@ -113,54 +189,57 @@ namespace RealityDirector.EditorTools
             var top = Row.Split(r, 3, 2);
             EditorGUI.PropertyField(top[0], type, GUIContent.none);
             var t = (CardEffectType)type.enumValueIndex;
-            bool actor = t <= CardEffectType.MoveActor;
-            if (actor)
+            if (ToActors(t))
                 EditorGUI.PropertyField(top[1], p.FindPropertyRelative("receiver"), GUIContent.none);
 
-            r = Row.Next(r);
-            switch (t)
+            var kind = Kind(t);
+            if (kind != EffectKind.Flag)
             {
-                case CardEffectType.ChangeStat:
+                r = Row.Next(r);
+                switch (kind)
                 {
-                    var s = Row.Split(r, 1, 1);
-                    Row.Labeled(s[0], "Эмоция", p.FindPropertyRelative("stat"));
-                    Row.Labeled(s[1], "На сколько", p.FindPropertyRelative("amount"));
-                    break;
+                    case EffectKind.Stat:
+                    {
+                        var s = Row.Split(r, 1, 1);
+                        if (t == CardEffectType.ChangeStat)
+                            Row.Labeled(s[0], "Эмоция", p.FindPropertyRelative("stat"));
+                        Row.Labeled(s[1], "На сколько", p.FindPropertyRelative("amount"));
+                        break;
+                    }
+                    case EffectKind.Relationship:
+                    {
+                        var s = Row.Split(r, 1, 1);
+                        Row.Labeled(s[0], "Ось", p.FindPropertyRelative("axis"));
+                        Row.Labeled(s[1], "На сколько", p.FindPropertyRelative("amount"));
+                        break;
+                    }
+                    case EffectKind.State:
+                        Row.Labeled(r, "Состояние", p.FindPropertyRelative("key"));
+                        if (t == CardEffectType.AddState)
+                        {
+                            r = Row.Next(r);
+                            var s = Row.Split(r, 3, 2);
+                            Row.Labeled(s[0], "Длится", p.FindPropertyRelative("duration"));
+                            if ((StateDuration)p.FindPropertyRelative("duration").enumValueIndex == StateDuration.Timed)
+                                Row.Labeled(s[1], "Секунд", p.FindPropertyRelative("seconds"));
+                        }
+
+                        break;
+                    case EffectKind.Key:
+                    {
+                        var s = Row.Split(r, 3, 2);
+                        Row.Labeled(s[0], KeyLabel(t), p.FindPropertyRelative("key"));
+                        Row.Labeled(s[1], "Сила", p.FindPropertyRelative("amount"), 40f);
+                        break;
+                    }
+                    default:
+                        Row.Labeled(r, t == CardEffectType.ReduceCost || t == CardEffectType.IncreaseCost ? "На $" : "Сколько карт", p.FindPropertyRelative("amount"));
+                        break;
                 }
-                case CardEffectType.ChangeRelationship:
-                {
-                    var s = Row.Split(r, 1, 1);
-                    Row.Labeled(s[0], "Ось", p.FindPropertyRelative("axis"));
-                    Row.Labeled(s[1], "На сколько", p.FindPropertyRelative("amount"));
-                    break;
-                }
-                case CardEffectType.AddState:
-                {
-                    Row.Labeled(r, "Состояние", p.FindPropertyRelative("key"));
-                    r = Row.Next(r);
-                    var s = Row.Split(r, 3, 2);
-                    Row.Labeled(s[0], "Длится", p.FindPropertyRelative("duration"));
-                    if ((StateDuration)p.FindPropertyRelative("duration").enumValueIndex == StateDuration.Timed)
-                        Row.Labeled(s[1], "Секунд", p.FindPropertyRelative("seconds"));
-                    break;
-                }
-                case CardEffectType.RemoveState:
-                    Row.Labeled(r, "Состояние", p.FindPropertyRelative("key"));
-                    break;
-                case CardEffectType.WorldEvent:
-                    Row.Labeled(r, "Теги", p.FindPropertyRelative("key"));
-                    break;
-                case CardEffectType.MoveActor:
-                    Row.Labeled(r, "Куда (id)", p.FindPropertyRelative("key"));
-                    break;
-                case CardEffectType.ReduceCost:
-                case CardEffectType.IncreaseCost:
-                    Row.Labeled(r, "На $", p.FindPropertyRelative("amount"));
-                    break;
-                default:
-                    Row.Labeled(r, "Сколько карт", p.FindPropertyRelative("amount"));
-                    break;
             }
+
+            r = Row.Next(r);
+            Row.Labeled(r, "Только если", p.FindPropertyRelative("onlyIf"));
         }
     }
 
@@ -199,19 +278,38 @@ namespace RealityDirector.EditorTools
     {
         public override float GetPropertyHeight(SerializedProperty property, GUIContent label)
         {
-            return Row.Line * 2 + Row.Gap * 3 + EditorGUI.GetPropertyHeight(property.FindPropertyRelative("stepUps"), true) + Row.Gap;
+            return Row.Line * 3 + Row.Gap * 4 + EditorGUI.GetPropertyHeight(property.FindPropertyRelative("stepUps"), true) + Row.Gap;
         }
 
         public override void OnGUI(Rect position, SerializedProperty p, GUIContent label)
         {
             var r = Row.First(position);
-            var s = Row.Split(r, 3, 2, 2, 2);
-            Row.Labeled(s[0], "Эмоция", p.FindPropertyRelative("stat"), 50f);
-            Row.Labeled(s[1], "Кол-во", p.FindPropertyRelative("count"), 44f);
-            Row.Labeled(s[2], "Кубик", p.FindPropertyRelative("die"), 40f);
-            Row.Labeled(s[3], "+", p.FindPropertyRelative("bonus"), 14f);
+            var subject = p.FindPropertyRelative("subject");
+            var top = Row.Split(r, 2, 3, 2);
+            EditorGUI.PropertyField(top[0], subject, GUIContent.none);
+            switch ((DiceSubject)subject.enumValueIndex)
+            {
+                case DiceSubject.Relationship:
+                    EditorGUI.PropertyField(top[1], p.FindPropertyRelative("axis"), GUIContent.none);
+                    break;
+                case DiceSubject.Check:
+                    Row.Labeled(top[1], "Что", p.FindPropertyRelative("check"), 30f);
+                    break;
+                default:
+                    EditorGUI.PropertyField(top[1], p.FindPropertyRelative("stat"), GUIContent.none);
+                    break;
+            }
+
+            var lower = p.FindPropertyRelative("lower");
+            lower.boolValue = EditorGUI.Popup(top[2], lower.boolValue ? 1 : 0, new[] { "повышает", "снижает" }) == 1;
             r = Row.Next(r);
-            Row.Labeled(r, "Бросок", p.FindPropertyRelative("roll"), 50f);
+            var s = Row.Split(r, 2, 2, 1, 3);
+            Row.Labeled(s[0], "Кол-во", p.FindPropertyRelative("count"), 44f);
+            Row.Labeled(s[1], "Кубик", p.FindPropertyRelative("die"), 40f);
+            Row.Labeled(s[2], "+", p.FindPropertyRelative("bonus"), 14f);
+            Row.Labeled(s[3], "Бросок", p.FindPropertyRelative("roll"), 46f);
+            r = Row.Next(r);
+            Row.Labeled(r, "Только если", p.FindPropertyRelative("onlyIf"));
             var steps = p.FindPropertyRelative("stepUps");
             var listRect = new Rect(position.x, r.yMax + Row.Gap, position.width, EditorGUI.GetPropertyHeight(steps, true));
             EditorGUI.PropertyField(listRect, steps, new GUIContent("Step Up (кубик растёт, если…)"), true);
