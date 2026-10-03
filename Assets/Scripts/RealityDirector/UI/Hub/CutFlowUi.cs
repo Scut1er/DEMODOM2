@@ -21,8 +21,9 @@ namespace RealityDirector.UI.Hub
         Text _boss;
         Text _coherence;
         RectTransform _libraryRow;
+        RectTransform _libraryView;
         RectTransform _airButton;
-        public RectTransform LibraryFocus => _libraryRow;
+        public RectTransform LibraryFocus => _libraryView != null ? _libraryView : _libraryRow;
         public RectTransform CutFocus => _cutRow;
         public RectTransform AirFocus => _airButton;
         public RectTransform BossFocus => _boss != null ? _boss.transform as RectTransform : null;
@@ -191,9 +192,9 @@ namespace RealityDirector.UI.Hub
             meterRect.offsetMin = Vector2.zero;
             meterRect.offsetMax = Vector2.zero;
 
-            var shot = TextOn(page, "ОТСНЯТО  ·  ▶ смотреть ролик, клик по карточке — в эфир", 16, new Color(0.7f, 0.64f, 0.6f, 1f), TextAnchor.UpperLeft);
-            Pin(shot.rectTransform, 36f, 160f, 400f, 28f);
-            _libraryRow = Row(page, 36f, 196f, 1848f, 250f);
+            var shot = TextOn(page, "ОТСНЯТО ЗА ВЫПУСК  ·  клик — в один из 3 слотов, колёсико листает ряд, ▶ смотрит ролик", 16, new Color(0.7f, 0.64f, 0.6f, 1f), TextAnchor.UpperLeft);
+            Pin(shot.rectTransform, 36f, 160f, 1400f, 28f);
+            _libraryView = ScrollRow(page, 36f, 196f, 1848f, 250f, out _libraryRow);
 
             var airLabel = TextOn(page, "В ЭФИР  ·  порядок имеет значение, ↔ — соседние кадры про одно", 16, new Color(0.7f, 0.64f, 0.6f, 1f), TextAnchor.UpperLeft);
             Pin(airLabel.rectTransform, 36f, 470f, 1200f, 28f);
@@ -754,6 +755,48 @@ namespace RealityDirector.UI.Hub
             var label = TextOn(go.transform, "КАДР " + number, 16, new Color(0.45f, 0.4f, 0.42f, 1f), TextAnchor.MiddleCenter);
             Stretch(label.rectTransform);
             return go;
+        }
+
+        RectTransform ScrollRow(RectTransform parent, float x, float y, float w, float h, out RectTransform content)
+        {
+            var viewGo = new GameObject("scroll", typeof(RectTransform), typeof(Image), typeof(RectMask2D), typeof(ScrollRect));
+            viewGo.transform.SetParent(parent, false);
+            var view = viewGo.GetComponent<RectTransform>();
+            Pin(view, x, y, w, h);
+            var plate = viewGo.GetComponent<Image>();
+            plate.color = new Color(0f, 0f, 0f, 0.01f);
+            plate.raycastTarget = true;
+
+            var contentGo = new GameObject("row", typeof(RectTransform), typeof(HorizontalLayoutGroup), typeof(ContentSizeFitter));
+            contentGo.transform.SetParent(view, false);
+            content = contentGo.GetComponent<RectTransform>();
+            content.anchorMin = new Vector2(0f, 0f);
+            content.anchorMax = new Vector2(0f, 1f);
+            content.pivot = new Vector2(0f, 0.5f);
+            content.anchoredPosition = Vector2.zero;
+            content.sizeDelta = new Vector2(0f, 0f);
+
+            var layout = contentGo.GetComponent<HorizontalLayoutGroup>();
+            layout.spacing = 10f;
+            layout.padding = new RectOffset(0, 12, 8, 8);
+            layout.childAlignment = TextAnchor.MiddleLeft;
+            layout.childForceExpandWidth = false;
+            layout.childForceExpandHeight = false;
+            layout.childControlWidth = true;
+            layout.childControlHeight = true;
+
+            var fit = contentGo.GetComponent<ContentSizeFitter>();
+            fit.horizontalFit = ContentSizeFitter.FitMode.PreferredSize;
+            fit.verticalFit = ContentSizeFitter.FitMode.Unconstrained;
+
+            var scroll = viewGo.GetComponent<ScrollRect>();
+            scroll.viewport = view;
+            scroll.content = content;
+            scroll.horizontal = true;
+            scroll.vertical = false;
+            scroll.movementType = ScrollRect.MovementType.Clamped;
+            scroll.scrollSensitivity = 60f;
+            return view;
         }
 
         RectTransform Row(RectTransform parent, float x, float y, float w, float h)

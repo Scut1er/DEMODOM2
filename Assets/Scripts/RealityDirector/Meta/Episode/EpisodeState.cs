@@ -107,6 +107,7 @@ namespace RealityDirector.Meta
         public bool setBedOpen;
         [Tooltip("Сыгранные спонсорские карты, которым ещё нужен кадр.")]
         public List<string> pendingSponsors = new List<string>();
+        [Tooltip("Больше не режет библиотеку. Слоты считаются на сцену.")]
         public int footageLimit = 5;
         public List<string> finalCut = new List<string>();
         public bool settled;

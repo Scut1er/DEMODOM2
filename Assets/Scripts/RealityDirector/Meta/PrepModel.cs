@@ -35,6 +35,7 @@ namespace RealityDirector.Meta
         public CrewTrack track;
         public string title;
         public int level;
+        public int maxLevel;
         public string description;
         public string now;
         public string next;

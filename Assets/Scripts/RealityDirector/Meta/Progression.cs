@@ -19,6 +19,9 @@ namespace RealityDirector.Meta
         public const int SeasonLength = 6;
         public const int BasePayout = 130;
         public const int MaxLevel = 5;
+        public const int OperatorMaxLevel = 3;
+        public const int BaseCaptureSlots = 5;
+        public const int AirSlots = 3;
 
         static readonly int[] CastCost = { 70, 110, 160, 220 };
         static readonly int[] CrewCost = { 90, 130, 180, 240 };
@@ -43,16 +46,24 @@ namespace RealityDirector.Meta
             return false;
         }
 
-        public static int CaptureSlots(int operatorLevel)
+        public static int MaxFor(CrewTrack track)
         {
-            return Mathf.Clamp(operatorLevel, 1, MaxLevel);
+            return track == CrewTrack.Operators ? OperatorMaxLevel : MaxLevel;
         }
 
-        public static int UpgradeCost(bool cast, int level)
+        public static int CaptureSlots(int operatorLevel)
         {
-            if (level < 1 || level >= MaxLevel)
+            int level = Mathf.Clamp(operatorLevel, 1, OperatorMaxLevel);
+            return BaseCaptureSlots + (level - 1);
+        }
+
+        public static int UpgradeCost(bool cast, int level, int maxLevel = MaxLevel)
+        {
+            if (level < 1 || level >= maxLevel)
                 return 0;
-            return (cast ? CastCost : CrewCost)[level - 1];
+            var table = cast ? CastCost : CrewCost;
+            int i = level - 1;
+            return i < table.Length ? table[i] : table[table.Length - 1];
         }
 
         public static float HypeBonus(int castLevel)

@@ -71,6 +71,7 @@ namespace RealityDirector
 
         void Awake()
         {
+            MusicBed.Play(MusicBed.Scene);
             Interactable.ResetGlobal();
             _content = PitchContent.Create();
             _context = new EpisodeContext();
@@ -809,15 +810,8 @@ namespace RealityDirector
                 return;
             }
 
-            int cap = episode.footageLimit > 0 ? episode.footageLimit : 5;
             for (int i = 0; i < taken.Count; i++)
             {
-                if (episode.footage.Count >= cap)
-                {
-                    taken[i].Release();
-                    continue;
-                }
-
                 var clip = FootageReel.Adopt(taken[i], GameSession.RoomNodeId);
                 StampSponsor(episode, clip);
                 episode.footage.Add(FootageReel.Entry(clip));
@@ -996,6 +990,7 @@ namespace RealityDirector
                     return;
                 _armed = null;
                 _ui.SetArmed(null);
+                Sfx.PlayUseCard();
                 _executor.Play(def, null, null);
                 Echo(def, null, null, null);
                 _ui.MarkUsed(def.id);
@@ -1533,8 +1528,8 @@ namespace RealityDirector
                 return;
             if (def.id == "meditation_bell")
                 Sfx.Play(Cue.Bell, 0.75f);
-            else if (!def.ignite)
-                Sfx.Play(Cue.Card, 0.6f);
+            else
+                Sfx.PlayUseCard();
             if (_shake != null)
                 _shake.Punch(def.ignite ? 0.16f : 0.1f, def.ignite ? 0.18f : 0.13f);
             var fx = def.cardColor;
@@ -1648,7 +1643,7 @@ namespace RealityDirector
             {
                 _lesson = Lesson.Holding;
                 StartCoroutine(FreezeSoon(0.7f, () => BossCoach.Ensure().Freeze(
-                    "Ролик в слоте. Один слот — один кусок футажа, сколько их дала съёмочная. Пустой угол занимает слот так же и режет драму, трэш и семью. В эфир это попадёт, только если оставишь в монтаже.",
+                    "Ролик в слоте. На сцене их пять, съёмочная может добавить ещё. Пустой угол занимает слот так же и режет драму, трэш и семью. В эфир попадут только три, которые оставишь в монтаже.",
                     () =>
                     {
                         _frozen = false;

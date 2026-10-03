@@ -32,6 +32,8 @@ namespace RealityDirector.Util
         static AudioSource _loop;
         static AudioClip[] _clips;
         static AudioClip[] _slaps;
+        static AudioClip[] _useCards;
+        static AudioClip _hellCall;
 
         public static void Bind(GameObject host)
         {
@@ -96,11 +98,31 @@ namespace RealityDirector.Util
                 found[count++] = clip;
             }
 
-            if (count == 0)
-                return;
-            _slaps = new AudioClip[count];
-            for (int i = 0; i < count; i++)
-                _slaps[i] = found[i];
+            if (count > 0)
+            {
+                _slaps = new AudioClip[count];
+                for (int i = 0; i < count; i++)
+                    _slaps[i] = found[i];
+            }
+
+            var cards = new AudioClip[4];
+            int cardCount = 0;
+            for (int i = 1; i <= cards.Length; i++)
+            {
+                var clip = Resources.Load<AudioClip>("Sfx/UseCard_" + i);
+                if (clip == null)
+                    continue;
+                cards[cardCount++] = clip;
+            }
+
+            if (cardCount > 0)
+            {
+                _useCards = new AudioClip[cardCount];
+                for (int i = 0; i < cardCount; i++)
+                    _useCards[i] = cards[i];
+            }
+
+            _hellCall = Resources.Load<AudioClip>("Sfx/CallFromHell_1");
         }
 
         static void Take(Cue cue, string name)
@@ -119,7 +141,34 @@ namespace RealityDirector.Util
                 clip = _slaps[Random.Range(0, _slaps.Length)];
             else
                 clip = _clips[(int)cue];
-            if (clip == null)
+            Shot(clip, volume, pitch);
+        }
+
+        public static void PlayUseCard(float volume = 0.8f)
+        {
+            if (_useCards != null && _useCards.Length > 0)
+            {
+                Shot(_useCards[Random.Range(0, _useCards.Length)], volume, 1f);
+                return;
+            }
+
+            Play(Cue.Card, volume);
+        }
+
+        public static void PlayHellCall(float volume = 0.9f)
+        {
+            if (_hellCall != null)
+            {
+                Shot(_hellCall, volume, 1f);
+                return;
+            }
+
+            Play(Cue.Bell, volume, 1.2f);
+        }
+
+        static void Shot(AudioClip clip, float volume, float pitch)
+        {
+            if (clip == null || _voices == null)
                 return;
             var src = _voices[_voice];
             _voice = (_voice + 1) % _voices.Length;
