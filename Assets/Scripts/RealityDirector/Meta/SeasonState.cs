@@ -99,11 +99,12 @@ namespace RealityDirector.Meta
             return false;
         }
 
-        public void Accept(ViewerWishId id, string label)
+        public bool Accept(ViewerWishId id, string label)
         {
             if (id == ViewerWishId.None || HasTask(id) || tasks.Count >= 4)
-                return;
-            tasks.Add(new ViewerTask { id = id, label = label });
+                return false;
+            tasks.Add(new ViewerTask { id = id, label = string.IsNullOrEmpty(label) ? id.ToString() : label });
+            return true;
         }
 
         public bool Resolve(IReadOnlyList<CapturedMoment> moments, SeasonTone tone)

@@ -31,16 +31,28 @@ namespace RealityDirector.UI.Hub
         public RectTransform NumbersFocus => _numbers;
         public RectTransform CommentsFocus => _comments;
         public RectTransform PayFocus => _pay;
+        public RectTransform TaskFocus => _taskRow;
         RectTransform _watch;
         RectTransform _numbers;
         RectTransform _comments;
         RectTransform _pay;
+        RectTransform _taskRow;
         RectTransform _cutRow;
         readonly List<FootageClip> _library = new List<FootageClip>();
         readonly List<string> _order = new List<string>();
         int _slots = 3;
         int _picked = -1;
         bool _taken;
+        Text _takeLabel;
+        Image _takePlate;
+        ViewerWishId _wish;
+        string _wishLabel;
+        GameObject _viewer;
+        RawImage _viewerPicture;
+        Material _vhs;
+        Text _viewerMeta;
+        FootageClip _playing;
+        float _playT;
 
         public bool AirVisible => _air != null && _air.activeSelf;
         public bool TaskTaken => _taken;
@@ -90,6 +102,7 @@ namespace RealityDirector.UI.Hub
 
         public void Hide()
         {
+            CloseWatch();
             if (_montage != null)
                 _montage.SetActive(false);
             if (_air != null)
@@ -104,6 +117,7 @@ namespace RealityDirector.UI.Hub
             _order.Clear();
             _picked = -1;
             _slots = Mathf.Max(1, slots);
+            CloseWatch();
             _air.SetActive(false);
             _montage.SetActive(true);
             _montage.transform.SetAsLastSibling();
@@ -114,6 +128,11 @@ namespace RealityDirector.UI.Hub
         public void ShowAir(FeedbackResult result, List<FootageClip> cut, string title, int pay, int coherence, string payLine)
         {
             _taken = false;
+            _taskRow = null;
+            _takeLabel = null;
+            _takePlate = null;
+            _wish = ViewerWishId.None;
+            _wishLabel = null;
             _montage.SetActive(false);
             Clear(_air.transform);
             _air.SetActive(true);
@@ -141,7 +160,7 @@ namespace RealityDirector.UI.Hub
             coh.anchoredPosition = new Vector2(-36f, -28f);
             coh.sizeDelta = new Vector2(420f, 40f);
 
-            var shot = TextOn(page, "ОТСНЯТО", 16, new Color(0.7f, 0.64f, 0.6f, 1f), TextAnchor.UpperLeft);
+            var shot = TextOn(page, "ОТСНЯТО  ·  ▶ смотреть ролик, клик по карточке — в эфир", 16, new Color(0.7f, 0.64f, 0.6f, 1f), TextAnchor.UpperLeft);
             Pin(shot.rectTransform, 36f, 160f, 400f, 28f);
             _libraryRow = Row(page, 36f, 196f, 1848f, 250f);
 
@@ -350,8 +369,17 @@ namespace RealityDirector.UI.Hub
                 Pin(body.rectTransform, 16f, 30f, review.offer ? 900f : 1100f, 40f);
                 if (review.offer)
                 {
-                    var take = ButtonAt(row, "☆ взять", new Vector2(980f, 16f), ToggleTask);
-                    take.GetComponent<RectTransform>().sizeDelta = new Vector2(160f, 44f);
+                    _taskRow = row;
+                    var take = ButtonAt(row, "☆ взять", Vector2.zero, ToggleTask);
+                    var takeRect = take.GetComponent<RectTransform>();
+                    takeRect.anchorMin = takeRect.anchorMax = new Vector2(1f, 0.5f);
+                    takeRect.pivot = new Vector2(1f, 0.5f);
+                    takeRect.anchoredPosition = new Vector2(-12f, 0f);
+                    takeRect.sizeDelta = new Vector2(168f, 44f);
+                    _takePlate = take.GetComponent<Image>();
+                    _takeLabel = take.GetComponentInChildren<Text>();
+                    _wish = review.wish;
+                    _wishLabel = result.wish;
                 }
 
                 top += review.offer ? 88f : 72f;
@@ -398,7 +426,44 @@ namespace RealityDirector.UI.Hub
 
         void ToggleTask()
         {
-            _taken = !_taken;
+            if (_taken)
+                return;
+            var state = GameSession.State;
+            if (state == null || _wish == ViewerWishId.None)
+            {
+                PaintTake("пусто", new Color(0.2f, 0.18f, 0.22f, 1f));
+                return;
+            }
+
+            if (state.HasTask(_wish))
+            {
+                PaintTake("★ уже есть", new Color(0.45f, 0.32f, 0.12f, 1f));
+                return;
+            }
+
+            if (state.tasks.Count >= 4)
+            {
+                PaintTake("мест нет", new Color(0.45f, 0.16f, 0.14f, 1f));
+                return;
+            }
+
+            if (!state.Accept(_wish, _wishLabel))
+            {
+                PaintTake("не взялось", new Color(0.45f, 0.16f, 0.14f, 1f));
+                return;
+            }
+
+            _taken = true;
+            PaintTake("★ в задачах", new Color(0.45f, 0.32f, 0.12f, 1f));
+            GameSession.Save();
+        }
+
+        void PaintTake(string value, Color plate)
+        {
+            if (_takeLabel != null)
+                _takeLabel.text = value;
+            if (_takePlate != null)
+                _takePlate.color = plate;
         }
 
         static string CutLines(List<FootageClip> cut)
@@ -455,7 +520,129 @@ namespace RealityDirector.UI.Hub
                 name = "РЕКЛАМА · " + name;
             var label = TextOn(go.transform, name + "\n" + Comma(clip.duration) + " с", 16, Color.white, TextAnchor.UpperLeft);
             Pin(label.rectTransform, 8f, 156f, 184f, 64f);
+            var watch = new GameObject("watch", typeof(RectTransform), typeof(Image), typeof(Button));
+            watch.transform.SetParent(go.transform, false);
+            var watchRect = watch.GetComponent<RectTransform>();
+            watchRect.anchorMin = watchRect.anchorMax = new Vector2(1f, 1f);
+            watchRect.pivot = new Vector2(1f, 1f);
+            watchRect.anchoredPosition = new Vector2(-8f, -8f);
+            watchRect.sizeDelta = new Vector2(40f, 28f);
+            watch.GetComponent<Image>().color = new Color(0.04f, 0.03f, 0.05f, 0.92f);
+            var mark = TextOn(watch.transform, "▶", 16, Color.white, TextAnchor.MiddleCenter);
+            Stretch(mark.rectTransform);
+            var shown = clip;
+            watch.GetComponent<Button>().onClick.AddListener(() => OpenWatch(shown));
             return go;
+        }
+
+        void OpenWatch(FootageClip clip)
+        {
+            if (clip == null)
+                return;
+            EnsureViewer();
+            _playing = clip;
+            _playT = 0f;
+            string who = clip.actorNames != null && clip.actorNames.Count > 0 ? string.Join(", ", clip.actorNames) : "никого в кадре";
+            string tags = clip.tags != null && clip.tags.Count > 0 ? string.Join(" · ", clip.tags) : "";
+            _viewerMeta.text = (clip.title ?? "КАДР") + "   " + Comma(clip.duration) + " с\n" + who + (tags.Length > 0 ? "\n" + tags : "");
+            _viewer.SetActive(true);
+            _viewer.transform.SetAsLastSibling();
+            PaintWatch();
+        }
+
+        void CloseWatch()
+        {
+            _playing = null;
+            if (_viewer != null)
+                _viewer.SetActive(false);
+        }
+
+        void EnsureViewer()
+        {
+            if (_viewer != null)
+                return;
+            _viewer = new GameObject("viewer", typeof(RectTransform), typeof(Image), typeof(Button));
+            _viewer.transform.SetParent(transform, false);
+            Stretch(_viewer.GetComponent<RectTransform>());
+            _viewer.GetComponent<Image>().color = new Color(0.02f, 0.015f, 0.03f, 0.92f);
+            var dim = _viewer.GetComponent<Button>();
+            dim.onClick.AddListener(CloseWatch);
+            var frame = Panel(_viewer.transform, Color.black);
+            frame.anchorMin = frame.anchorMax = new Vector2(0.5f, 0.5f);
+            frame.pivot = new Vector2(0.5f, 0.5f);
+            frame.anchoredPosition = new Vector2(0f, 40f);
+            frame.sizeDelta = new Vector2(960f, 540f);
+            var raw = new GameObject("picture", typeof(RectTransform), typeof(RawImage));
+            raw.transform.SetParent(frame, false);
+            var rawRect = raw.GetComponent<RectTransform>();
+            Stretch(rawRect);
+            rawRect.offsetMin = new Vector2(8f, 8f);
+            rawRect.offsetMax = new Vector2(-8f, -8f);
+            _viewerPicture = raw.GetComponent<RawImage>();
+            _viewerPicture.raycastTarget = false;
+            var shader = Resources.Load<Shader>("Shaders/Vhs");
+            if (shader != null)
+            {
+                _vhs = new Material(shader);
+                _vhs.hideFlags = HideFlags.HideAndDontSave;
+                _viewerPicture.material = _vhs;
+            }
+            _viewerMeta = TextOn(_viewer.transform, "", 22, Color.white, TextAnchor.UpperCenter);
+            var meta = _viewerMeta.rectTransform;
+            meta.anchorMin = meta.anchorMax = new Vector2(0.5f, 0f);
+            meta.pivot = new Vector2(0.5f, 0f);
+            meta.anchoredPosition = new Vector2(0f, 36f);
+            meta.sizeDelta = new Vector2(1100f, 110f);
+            var close = ButtonAt(_viewer.transform, "ЗАКРЫТЬ", new Vector2(1680f, 980f), CloseWatch);
+            var closeRect = close.GetComponent<RectTransform>();
+            closeRect.anchorMin = closeRect.anchorMax = new Vector2(1f, 1f);
+            closeRect.pivot = new Vector2(1f, 1f);
+            closeRect.anchoredPosition = new Vector2(-36f, -28f);
+            _viewer.SetActive(false);
+        }
+
+        void Update()
+        {
+            if (_playing == null || _viewer == null || !_viewer.activeSelf)
+                return;
+            int n = _playing.frames != null ? _playing.frames.Count : 0;
+            if (n > 1)
+            {
+                float dur = Mathf.Max(_playing.duration, n * 0.28f);
+                _playT += Time.unscaledDeltaTime;
+                if (_playT >= dur)
+                    _playT -= dur;
+            }
+
+            if (_vhs != null)
+                _vhs.SetFloat("_VhsTime", Time.unscaledTime);
+            PaintWatch();
+        }
+
+        void OnDestroy()
+        {
+            if (_vhs != null)
+                Destroy(_vhs);
+        }
+
+        void PaintWatch()
+        {
+            if (_playing == null || _viewerPicture == null)
+                return;
+            var frames = _playing.frames;
+            int n = frames != null ? frames.Count : 0;
+            Texture2D tex = _playing.photo;
+            int index = 0;
+            if (n > 0)
+            {
+                float dur = Mathf.Max(_playing.duration, n * 0.28f);
+                index = n == 1 ? 0 : Mathf.Clamp(Mathf.FloorToInt(_playT / dur * n), 0, n - 1);
+                if (frames[index] != null)
+                    tex = frames[index];
+            }
+
+            _viewerPicture.texture = tex;
+            _viewerPicture.color = tex != null ? Color.white : new Color(0.2f, 0.16f, 0.18f, 1f);
         }
 
         GameObject EmptySlot(RectTransform parent, int number)

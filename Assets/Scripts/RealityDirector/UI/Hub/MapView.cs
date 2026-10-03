@@ -70,6 +70,9 @@ namespace RealityDirector.UI.Hub
 
         public RectTransform BoardFocus => board;
         public RectTransform EnterFocus => shoot != null ? shoot.transform as RectTransform : null;
+        public RectTransform PlanFocus => plan != null ? plan.rectTransform : BoardFocus;
+        public RectTransform InfoFocus => infoBody != null ? infoBody.rectTransform : BoardFocus;
+        public RectTransform StatsFocus => stats != null ? stats.transform as RectTransform : null;
         readonly Dictionary<RoomType, RectTransform> _nodeFocus = new Dictionary<RoomType, RectTransform>();
 
         public RectTransform NodeFocus(RoomType type)
