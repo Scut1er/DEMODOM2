@@ -816,7 +816,20 @@ namespace RealityDirector
             {
                 _state.tutorialBeat = 3;
                 BossCoach.Ensure().Hide();
-                if (_state.played.Contains("fridge_fire"))
+                // Уже снятое (в том числе пустой угол) считается. Иначе выход из игры возвращает на «первый кадр».
+                if (banked >= TutorialClips)
+                {
+                    _lesson = Lesson.TurnIn;
+                    _ui.SetHandLocked(false);
+                    BossCoach.Ensure().Order("Жми «СНЯТО!». Ролики лягут в библиотеку, вернёшься на карту выпуска. Это ещё не эфир.", _ui.DoneRect);
+                }
+                else if (banked >= 1)
+                {
+                    _lesson = Lesson.Second;
+                    _ui.SetHandLocked(false);
+                    BossCoach.Ensure().Order("Ролик уже есть. Сними ещё один: сыграй карту, потом C — и рамку на реакцию. С одним кадром в монтаже нечего сравнивать.", _ui.CardBarRect);
+                }
+                else if (_state.played.Contains("fridge_fire"))
                 {
                     _lesson = Lesson.Camera;
                     BossCoach.Ensure().Order("Жми C. Рамка на лицо. Зажми левую на три секунды и отпусти.", _ui.CameraRect);
@@ -937,7 +950,7 @@ namespace RealityDirector
         {
             if (_phase != PitchPhase.Play)
                 return;
-            if (ShootLesson() && _capture.Moments.Count < TutorialClips)
+            if (ShootLesson() && ClipsHere() < TutorialClips)
             {
                 _ui.Toast("Нужно два ролика. С одним в монтаже нечего клеить.");
                 return;
@@ -1005,6 +1018,14 @@ namespace RealityDirector
             }
 
             return n;
+        }
+
+        // Сколько кадров этой съёмки уже есть: библиотека (сейв) или живой ролик, если выпуска нет.
+        int ClipsHere()
+        {
+            if (_state != null && _state.episode != null)
+                return BankedHere();
+            return _capture.Moments.Count;
         }
 
         // Кадр банкуется в момент съёмки, поэтому несёт только спонсоров, сыгранных до него.
@@ -1880,23 +1901,23 @@ namespace RealityDirector
             _shake.Punch(0.05f, 0.08f);
             Sfx.Play(Cue.Shutter, 0.8f);
             StartCoroutine(HitStop());
-            if (_lesson == Lesson.Camera)
+            // Пустой угол тоже кадр: урок идёт дальше, иначе слоты можно забить впустую и застрять.
+            if (_lesson == Lesson.Camera || _lesson == Lesson.Second)
             {
-                if (moment.grade == CaptureGrade.Blank)
+                _ui.SetHandLocked(false);
+                if (ClipsHere() >= TutorialClips)
                 {
-                    BossCoach.Ensure().Order("Пустой угол. Рамка на лицо, ещё раз.", _ui.CameraRect);
+                    _lesson = Lesson.TurnIn;
+                    BossCoach.Ensure().Order("Жми «СНЯТО!». Ролики лягут в библиотеку, вернёшься на карту выпуска. Это ещё не эфир.", _ui.DoneRect);
                 }
-                else
+                else if (_lesson == Lesson.Camera)
                 {
                     _lesson = Lesson.Second;
-                    _ui.SetHandLocked(false);
-                    BossCoach.Ensure().Order("Ролик в слоте. Сними ещё один: сыграй карту, потом C — и рамку на реакцию. С одним кадром в монтаже нечего сравнивать.", _ui.CardBarRect);
+                    string line = moment.grade == CaptureGrade.Blank
+                        ? "Пустой угол, слот сгорел. Сними ещё один: сыграй карту, потом C — и рамку на реакцию."
+                        : "Ролик в слоте. Сними ещё один: сыграй карту, потом C — и рамку на реакцию. С одним кадром в монтаже нечего сравнивать.";
+                    BossCoach.Ensure().Order(line, _ui.CardBarRect);
                 }
-            }
-            else if (_lesson == Lesson.Second && _capture.Moments.Count >= TutorialClips)
-            {
-                _lesson = Lesson.TurnIn;
-                BossCoach.Ensure().Order("Жми «СНЯТО!». Ролики лягут в библиотеку, вернёшься на карту выпуска. Это ещё не эфир.", _ui.DoneRect);
             }
 
             if (_capture.IsFull)
