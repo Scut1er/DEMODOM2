@@ -1,7 +1,9 @@
 using System.Collections.Generic;
+using RealityDirector.Capture;
 using RealityDirector.Core;
 using RealityDirector.Meta;
 using RealityDirector.Persistence;
+using RealityDirector.UI;
 using RealityDirector.Util;
 using UnityEngine;
 using UnityEngine.EventSystems;
@@ -28,6 +30,10 @@ namespace RealityDirector.UI.Hub
         MapNode _selected;
         string _hubNotice;
         bool _runShop;
+        CutFlowUi _cut;
+        HubOverlays _screens;
+        ViewerWishId _airWish;
+        string _airWishLabel;
         CastMember[] _cast;
         GameObject _back;
 
@@ -111,6 +117,48 @@ namespace RealityDirector.UI.Hub
             // Выпуск уже идёт — в хаб только после эфира.
             map.Back += () => { };
             map.Shoot += Shoot;
+            _cut = CutFlowUi.Create();
+            _screens = HubOverlays.Create();
+            _cut.Confirm += ConfirmCut;
+            _cut.Next += CloseAir;
+        }
+
+        void Update()
+        {
+            ApplyTutorialLocks();
+            if (_cut == null || !_cut.AirVisible)
+                return;
+            var state = GameSession.State;
+            if (state != null && state.wantsTutorial && state.tutorialBeat < 6 && BossCoach.Ensure().IsOpen)
+                return;
+            var keyboard = Keyboard.current;
+            if (keyboard != null && (keyboard.spaceKey.wasPressedThisFrame || keyboard.enterKey.wasPressedThisFrame))
+                CloseAir();
+        }
+
+        bool _teachWas;
+
+        void ApplyTutorialLocks()
+        {
+            var state = GameSession.State;
+            bool teach = state != null && state.wantsTutorial && state.tutorialBeat < 6;
+            bool talking = false;
+            if (teach)
+            {
+                var coach = BossCoach.Ensure();
+                talking = coach.IsOpen && !coach.Ordering;
+            }
+            if (hub != null)
+                hub.ApplyTutorial(teach, talking, state != null && state.tutorialBeat >= 1);
+            if (map != null)
+                map.ApplyTutorial(teach, talking);
+            if (_screens != null)
+                _screens.SetPageLocked(talking);
+            if (_cut != null)
+                _cut.SetLocked(talking);
+            if (_teachWas && !teach)
+                RefreshHub();
+            _teachWas = teach;
         }
 
         void Start()
@@ -122,8 +170,15 @@ namespace RealityDirector.UI.Hub
             }
 
             Bind();
-            // Квартира закрыла сцену. Карту выпуска открывает Resume (выпуск идёт), комнату закрывает RoomNodeId.
             GameSession.ReturnToMap = false;
+            if (GameSession.ExitToHub)
+            {
+                GameSession.ExitToHub = false;
+                GameSession.RoomNodeId = null;
+                ShowHub();
+                return;
+            }
+            // Квартира закрыла сцену. Карту выпуска открывает Resume (выпуск идёт), комнату закрывает RoomNodeId.
             // Вернулись со съёмки — комната пройдена, дальше по карте выпуска.
             if (!string.IsNullOrEmpty(GameSession.RoomNodeId) && _episode.Active)
             {
@@ -143,13 +198,21 @@ namespace RealityDirector.UI.Hub
             if (_content != null)
                 _content.DestroyAssets();
             _episode?.Dispose();
+            BossCoach.Ensure().Hide();
         }
 
         void BeginSeason()
         {
             GameSession.NewSeason(_content.StarterIds(), season);
             Bind();
-            Show(intro.gameObject);
+            _screens.AskName("", (name, teach) =>
+            {
+                GameSession.State.producerName = name;
+                GameSession.State.wantsTutorial = teach;
+                GameSession.State.tutorialBeat = 0;
+                GameSession.Save();
+                Show(intro.gameObject);
+            });
         }
 
         void ContinueSeason()
@@ -169,6 +232,8 @@ namespace RealityDirector.UI.Hub
         {
             if (GameSession.SeasonOver)
                 ShowSeasonEnd();
+            else if (_episode.Active && _episode.Current.Finished)
+                AirEpisode();
             else if (_episode.Active)
                 OpenMap();
             else
@@ -205,6 +270,15 @@ namespace RealityDirector.UI.Hub
             Show(hub.gameObject);
             hub.Deck.Hide();
             RefreshHub();
+            var teach = new List<CoachStep>();
+            BossCoach.Line(teach, "Кастинг. Кого пустишь к камере. И когда я разрешу подсмотреть, что они от тебя прячут.", hub.ZoneFocus(CrewTrack.Cast));
+            BossCoach.Line(teach, "Съёмочная. Сколько роликов влезет в выпуск. Слоты кончились — хоть потолок снимай, в эфир он не просится.", hub.ZoneFocus(CrewTrack.Operators));
+            BossCoach.Line(teach, "Сценарная. Отсюда новые карты. Дорастёт — дам второй рекламный контракт. Проценты к чеку оставь бухгалтерии.", hub.ZoneFocus(CrewTrack.Writers));
+            BossCoach.Line(teach, "Магазин. Тратишь кр. Карта остаётся на весь сезон. Я от себя такой щедрости не ждал.", hub.ShopFocus());
+            BossCoach.Line(teach, "Колода. Не всё, что у тебя есть. То, что сегодня потащишь на площадку.", hub.DeckFocus());
+            BossCoach.Line(teach, "Старт. Сначала люди. Потом карта выпуска. Не перепутай, второй раз я это рассказывать не буду.", hub.StartFocus());
+            if (teach.Count > 0)
+                BossCoach.Play(0, 1, teach.ToArray());
         }
 
         void RefreshHub()
@@ -219,8 +293,8 @@ namespace RealityDirector.UI.Hub
             var state = GameSession.State;
             int number = state.episodeIndex + 1;
             hub.SetStartCaption(_episode.Active
-                ? "Выпуск " + number + " из " + state.seasonLength + " идёт  ·  вернуться на карту выпуска"
-                : "Выпуск " + number + " из " + state.seasonLength + "  ·  дальше карта выпуска: комнаты и монтаж");
+                ? "Выпуск " + number + " из " + state.seasonLength + " идёт  ·  вернуться на карту эпизода"
+                : "Выпуск " + number + " из " + state.seasonLength + "  ·  дальше карта эпизода: комнаты и монтаж");
             hub.SetSubtitle("Сезон " + state.seasonNumber + "  ·  Выпуск " + number + " из " + state.seasonLength + "  ·  Продакшн-хаб"
                             + (string.IsNullOrEmpty(_hubNotice) ? "" : "\n" + _hubNotice));
         }
@@ -230,22 +304,39 @@ namespace RealityDirector.UI.Hub
         {
             if (!_episode.Active)
             {
-                _episode.Begin(CastIds());
-                GameSession.Save();
+                int seats = Mathf.Min(CastRoster.Seats(_meta.CastLevel), Mathf.Max(2, season.castMax));
+                int min = Mathf.Clamp(season.castMin, 2, seats);
+                var state = GameSession.State;
+                if (state.wantsTutorial && state.tutorialBeat < 1)
+                    state.tutorialBeat = 1;
+                BossCoach.Ensure().Hide();
+                _screens.PickCast(_cast, state.castPick, min, seats, state.castLevel >= 3, ids =>
+                {
+                    state.castPick.Clear();
+                    state.castPick.AddRange(ids);
+                    if (state.wantsTutorial && state.tutorialBeat < 2)
+                        state.tutorialBeat = 2;
+                    BossCoach.Ensure().Hide();
+                    _episode.Begin(ids);
+                    GameSession.Save();
+                    int number = state.episodeIndex + 1;
+                    _screens.Slate(number, state.producerName, () =>
+                    {
+                        _hubNotice = null;
+                        OpenMap();
+                    });
+                });
+                var castTeach = new List<CoachStep>();
+                BossCoach.Line(castTeach, "Двое. Минимум. Из одного человека шоу не соберёшь, это уже исповедь.", _screens.Focus);
+                BossCoach.Line(castTeach, "Черта под именем. Вот так они и сломаются, когда ты начнёшь.", _screens.Focus);
+                BossCoach.Line(castTeach, "Скрытое пока закрыто. Кастинг подрастёт — шепну. Раньше не выпрашивай.", _screens.Focus);
+                if (castTeach.Count > 0)
+                    BossCoach.Play(1, 2, castTeach.ToArray());
+                return;
             }
 
             _hubNotice = null;
             OpenMap();
-        }
-
-        // Пока выбора каста нет: в выпуск идут первые участники по числу мест (уровень Кастинга, не больше castMax).
-        List<string> CastIds()
-        {
-            int seats = Mathf.Min(CastRoster.Seats(_meta.CastLevel), Mathf.Max(1, season.castMax));
-            var ids = new List<string>();
-            for (int i = 0; i < _cast.Length && ids.Count < seats; i++)
-                ids.Add(_cast[i].id);
-            return ids;
         }
 
         void OpenMap()
@@ -253,6 +344,14 @@ namespace RealityDirector.UI.Hub
             _selected = _episode.Map.CurrentChoice;
             Show(map.gameObject);
             RefreshMap();
+            var mapTeach = new List<CoachStep>();
+            BossCoach.Line(mapTeach, "Сегодня маршрут короткий. Я сам его собрал: съёмка, событие, монтаж.", map.BoardFocus);
+            BossCoach.Line(mapTeach, "Съёмка. Заходи сюда. Здесь заставлю тебя кинуть карту.", map.NodeFocus(RoomType.Situation));
+            BossCoach.Line(mapTeach, "Потом событие. Почитаешь и выберешь. В эфир это само не прыгнет.", map.NodeFocus(RoomType.Event));
+            BossCoach.Line(mapTeach, "И монтаж. Последняя дверь. Мимо неё выпуск не выходит.", map.NodeFocus(RoomType.Montage));
+            BossCoach.Line(mapTeach, "Жми на съёмку, потом входи. Назад я не пускаю.", map.EnterFocus);
+            if (mapTeach.Count > 0)
+                BossCoach.Play(2, 3, mapTeach.ToArray());
         }
 
         void RefreshMap()
@@ -262,6 +361,8 @@ namespace RealityDirector.UI.Hub
 
         void PickRandom()
         {
+            if (GameSession.State != null && GameSession.State.wantsTutorial && GameSession.State.tutorialBeat < 6)
+                return;
             var open = _episode.Map.Available();
             if (open.Count == 0)
             {
@@ -330,10 +431,12 @@ namespace RealityDirector.UI.Hub
             GameSession.RoomNodeId = node.id;
             GameSession.Save();
             var situation = node.room as SituationRoomDefinition;
+            if (situation != null && _episode.Current != null)
+                _episode.Current.roleBrief = situation.roleBrief;
             SceneFlow.ToScene(situation != null && !string.IsNullOrEmpty(situation.scene) ? situation.scene : SceneFlow.Episode);
         }
 
-        // Магазин выпуска: временные карты и спонсоры за нал. Хаб отсюда не открывается.
+        // Покупка за нал или контракт без денег. Выплата контракта ждёт монтаж.
         void EnterMarketing(MapNode node)
         {
             if (!_episode.Map.Choose(node))
@@ -342,16 +445,32 @@ namespace RealityDirector.UI.Hub
                 return;
             }
 
-            _runShop = true;
             _meta.ClearReject();
             Sfx.Play(Cue.Coin, 0.4f);
             GameSession.Save();
-            map.Deck.Open(DeckPanelView.ShopTab, _meta.BuildRunShop(), true);
+            RefreshDeals();
+        }
+
+        void RefreshDeals()
+        {
+            if (!_episode.Active)
+                return;
+            _screens.ShowDeals(_meta.ReputationLine(), JamContent.Offers(GameSession.State.sponsorReputation), offer =>
+            {
+                bool ok = offer.kind == OfferKind.Contract
+                    ? _meta.TryTakeContract(offer.cardId, offer.payout, offer.scoreHit)
+                    : _meta.TryBuyRun(offer.cardId);
+                Sfx.Play(ok ? Cue.Coin : Cue.Miss, ok ? 0.5f : 0.45f);
+                if (ok)
+                    GameSession.Save();
+                RefreshDeals();
+            }, LeaveRunShop);
         }
 
         void LeaveRunShop()
         {
             _runShop = false;
+            _screens.Hide();
             if (!_episode.Active)
             {
                 RefreshMap();
@@ -363,27 +482,56 @@ namespace RealityDirector.UI.Hub
             AfterStep();
         }
 
-        // Событие — пока не реализовано: комната засчитывается сразу.
         void RunEvent(MapNode node)
         {
             if (!_episode.Map.Choose(node))
                 return;
-            // TODO: экран события по EventRoomDefinition (текст, 2–3 выбора, эффекты) — шаг Event room.
             Sfx.Play(Cue.Blip, 0.5f);
-            _episode.CompleteRoom();
-            GameSession.Save();
-            AfterStep("Событие", "Пока не реализовано — сцена засчитана. Здесь будет выбор с последствиями.");
+            var def = node.room as EventRoomDefinition;
+            _screens.ShowEvent(def, choice =>
+            {
+                BossCoach.Ensure().Hide();
+                if (choice != null && choice.effects != null)
+                    Rules.Apply(choice.effects, new RuleContext(GameSession.State, _episode.Current, GameSession.Tone));
+                string line = choice != null && !string.IsNullOrEmpty(choice.resultText) ? choice.resultText : "Без последствий.";
+                _screens.ShowResult(line, () =>
+                {
+                    _episode.CompleteRoom();
+                    GameSession.Save();
+                    AfterStep();
+                });
+            });
+            if (GameSession.State != null && GameSession.State.wantsTutorial && GameSession.State.tutorialBeat < 6 && _screens.Focus != null)
+                BossCoach.Ensure().Order("Выбери одну. Это не клип. Это то, с чем они придут дальше.", _screens.Focus);
         }
 
-        // Монтаж — всегда последняя комната. Пока не реализован: выпуск сразу уходит в эфир.
         void RunMontage(MapNode node)
         {
             if (!_episode.Map.Choose(node))
                 return;
-            // TODO: выбор и порядок клипов, оценка монтажа, эфир и HellTube — шаги Montage и HellTube.
+            map.Deck.Hide();
+            _episode.Current.EnsureLists();
             Sfx.Play(Cue.Blip, 0.5f);
+            int slots = season != null && season.finalCutSize > 0 ? season.finalCutSize : 3;
+            _cut.ShowMontage(Library(_episode.Current), slots);
+            var cutTeach = new List<CoachStep>();
+            BossCoach.Line(cutTeach, "Сверху — всё, что наснимал. И удачное, и то, за что мне за тебя стыдно.", _cut.LibraryFocus);
+            BossCoach.Line(cutTeach, "Снизу — что увидит ад. Кадров мало. Порядок уже история, не куча.", _cut.CutFocus);
+            BossCoach.Line(cutTeach, "Соседи про одно и то же — связность. Про разное — нарезка. Зритель тупой. Но не всегда.", _cut.CoherenceFocus);
+            BossCoach.Line(cutTeach, "Строчка сверху — это я ору. Я не подсказка. Я давление.", _cut.BossFocus);
+            BossCoach.Line(cutTeach, "В эфир. Вырезанное для них не случалось. Рекламу, которую выкинул, я тебе не оплачу.", _cut.AirFocus);
+            if (cutTeach.Count > 0)
+                BossCoach.Play(4, 5, cutTeach.ToArray());
+        }
+
+        void ConfirmCut(List<string> ids)
+        {
+            if (!_episode.Active)
+                return;
+            _episode.Current.finalCut = ids != null ? new List<string>(ids) : new List<string>();
             _episode.CompleteRoom();
             GameSession.Save();
+            _cut.Hide();
             AfterStep();
         }
 
@@ -403,20 +551,185 @@ namespace RealityDirector.UI.Hub
                 map.Notice(noticeTitle, noticeBody);
         }
 
-        // Эфир выпуска. Экран итогов (монтаж, HellTube) — следующие шаги, пока только строка в хабе.
+        // Эфир: деньги и HellTube только по финальному кату. Комната карты к этому моменту уже закрыта.
         void AirEpisode()
         {
-            int number = _episode.Current.Number;
-            _episode.End();
-            GameSession.Save();
-            if (GameSession.SeasonOver)
-            {
-                ShowSeasonEnd();
+            if (!_episode.Active)
                 return;
+            var episode = _episode.Current;
+            episode.EnsureLists();
+            var cut = LoadCut(episode);
+            int coherence = MontageCut.Coherence(cut);
+            var moments = Shells(cut);
+            if (!episode.settled)
+                Settle(episode, cut, moments, coherence);
+            int hit = AiredHit(episode);
+            var result = FeedbackGenerator.BuildCut(moments, GameSession.Tone, coherence, hit > 0);
+            if (hit > 0)
+                result = FeedbackGenerator.ApplySponsor(result, hit);
+            _airWish = result.nextWish;
+            _airWishLabel = result.wish;
+            int scene = episode.Number;
+            string name = string.IsNullOrEmpty(GameSession.SceneTitle) ? "Без названия" : GameSession.SceneTitle;
+            _cut.ShowAir(result, cut, "Серия " + scene + ". «" + name + "»", episode.settledPay, coherence, episode.settledLine);
+            var airTeach = new List<CoachStep>();
+            BossCoach.Line(airTeach, "Вот что они видят. Не квартиру. Только то, что ты сам оставил в кате.", _cut.WatchFocus);
+            BossCoach.Line(airTeach, "Просмотры, лайки, связность. Черновики я в эту арифметику не кладу.", _cut.NumbersFocus);
+            BossCoach.Line(airTeach, "Комментарии. Им можно быть злыми. Считай это рецензией.", _cut.CommentsFocus);
+            BossCoach.Line(airTeach, "Чек. Реклама в кате платит и злит их. Реклама на полу монтажной — тишина.", _cut.PayFocus);
+            if (airTeach.Count > 0)
+                BossCoach.Play(5, 6, airTeach.ToArray());
+        }
+
+        void Settle(EpisodeState episode, List<FootageClip> cut, List<CapturedMoment> moments, int coherence)
+        {
+            int sponsorMoney = 0;
+            int hit = 0;
+            bool playedAd = false;
+            var aired = new HashSet<string>();
+            for (int i = 0; i < cut.Count; i++)
+                aired.Add(cut[i].id);
+            for (int i = 0; i < episode.contracts.Count; i++)
+            {
+                var contract = episode.contracts[i];
+                if (contract.status != ContractStatus.Active)
+                    continue;
+                if (contract.cardWasPlayed)
+                    playedAd = true;
+                bool inCut = false;
+                for (int m = 0; m < contract.matchingFootageIds.Count; m++)
+                {
+                    if (aired.Contains(contract.matchingFootageIds[m]))
+                        inCut = true;
+                }
+
+                if (contract.cardWasPlayed && inCut)
+                {
+                    contract.status = ContractStatus.Fulfilled;
+                    contract.footageWasAired = true;
+                    sponsorMoney += contract.payout;
+                    hit += contract.scoreHit;
+                    GameSession.State.sponsorReputation = Mathf.Clamp(GameSession.State.sponsorReputation + 12, 0, 100);
+                }
+                else
+                {
+                    contract.status = ContractStatus.Failed;
+                    GameSession.State.sponsorReputation = Mathf.Clamp(GameSession.State.sponsorReputation - 15, 0, 100);
+                }
             }
 
-            _hubNotice = "Выпуск " + number + " вышел в эфир. Итоги монтажа и HellTube появятся здесь.";
-            ShowHub();
+            var result = FeedbackGenerator.BuildCut(moments, GameSession.Tone, coherence, hit > 0);
+            if (hit > 0)
+                result = FeedbackGenerator.ApplySponsor(result, hit);
+            bool hadTasks = GameSession.State.tasks.Count > 0;
+            bool wishDone = GameSession.State.Resolve(moments, GameSession.Tone);
+            int pay = Progression.Payout(result.score, GameSession.State.castLevel, wishDone) + sponsorMoney;
+            GameSession.State.money += pay;
+            GameSession.State.ratingSum += result.score;
+            GameSession.State.rated++;
+            string line = PayLine(pay, hadTasks, wishDone);
+            if (sponsorMoney > 0)
+                line += "   ·   спонсор +" + sponsorMoney + " кр, отзывы −" + hit;
+            else if (playedAd)
+                line += "   ·   реклама не в эфире, выплаты нет";
+            episode.settled = true;
+            episode.settledPay = pay;
+            episode.settledSponsor = sponsorMoney;
+            episode.settledLine = line;
+            GameSession.Save();
+        }
+
+        void CloseAir()
+        {
+            if (_cut == null || !_cut.AirVisible || !_episode.Active)
+                return;
+            if (_cut.TaskTaken)
+                GameSession.State.Accept(_airWish, _airWishLabel);
+            var episode = _episode.Current;
+            FootageReel.ReleaseEpisode(episode);
+            _episode.End();
+            _cut.Hide();
+            GameSession.Save();
+            if (GameSession.SeasonOver)
+                ShowSeasonEnd();
+            else
+                ShowHub();
+        }
+
+        List<FootageClip> Library(EpisodeState episode)
+        {
+            var list = new List<FootageClip>();
+            if (episode == null || episode.footage == null)
+                return list;
+            for (int i = 0; i < episode.footage.Count; i++)
+            {
+                var clip = FootageReel.Resolve(episode.footage[i]);
+                if (clip != null)
+                    list.Add(clip);
+            }
+
+            return list;
+        }
+
+        List<FootageClip> LoadCut(EpisodeState episode)
+        {
+            var list = new List<FootageClip>();
+            if (episode.finalCut == null)
+                return list;
+            var library = Library(episode);
+            for (int i = 0; i < episode.finalCut.Count; i++)
+            {
+                for (int j = 0; j < library.Count; j++)
+                {
+                    if (library[j].id == episode.finalCut[i])
+                        list.Add(library[j]);
+                }
+            }
+
+            return list;
+        }
+
+        static List<CapturedMoment> Shells(List<FootageClip> cut)
+        {
+            var list = new List<CapturedMoment>(cut.Count);
+            for (int i = 0; i < cut.Count; i++)
+            {
+                var clip = cut[i];
+                list.Add(new CapturedMoment
+                {
+                    actorNames = clip.actorNames,
+                    tags = clip.tags,
+                    mood = clip.mood,
+                    grade = clip.grade,
+                    exposed = clip.exposed,
+                    duration = clip.duration,
+                    photo = clip.photo,
+                    time = clip.time
+                });
+            }
+
+            return list;
+        }
+
+        static int AiredHit(EpisodeState episode)
+        {
+            int hit = 0;
+            for (int i = 0; i < episode.contracts.Count; i++)
+            {
+                if (episode.contracts[i].footageWasAired)
+                    hit += episode.contracts[i].scoreHit;
+            }
+
+            return hit;
+        }
+
+        static string PayLine(int pay, bool hadTasks, bool wishDone)
+        {
+            if (!hadTasks)
+                return "+" + pay + " кр   ·   задач не было";
+            if (wishDone)
+                return "+" + pay + " кр   ·   задача закрыта ×1.3";
+            return "+" + pay + " кр   ·   задачи открыты, мимо";
         }
 
         void ShowSeasonEnd()

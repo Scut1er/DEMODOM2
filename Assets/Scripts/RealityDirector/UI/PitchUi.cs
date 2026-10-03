@@ -35,7 +35,47 @@ namespace RealityDirector.UI
         GameObject _feedback;
         GameObject _vision;
         GameObject _captureBanner;
+        Text _bannerText;
         Transform _cardBar;
+        RectTransform _camRect;
+        Button _camButton;
+        Button _doneButton;
+        Button _hubButton;
+        bool _gated;
+        bool _gateCards;
+        string _gateCard;
+        bool _gateCamera;
+        bool _gateDone;
+        bool _gateHub;
+        RectTransform _doneRect;
+        public RectTransform CardBarRect => _cardBar as RectTransform;
+        RectTransform _aim;
+        public RectTransform AimRect => _aim;
+        public RectTransform CardRect(string id)
+        {
+            for (int i = 0; i < _cards.Count; i++)
+            {
+                if (_cards[i].Def != null && _cards[i].Def.id == id && _cards[i].Root != null)
+                    return _cards[i].Root;
+            }
+
+            return CardBarRect;
+        }
+        public RectTransform CameraRect => _camRect;
+        public RectTransform DoneRect => _doneRect;
+        RectTransform _hubRect;
+        public RectTransform HubRect => _hubRect;
+        public RectTransform[] SlotRects()
+        {
+            var list = new List<RectTransform>();
+            for (int i = 0; i < _slots.Length; i++)
+            {
+                if (_slots[i].Root != null)
+                    list.Add(_slots[i].Root.transform as RectTransform);
+            }
+
+            return list.ToArray();
+        }
         Text _hint;
         Text _toast;
         Text _camLabel;
@@ -52,16 +92,57 @@ namespace RealityDirector.UI
         readonly Text[] _reviewScores = new Text[3];
         readonly Button[] _stars = new Button[3];
         readonly Text[] _starLabels = new Text[3];
+        Text _tubeTitle;
+        Text _metaLine;
+        Text _commentHead;
+        RectTransform _likeFill;
+        Text _viewsText;
+        Text _qualityText;
+        Text _linkText;
+        Text _bonusText;
+        Text _cutList;
         Text _scoreText;
         Text _wishText;
         Text _payText;
+        GameObject _player;
+        RectTransform _likeTrack;
+        readonly Image[] _frames = new Image[3];
+        readonly Sprite[] _frameSprites = new Sprite[3];
+        readonly GameObject[] _reviewRows = new GameObject[3];
+        readonly Text[] _reviewLetters = new Text[3];
         GameObject _tasksRoot;
         Text _tasksBody;
         bool _taskTaken;
         int _offerRow = -1;
 
         public bool TaskTaken => _taskTaken;
+        public int UsedCount
+        {
+            get
+            {
+                int n = 0;
+                for (int i = 0; i < _cards.Count; i++)
+                {
+                    if (_cards[i].Used)
+                        n++;
+                }
+
+                return n;
+            }
+        }
         Text _episodeTitle;
+        Text _footage;
+        Text _libraryCount;
+        Text _usedCount;
+        Text _handCount;
+        Text _cash;
+        Text _frameBody;
+        GameObject _framePlate;
+        Button _pauseButton;
+        RectTransform _castRoot;
+        readonly List<Text> _castMood = new List<Text>();
+        readonly List<RectTransform> _stressFill = new List<RectTransform>();
+        readonly List<RectTransform> _angerFill = new List<RectTransform>();
         Coroutine _flashRoutine;
         GameObject _toneRoot;
         Text _toneLead;
@@ -365,6 +446,55 @@ namespace RealityDirector.UI
                 if (card.Group != null)
                     card.Group.alpha = locked && !card.Used ? 0.45f : 1f;
             }
+
+            ApplyGates();
+        }
+
+        // Урок: жива только та кнопка, которую босс только что потребовал.
+        public void SetActionGates(bool cards, string onlyCard, bool camera, bool done, bool hub)
+        {
+            _gated = true;
+            _gateCards = cards;
+            _gateCard = onlyCard;
+            _gateCamera = camera;
+            _gateDone = done;
+            _gateHub = hub;
+            ApplyGates();
+        }
+
+        public void ClearActionGates()
+        {
+            if (!_gated)
+                return;
+            _gated = false;
+            if (_camButton != null)
+                _camButton.interactable = true;
+            if (_doneButton != null)
+                _doneButton.interactable = true;
+            if (_hubButton != null)
+                _hubButton.interactable = true;
+            SetHandLocked(false);
+        }
+
+        void ApplyGates()
+        {
+            if (!_gated)
+                return;
+            for (int i = 0; i < _cards.Count; i++)
+            {
+                var card = _cards[i];
+                if (card.Button == null)
+                    continue;
+                bool mine = string.IsNullOrEmpty(_gateCard) || (card.Def != null && card.Def.id == _gateCard);
+                card.Button.interactable = _gateCards && mine && !card.Used;
+            }
+
+            if (_camButton != null)
+                _camButton.interactable = _gateCamera;
+            if (_doneButton != null)
+                _doneButton.interactable = _gateDone;
+            if (_hubButton != null)
+                _hubButton.interactable = _gateHub;
         }
 
         public void SetArmed(EventDefinition def)
@@ -440,6 +570,7 @@ namespace RealityDirector.UI
         public void SetCaptureCapacity(int capacity)
         {
             capacity = Mathf.Clamp(capacity, 1, _slots.Length);
+            float span = (capacity - 1) * 58f;
             for (int i = 0; i < _slots.Length; i++)
             {
                 bool on = i < capacity;
@@ -447,14 +578,166 @@ namespace RealityDirector.UI
                 if (!on)
                     continue;
                 var rect = _slots[i].Root.GetComponent<RectTransform>();
-                rect.anchoredPosition = new Vector2(-14f - (capacity - 1 - i) * 160f, -132f);
+                rect.anchoredPosition = new Vector2(-span * 0.5f + i * 58f, -52f);
             }
+
+            SetFootage(0, capacity);
+        }
+
+        void BuildCastRow(int index)
+        {
+            var row = Panel("who" + index, _castRoot, new Color(0.1f, 0.08f, 0.12f, 1f));
+            var rect = row.rectTransform;
+            rect.anchorMin = new Vector2(0f, 1f);
+            rect.anchorMax = new Vector2(1f, 1f);
+            rect.pivot = new Vector2(0.5f, 1f);
+            rect.sizeDelta = new Vector2(0f, 96f);
+            rect.anchoredPosition = new Vector2(0f, -index * 102f);
+            row.raycastTarget = false;
+
+            var name = MakeText(row.transform, "", 18, Paper, TextAnchor.UpperLeft);
+            var nameRect = name.rectTransform;
+            nameRect.anchorMin = new Vector2(0f, 1f);
+            nameRect.anchorMax = new Vector2(1f, 1f);
+            nameRect.pivot = new Vector2(0f, 1f);
+            nameRect.anchoredPosition = new Vector2(12f, -8f);
+            nameRect.sizeDelta = new Vector2(-20f, 24f);
+
+            var trait = MakeText(row.transform, "", 13, Muted, TextAnchor.UpperLeft);
+            var traitRect = trait.rectTransform;
+            traitRect.anchorMin = new Vector2(0f, 1f);
+            traitRect.anchorMax = new Vector2(1f, 1f);
+            traitRect.pivot = new Vector2(0f, 1f);
+            traitRect.anchoredPosition = new Vector2(12f, -32f);
+            traitRect.sizeDelta = new Vector2(-20f, 18f);
+
+            var mood = MakeText(row.transform, "", 13, new Color(0.95f, 0.82f, 0.45f, 1f), TextAnchor.UpperLeft);
+            var moodRect = mood.rectTransform;
+            moodRect.anchorMin = new Vector2(0f, 1f);
+            moodRect.anchorMax = new Vector2(1f, 1f);
+            moodRect.pivot = new Vector2(0f, 1f);
+            moodRect.anchoredPosition = new Vector2(12f, -50f);
+            moodRect.sizeDelta = new Vector2(-20f, 18f);
+            _castMood.Add(mood);
+
+            _stressFill.Add(Meter(row.transform, new Color(0.35f, 0.82f, 0.45f, 1f), -72f));
+            _angerFill.Add(Meter(row.transform, new Color(0.86f, 0.28f, 0.24f, 1f), -82f));
+        }
+
+        RectTransform Meter(Transform parent, Color color, float y)
+        {
+            var track = Panel("track", parent, new Color(0f, 0f, 0f, 0.45f));
+            var trackRect = track.rectTransform;
+            trackRect.anchorMin = trackRect.anchorMax = new Vector2(0f, 1f);
+            trackRect.pivot = new Vector2(0f, 1f);
+            trackRect.anchoredPosition = new Vector2(12f, y);
+            trackRect.sizeDelta = new Vector2(78f, 6f);
+            track.raycastTarget = false;
+            var fill = Panel("fill", track.transform, color);
+            var fillRect = fill.rectTransform;
+            fillRect.anchorMin = new Vector2(0f, 0.5f);
+            fillRect.anchorMax = new Vector2(0f, 0.5f);
+            fillRect.pivot = new Vector2(0f, 0.5f);
+            fillRect.anchoredPosition = Vector2.zero;
+            fillRect.sizeDelta = new Vector2(0f, 6f);
+            fill.raycastTarget = false;
+            return fillRect;
         }
 
         public void SetEpisodeTitle(string text)
         {
             if (_episodeTitle != null)
                 _episodeTitle.text = text;
+        }
+
+        public struct CastFace
+        {
+            public string name;
+            public string trait;
+            public string mood;
+            public int stress;
+            public int anger;
+        }
+
+        public void SetCast(CastFace[] faces)
+        {
+            if (_castRoot == null)
+                return;
+            int n = faces != null ? faces.Length : 0;
+            if (_castRoot.childCount != n)
+            {
+                for (int i = _castRoot.childCount - 1; i >= 0; i--)
+                    Destroy(_castRoot.GetChild(i).gameObject);
+                _castMood.Clear();
+                _stressFill.Clear();
+                _angerFill.Clear();
+                for (int i = 0; i < n; i++)
+                    BuildCastRow(i);
+            }
+
+            for (int i = 0; i < n; i++)
+            {
+                var face = faces[i];
+                var row = _castRoot.GetChild(i);
+                var labels = row.GetComponentsInChildren<Text>();
+                if (labels.Length > 0)
+                    labels[0].text = face.name;
+                if (labels.Length > 1)
+                    labels[1].text = face.trait;
+                if (i < _castMood.Count)
+                    _castMood[i].text = face.mood;
+                if (i < _stressFill.Count)
+                    _stressFill[i].sizeDelta = new Vector2(78f * Mathf.Clamp01(face.stress / 100f), 6f);
+                if (i < _angerFill.Count)
+                    _angerFill[i].sizeDelta = new Vector2(78f * Mathf.Clamp01(face.anger / 100f), 6f);
+            }
+        }
+
+        public void SetFrame(string body, bool on)
+        {
+            if (_framePlate == null)
+                return;
+            bool show = on && !string.IsNullOrEmpty(body);
+            _framePlate.SetActive(show);
+            if (show)
+                _frameBody.text = "В кадре:\n" + body;
+        }
+
+        public void SetHandMeta(int hand, int handMax, int library, int used)
+        {
+            if (_handCount != null)
+                _handCount.text = "РУКА  " + hand + " / " + handMax;
+            if (_libraryCount != null)
+                _libraryCount.text = library.ToString();
+            if (_usedCount != null)
+                _usedCount.text = used.ToString();
+        }
+
+        public void SetCash(int cash)
+        {
+            if (_cash != null)
+                _cash.text = "нал  " + cash;
+        }
+
+        public void SetFootage(int count, int capacity)
+        {
+            if (_footage != null)
+                _footage.text = "ФУТАЖ  " + count + " / " + capacity;
+        }
+
+        public void SetPauseEnabled(bool on)
+        {
+            if (_pauseButton != null)
+                _pauseButton.interactable = on;
+        }
+
+        public void SetPaused(bool on)
+        {
+            if (_pauseButton == null)
+                return;
+            var label = _pauseButton.GetComponentInChildren<Text>();
+            if (label != null)
+                label.text = on ? "ПАУЗА" : "ПАУЗА  ESC";
         }
 
         public void SetSlots(IReadOnlyList<CapturedMoment> moments, int capacity)
@@ -627,7 +910,18 @@ namespace RealityDirector.UI
         public void SetCaptureMode(bool on)
         {
             _captureBanner.SetActive(on);
-            _camLabel.text = on ? "КАМЕРА ВКЛ" : "КАМЕРА  C";
+            _camLabel.text = on ? "КАМЕРА ВКЛ" : "КАМЕРА   C";
+            if (_bannerText != null && on)
+                _bannerText.text = "REC  00 / 03";
+        }
+
+        public void SetRecord(float seconds, bool on)
+        {
+            if (_bannerText == null || !on)
+                return;
+            _captureBanner.SetActive(true);
+            int sec = Mathf.FloorToInt(seconds);
+            _bannerText.text = "REC  " + sec.ToString("00") + " / 03";
         }
 
         public void SetHint(string text)
@@ -667,7 +961,7 @@ namespace RealityDirector.UI
             _toneRoot.transform.SetAsLastSibling();
         }
 
-        public void ShowFeedback(FeedbackResult result, Action onNext)
+        public void ShowFeedback(FeedbackResult result, IReadOnlyList<CapturedMoment> moments, string title, int pay, Action onNext)
         {
             _hud.SetActive(false);
             SetTagsVisible(false);
@@ -680,27 +974,51 @@ namespace RealityDirector.UI
             SetCaptureMode(false);
             _taskTaken = false;
             _offerRow = -1;
+
+            int views = Mathf.RoundToInt(8000f + result.score * 8000f);
+            int likes = Mathf.RoundToInt(result.score * 10f);
+            string rating = Comma(result.score) + " / 10";
+            _tubeTitle.text = string.IsNullOrEmpty(title) ? "Серия" : title;
+            _metaLine.text = Grouped(views) + " просмотров   ·   нравится " + likes + "%   ·   рейтинг " + rating;
+            var likeSize = _likeFill.sizeDelta;
+            likeSize.x = 260f * Mathf.Clamp01(result.score / 10f);
+            _likeFill.sizeDelta = likeSize;
+
+            int comments = result.reviews != null ? result.reviews.Count : 0;
+            _commentHead.text = "КОММЕНТАРИИ   ·   " + comments;
             for (int i = 0; i < 3; i++)
             {
+                bool has = result.reviews != null && i < result.reviews.Count;
+                _reviewRows[i].SetActive(has);
+                if (!has)
+                    continue;
                 var review = result.reviews[i];
                 bool offer = review.offer;
-                _reviewAuthors[i].text = offer ? "★  " + review.author : review.author;
+                string author = review.author ?? "";
+                _reviewLetters[i].text = author.Length > 0 ? author.Substring(0, 1) : "?";
+                _reviewAuthors[i].text = offer ? "★  " + author + "   ·   заказ зрителей" : author;
                 _reviewBodies[i].text = review.body;
-                _reviewScores[i].text = review.score.ToString();
-                _reviewScores[i].color = ScoreColor(review.score);
+                _reviewScores[i].gameObject.SetActive(!offer);
+                _reviewScores[i].text = "+" + Grouped(Mathf.RoundToInt(review.score * review.score * 16f));
                 _stars[i].gameObject.SetActive(offer);
                 if (!offer)
                     continue;
                 _offerRow = i;
                 _starLabels[i].text = "☆ взять";
                 _starLabels[i].color = Paper;
-                _stars[i].image.color = new Color(0.22f, 0.2f, 0.24f, 1f);
+                _stars[i].image.color = new Color(0.16f, 0.14f, 0.18f, 1f);
             }
 
-            _scoreText.text = result.score.ToString("0.0");
-            _scoreText.color = ScoreColor(result.score);
-            _wishText.text = "";
-            _payText.text = result.payLine ?? "";
+            FillFrames(moments);
+            _viewsText.text = Grouped(views);
+            _scoreText.text = rating;
+            _qualityText.text = Comma(FrameQuality(moments)) + " / 10";
+            _linkText.text = LinkPercent(moments) + "%";
+            int bright = BrightCount(moments);
+            _bonusText.text = "+0,0 (" + bright + ")";
+            _payText.text = "+" + pay + " кр";
+            _wishText.text = result.payLine ?? "";
+            _cutList.text = CutList(moments);
             _feedbackNext = onNext;
         }
 
@@ -748,6 +1066,8 @@ namespace RealityDirector.UI
         Action _onEnd;
         Action _onCamera;
         Action _onReplay;
+        Action _onHub;
+        Action _onPause;
 
         public void BindFlow(Action onStart, Action onEnd, Action onCamera, Action onReplay)
         {
@@ -757,10 +1077,25 @@ namespace RealityDirector.UI
             _onReplay = onReplay;
         }
 
+        public void BindExit(Action onHub)
+        {
+            _onHub = onHub;
+        }
+
+        public void BindPause(Action onPause)
+        {
+            _onPause = onPause;
+        }
+
         void Construct()
         {
             _tagsRoot = NewRect("Tags", transform);
             _hud = NewRect("Hud", transform);
+            var aim = NewRect("Aim", transform);
+            _aim = aim.GetComponent<RectTransform>();
+            _aim.anchorMin = _aim.anchorMax = new Vector2(0.5f, 0.5f);
+            _aim.pivot = new Vector2(0.5f, 0.5f);
+            _aim.sizeDelta = new Vector2(200f, 240f);
             BuildHud();
             _flash = Panel("Flash", transform, Color.white);
             Stretch(_flash.rectTransform);
@@ -777,45 +1112,70 @@ namespace RealityDirector.UI
 
         void BuildHud()
         {
-            var top = Panel("top", _hud.transform, Hud);
-            var topRect = top.rectTransform;
-            topRect.anchorMin = new Vector2(0f, 1f);
-            topRect.anchorMax = new Vector2(1f, 1f);
-            topRect.pivot = new Vector2(0.5f, 1f);
-            topRect.sizeDelta = new Vector2(0f, 118f);
-            topRect.anchoredPosition = Vector2.zero;
+            var left = Panel("cast", _hud.transform, new Color(0.05f, 0.04f, 0.07f, 0.94f));
+            var leftRect = left.rectTransform;
+            leftRect.anchorMin = new Vector2(0f, 0f);
+            leftRect.anchorMax = new Vector2(0f, 1f);
+            leftRect.pivot = new Vector2(0f, 0.5f);
+            leftRect.offsetMin = new Vector2(0f, 332f);
+            leftRect.offsetMax = new Vector2(268f, 0f);
 
-            _episodeTitle = MakeText(top.transform, "СЕРИЯ 1\nты режиссёр, не участник", 22, Paper, TextAnchor.UpperLeft);
-            var title = _episodeTitle;
-            var titleRect = title.rectTransform;
+            _episodeTitle = MakeText(left.transform, "СЕРИЯ 1\nты режиссёр, не участник", 20, Paper, TextAnchor.UpperLeft);
+            var titleRect = _episodeTitle.rectTransform;
             titleRect.anchorMin = new Vector2(0f, 1f);
             titleRect.anchorMax = new Vector2(0f, 1f);
             titleRect.pivot = new Vector2(0f, 1f);
-            titleRect.anchoredPosition = new Vector2(28f, -16f);
-            titleRect.sizeDelta = new Vector2(520f, 80f);
+            titleRect.anchoredPosition = new Vector2(16f, -14f);
+            titleRect.sizeDelta = new Vector2(236f, 64f);
+
+            var cam = MakeButton(left.transform, "КАМЕРА   C", new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(0f, 1f),
+                new Vector2(16f, -86f), new Vector2(236f, 44f), Accent, () => _onCamera?.Invoke());
+            _camButton = cam;
+            _camRect = cam.transform as RectTransform;
+            _camLabel = cam.GetComponentInChildren<Text>();
+
+            var castGo = NewRect("rows", left.transform);
+            _castRoot = castGo.GetComponent<RectTransform>();
+            _castRoot.anchorMin = new Vector2(0f, 1f);
+            _castRoot.anchorMax = new Vector2(1f, 1f);
+            _castRoot.pivot = new Vector2(0.5f, 1f);
+            _castRoot.anchoredPosition = new Vector2(0f, -142f);
+            _castRoot.sizeDelta = new Vector2(-16f, 520f);
+
+            _footage = MakeText(_hud.transform, "ФУТАЖ  0 / 1", 22, Paper, TextAnchor.MiddleCenter);
+            var footRect = _footage.rectTransform;
+            footRect.anchorMin = footRect.anchorMax = new Vector2(0.5f, 1f);
+            footRect.pivot = new Vector2(0.5f, 1f);
+            footRect.anchoredPosition = new Vector2(-40f, -14f);
+            footRect.sizeDelta = new Vector2(280f, 36f);
 
             for (int i = 0; i < _slots.Length; i++)
             {
                 var slotImg = Panel("slot" + i, _hud.transform, new Color(0.1f, 0.09f, 0.08f, 0.92f));
                 var slotRect = slotImg.rectTransform;
-                slotRect.anchorMin = new Vector2(1f, 1f);
-                slotRect.anchorMax = new Vector2(1f, 1f);
-                slotRect.pivot = new Vector2(1f, 1f);
-                slotRect.sizeDelta = new Vector2(148f, 200f);
-                slotRect.anchoredPosition = new Vector2(-14f - (_slots.Length - 1 - i) * 160f, -132f);
-                var placeholder = MakeText(slotImg.transform, "СЛОТ " + (i + 1) + "\nпусто", 18, Muted, TextAnchor.MiddleCenter);
+                slotRect.anchorMin = slotRect.anchorMax = new Vector2(0.5f, 1f);
+                slotRect.pivot = new Vector2(0.5f, 1f);
+                slotRect.sizeDelta = new Vector2(52f, 36f);
+                slotRect.anchoredPosition = new Vector2(-90f + i * 58f, -52f);
+                var placeholder = MakeText(slotImg.transform, (i + 1).ToString(), 14, Muted, TextAnchor.MiddleCenter);
                 Stretch(placeholder.rectTransform);
                 var well = NewRect("well", slotImg.transform);
                 _slots[i] = new Slot { Root = slotImg.gameObject, Well = well.GetComponent<RectTransform>(), Placeholder = placeholder };
             }
 
-            var cam = MakeButton(_hud.transform, "КАМЕРА  C", new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(0f, 1f),
-                new Vector2(168f, -132f), new Vector2(180f, 48f), Accent, () => _onCamera?.Invoke());
-            _camLabel = cam.GetComponentInChildren<Text>();
+            var pause = MakeButton(_hud.transform, "ПАУЗА  ESC", new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0.5f, 1f),
+                new Vector2(210f, -18f), new Vector2(150f, 44f), new Color(0.16f, 0.14f, 0.18f, 1f), () => _onPause?.Invoke());
+            _pauseButton = pause;
 
-            var end = MakeButton(_hud.transform, "КОНЕЦ", new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(0f, 1f),
-                new Vector2(364f, -132f), new Vector2(168f, 48f), new Color(0.22f, 0.2f, 0.24f, 1f), () => _onEnd?.Invoke());
+            var end = MakeButton(_hud.transform, "СНЯТО!", new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0.5f, 1f),
+                new Vector2(390f, -18f), new Vector2(160f, 44f), new Color(0.75f, 0.16f, 0.18f, 1f), () => _onEnd?.Invoke());
+            _doneButton = end;
+            var leave = MakeButton(_hud.transform, "ХАБ", new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0.5f, 1f),
+                new Vector2(560f, -18f), new Vector2(90f, 44f), new Color(0.16f, 0.14f, 0.18f, 1f), () => _onHub?.Invoke());
+            _hubButton = leave;
+            _hubRect = leave.transform as RectTransform;
             _endPlate = end.GetComponent<Image>();
+            _doneRect = end.transform as RectTransform;
             var clap = new GameObject("clap", typeof(RectTransform), typeof(Image));
             clap.transform.SetParent(end.transform, false);
             var clapRect = clap.GetComponent<RectTransform>();
@@ -832,25 +1192,91 @@ namespace RealityDirector.UI
             endLabel.rectTransform.offsetMin = new Vector2(42f, 0f);
             endLabel.alignment = TextAnchor.MiddleLeft;
 
-            _captureBanner = Panel("banner", _hud.transform, new Color(0.95f, 0.82f, 0.35f, 0.95f)).gameObject;
+            _captureBanner = Panel("banner", _hud.transform, new Color(0.75f, 0.12f, 0.16f, 0.95f)).gameObject;
             var bannerRect = _captureBanner.GetComponent<RectTransform>();
-            bannerRect.anchorMin = new Vector2(0.5f, 1f);
-            bannerRect.anchorMax = new Vector2(0.5f, 1f);
-            bannerRect.pivot = new Vector2(0.5f, 1f);
-            bannerRect.sizeDelta = new Vector2(460f, 42f);
-            bannerRect.anchoredPosition = new Vector2(0f, -132f);
-            var bannerText = MakeText(_captureBanner.transform, "SPACE  —  СНЯТЬ", 22, Ink, TextAnchor.MiddleCenter);
-            Stretch(bannerText.rectTransform);
+            bannerRect.anchorMin = bannerRect.anchorMax = new Vector2(0.5f, 0.5f);
+            bannerRect.pivot = new Vector2(0.5f, 0.5f);
+            bannerRect.sizeDelta = new Vector2(220f, 36f);
+            bannerRect.anchoredPosition = new Vector2(80f, -40f);
+            _bannerText = MakeText(_captureBanner.transform, "REC", 18, Paper, TextAnchor.MiddleCenter);
+            Stretch(_bannerText.rectTransform);
             _captureBanner.SetActive(false);
 
-            var bar = Panel("bar", _hud.transform, Hud);
+            var frame = Panel("frame", _hud.transform, new Color(0.06f, 0.05f, 0.08f, 0.88f));
+            _framePlate = frame.gameObject;
+            var frameRect = frame.rectTransform;
+            frameRect.anchorMin = frameRect.anchorMax = new Vector2(0.5f, 0.5f);
+            frameRect.pivot = new Vector2(0.5f, 0.5f);
+            frameRect.sizeDelta = new Vector2(280f, 160f);
+            frameRect.anchoredPosition = new Vector2(40f, 80f);
+            _frameBody = MakeText(frame.transform, "В кадре:", 16, Paper, TextAnchor.UpperLeft);
+            var frameBody = _frameBody.rectTransform;
+            frameBody.anchorMin = Vector2.zero;
+            frameBody.anchorMax = Vector2.one;
+            frameBody.offsetMin = new Vector2(14f, 10f);
+            frameBody.offsetMax = new Vector2(-12f, -10f);
+            _framePlate.SetActive(false);
+
+            var deck = Panel("deck", _hud.transform, new Color(0.05f, 0.04f, 0.07f, 0.96f));
+            var deckRect = deck.rectTransform;
+            deckRect.anchorMin = new Vector2(0f, 0f);
+            deckRect.anchorMax = new Vector2(1f, 0f);
+            deckRect.pivot = new Vector2(0.5f, 0f);
+            deckRect.sizeDelta = new Vector2(0f, 332f);
+
+            _handCount = MakeText(deck.transform, "РУКА  0 / 0", 16, Paper, TextAnchor.MiddleCenter);
+            var handRect = _handCount.rectTransform;
+            handRect.anchorMin = handRect.anchorMax = new Vector2(0.5f, 1f);
+            handRect.pivot = new Vector2(0.5f, 1f);
+            handRect.anchoredPosition = new Vector2(0f, -6f);
+            handRect.sizeDelta = new Vector2(240f, 24f);
+
+            _cash = MakeText(deck.transform, "нал  0", 16, new Color(0.95f, 0.82f, 0.28f, 1f), TextAnchor.MiddleRight);
+            var cashRect = _cash.rectTransform;
+            cashRect.anchorMin = cashRect.anchorMax = new Vector2(1f, 1f);
+            cashRect.pivot = new Vector2(1f, 1f);
+            cashRect.anchoredPosition = new Vector2(-24f, -6f);
+            cashRect.sizeDelta = new Vector2(220f, 24f);
+
+            var library = MakeText(deck.transform, "БИБЛИОТЕКА", 13, Muted, TextAnchor.UpperCenter);
+            var libRect = library.rectTransform;
+            libRect.anchorMin = libRect.anchorMax = new Vector2(0f, 1f);
+            libRect.pivot = new Vector2(0f, 1f);
+            libRect.anchoredPosition = new Vector2(16f, -36f);
+            libRect.sizeDelta = new Vector2(120f, 20f);
+            _libraryCount = MakeText(deck.transform, "0", 28, Paper, TextAnchor.MiddleCenter);
+            var libNum = _libraryCount.rectTransform;
+            libNum.anchorMin = libNum.anchorMax = new Vector2(0f, 1f);
+            libNum.pivot = new Vector2(0f, 1f);
+            libNum.anchoredPosition = new Vector2(16f, -58f);
+            libNum.sizeDelta = new Vector2(120f, 40f);
+            var libHint = MakeText(deck.transform, "карт осталось", 12, Muted, TextAnchor.UpperCenter);
+            var libHintRect = libHint.rectTransform;
+            libHintRect.anchorMin = libHintRect.anchorMax = new Vector2(0f, 1f);
+            libHintRect.pivot = new Vector2(0f, 1f);
+            libHintRect.anchoredPosition = new Vector2(16f, -100f);
+            libHintRect.sizeDelta = new Vector2(120f, 18f);
+
+            var used = MakeText(deck.transform, "ИСПОЛЬЗОВАНО", 13, Muted, TextAnchor.UpperCenter);
+            var usedRect = used.rectTransform;
+            usedRect.anchorMin = usedRect.anchorMax = new Vector2(1f, 1f);
+            usedRect.pivot = new Vector2(1f, 1f);
+            usedRect.anchoredPosition = new Vector2(-16f, -36f);
+            usedRect.sizeDelta = new Vector2(130f, 20f);
+            _usedCount = MakeText(deck.transform, "0", 28, Paper, TextAnchor.MiddleCenter);
+            var usedNum = _usedCount.rectTransform;
+            usedNum.anchorMin = usedNum.anchorMax = new Vector2(1f, 1f);
+            usedNum.pivot = new Vector2(1f, 1f);
+            usedNum.anchoredPosition = new Vector2(-16f, -58f);
+            usedNum.sizeDelta = new Vector2(130f, 40f);
+
+            var bar = Panel("bar", deck.transform, new Color(0f, 0f, 0f, 0f));
             _cardBar = bar.transform;
             var barRect = bar.rectTransform;
-            barRect.anchorMin = new Vector2(0.5f, 0f);
-            barRect.anchorMax = new Vector2(0.5f, 0f);
-            barRect.pivot = new Vector2(0.5f, 0f);
-            barRect.sizeDelta = new Vector2(980f, 332f);
-            barRect.anchoredPosition = new Vector2(0f, 16f);
+            barRect.anchorMin = Vector2.zero;
+            barRect.anchorMax = Vector2.one;
+            barRect.offsetMin = new Vector2(150f, 8f);
+            barRect.offsetMax = new Vector2(-150f, -28f);
             var layout = bar.gameObject.AddComponent<HorizontalLayoutGroup>();
             layout.spacing = 16f;
             layout.padding = new RectOffset(14, 14, 10, 10);
@@ -866,7 +1292,7 @@ namespace RealityDirector.UI
             hintRect.anchorMax = new Vector2(0.5f, 0f);
             hintRect.pivot = new Vector2(0.5f, 0f);
             hintRect.sizeDelta = new Vector2(1100f, 36f);
-            hintRect.anchoredPosition = new Vector2(0f, 356f);
+            hintRect.anchoredPosition = new Vector2(0f, 340f);
 
             _toast = MakeText(_hud.transform, "", 22, new Color(1f, 0.82f, 0.45f, 1f), TextAnchor.MiddleCenter);
             var toastRect = _toast.rectTransform;
@@ -874,7 +1300,7 @@ namespace RealityDirector.UI
             toastRect.anchorMax = new Vector2(0.5f, 0f);
             toastRect.pivot = new Vector2(0.5f, 0f);
             toastRect.sizeDelta = new Vector2(900f, 32f);
-            toastRect.anchoredPosition = new Vector2(0f, 392f);
+            toastRect.anchoredPosition = new Vector2(0f, 372f);
             _toast.gameObject.SetActive(false);
             SetCaptureCapacity(1);
         }
@@ -1130,11 +1556,11 @@ namespace RealityDirector.UI
             var plate = Panel("Tasks", transform, new Color(0.06f, 0.05f, 0.07f, 0.55f));
             _tasksRoot = plate.gameObject;
             var rect = plate.rectTransform;
-            rect.anchorMin = new Vector2(0f, 0.5f);
-            rect.anchorMax = new Vector2(0f, 0.5f);
-            rect.pivot = new Vector2(0f, 0.5f);
-            rect.anchoredPosition = new Vector2(16f, -20f);
-            rect.sizeDelta = new Vector2(280f, 240f);
+            rect.anchorMin = new Vector2(1f, 1f);
+            rect.anchorMax = new Vector2(1f, 1f);
+            rect.pivot = new Vector2(1f, 1f);
+            rect.anchoredPosition = new Vector2(-16f, -140f);
+            rect.sizeDelta = new Vector2(280f, 160f);
             plate.raycastTarget = false;
             var group = plate.gameObject.AddComponent<CanvasGroup>();
             group.alpha = 0.72f;
@@ -1179,64 +1605,355 @@ namespace RealityDirector.UI
 
         GameObject BuildFeedback()
         {
-            var panel = Panel("Feedback", transform, new Color(0.06f, 0.05f, 0.07f, 1f)).gameObject;
+            var panel = Panel("Feedback", transform, new Color(0.07f, 0.055f, 0.08f, 1f)).gameObject;
             Stretch(panel.GetComponent<RectTransform>());
-            var title = MakeText(panel.transform, "РЕАКЦИЯ ЗРИТЕЛЕЙ", 28, Muted, TextAnchor.MiddleCenter);
-            Place(title.rectTransform, new Vector2(0.5f, 1f), new Vector2(0f, -48f), new Vector2(800f, 40f));
+            BuildTubeChrome(panel.transform);
+            return panel;
+        }
 
+        void BuildTubeChrome(Transform panel)
+        {
+            var bar = Panel("bar", panel, new Color(0.09f, 0.07f, 0.1f, 1f));
+            var barRect = bar.rectTransform;
+            barRect.anchorMin = new Vector2(0f, 1f);
+            barRect.anchorMax = new Vector2(1f, 1f);
+            barRect.pivot = new Vector2(0.5f, 1f);
+            barRect.sizeDelta = new Vector2(0f, 52f);
+            barRect.anchoredPosition = Vector2.zero;
+
+            var flame = Panel("flame", bar.transform, Color.white);
+            flame.sprite = IllustratedArt.IconFire;
+            flame.preserveAspect = true;
+            Pin(flame.rectTransform, 22f, 10f, 28f, 28f);
+            var logo = MakeText(bar.transform, "HELLTUBE", 22, new Color(0.96f, 0.78f, 0.22f, 1f), TextAnchor.MiddleLeft);
+            Pin(logo.rectTransform, 56f, 8f, 180f, 36f);
+            var tagline = MakeText(bar.transform, "смотри, пока горишь", 14, Muted, TextAnchor.MiddleLeft);
+            Pin(tagline.rectTransform, 250f, 10f, 240f, 32f);
+
+            var search = Panel("search", bar.transform, new Color(0.14f, 0.11f, 0.16f, 1f));
+            var searchRect = search.rectTransform;
+            searchRect.anchorMin = searchRect.anchorMax = new Vector2(0.5f, 0.5f);
+            searchRect.sizeDelta = new Vector2(460f, 32f);
+            var searchText = MakeText(search.transform, "поиск по грехам", 14, new Color(0.45f, 0.4f, 0.42f, 1f), TextAnchor.MiddleLeft);
+            var searchLabel = searchText.rectTransform;
+            searchLabel.anchorMin = Vector2.zero;
+            searchLabel.anchorMax = Vector2.one;
+            searchLabel.offsetMin = new Vector2(16f, 0f);
+            searchLabel.offsetMax = new Vector2(-12f, 0f);
+
+            var channel = MakeText(bar.transform, "канал  ONLY WHAT MATTERS", 15, new Color(0.45f, 0.82f, 0.38f, 1f), TextAnchor.MiddleRight);
+            var channelRect = channel.rectTransform;
+            channelRect.anchorMin = channelRect.anchorMax = new Vector2(1f, 0.5f);
+            channelRect.pivot = new Vector2(1f, 0.5f);
+            channelRect.anchoredPosition = new Vector2(-22f, 0f);
+            channelRect.sizeDelta = new Vector2(420f, 32f);
+
+            var player = Panel("player", panel, new Color(0.02f, 0.02f, 0.025f, 1f));
+            _player = player.gameObject;
+            Pin(player.rectTransform, 28f, 72f, 1400f, 392f);
+            float pad = 8f;
+            float gap = 6f;
+            float frameW = (1400f - pad * 2f - gap * 2f) / 3f;
+            float frameH = 392f - pad * 2f;
             for (int i = 0; i < 3; i++)
             {
-                var row = Panel("review" + i, panel.transform, PanelColor);
-                var rowRect = row.rectTransform;
-                rowRect.anchorMin = new Vector2(0.5f, 1f);
-                rowRect.anchorMax = new Vector2(0.5f, 1f);
-                rowRect.pivot = new Vector2(0.5f, 1f);
-                rowRect.sizeDelta = new Vector2(980f, 110f);
-                rowRect.anchoredPosition = new Vector2(0f, -110f - i * 124f);
+                var frame = Panel("frame" + i, player.transform, new Color(0.05f, 0.04f, 0.06f, 1f));
+                Pin(frame.rectTransform, pad + i * (frameW + gap), pad, frameW, frameH);
+                frame.preserveAspect = true;
+                _frames[i] = frame;
+            }
 
-                _reviewAuthors[i] = MakeText(row.transform, "", 22, Accent, TextAnchor.UpperLeft);
-                var authorRect = _reviewAuthors[i].rectTransform;
-                authorRect.anchorMin = new Vector2(0f, 1f);
-                authorRect.anchorMax = new Vector2(0f, 1f);
-                authorRect.pivot = new Vector2(0f, 1f);
-                authorRect.anchoredPosition = new Vector2(22f, -12f);
-                authorRect.sizeDelta = new Vector2(400f, 32f);
+            _tubeTitle = MakeText(panel, "", 26, Paper, TextAnchor.MiddleLeft);
+            Pin(_tubeTitle.rectTransform, 28f, 478f, 1380f, 40f);
+            _metaLine = MakeText(panel, "", 16, Muted, TextAnchor.MiddleLeft);
+            Pin(_metaLine.rectTransform, 28f, 518f, 1100f, 26f);
+            var track = Panel("likes", panel, new Color(0.2f, 0.18f, 0.16f, 1f));
+            _likeTrack = track.rectTransform;
+            Pin(track.rectTransform, 28f, 550f, 260f, 6f);
+            var fill = Panel("fill", track.transform, new Color(0.62f, 0.78f, 0.28f, 1f));
+            var fillRect = fill.rectTransform;
+            fillRect.anchorMin = new Vector2(0f, 0f);
+            fillRect.anchorMax = new Vector2(0f, 1f);
+            fillRect.pivot = new Vector2(0f, 0.5f);
+            fillRect.anchoredPosition = Vector2.zero;
+            fillRect.sizeDelta = new Vector2(80f, 0f);
+            _likeFill = fillRect;
 
-                var star = MakeButton(row.transform, "☆ взять", new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(0f, 1f),
-                    new Vector2(520f, -10f), new Vector2(168f, 34f), new Color(0.22f, 0.2f, 0.24f, 1f), ToggleTask);
+            _commentHead = MakeText(panel, "КОММЕНТАРИИ", 16, Paper, TextAnchor.MiddleLeft);
+            Pin(_commentHead.rectTransform, 28f, 572f, 400f, 28f);
+
+            var nameColor = new Color(0.42f, 0.78f, 0.4f, 1f);
+            var rowColor = new Color(0.1f, 0.085f, 0.12f, 1f);
+            Color[] faces =
+            {
+                new Color(0.32f, 0.72f, 0.4f, 1f),
+                new Color(0.78f, 0.62f, 0.22f, 1f),
+                new Color(0.28f, 0.58f, 0.62f, 1f)
+            };
+            for (int i = 0; i < 3; i++)
+            {
+                var row = Panel("review" + i, panel, rowColor);
+                Pin(row.rectTransform, 28f, 608f + i * 96f, 1400f, 88f);
+                _reviewRows[i] = row.gameObject;
+
+                var face = Panel("face", row.transform, faces[i]);
+                face.sprite = Disc();
+                Pin(face.rectTransform, 14f, 22f, 40f, 40f);
+                _reviewLetters[i] = MakeText(face.transform, "", 18, new Color(0.08f, 0.06f, 0.07f, 1f), TextAnchor.MiddleCenter);
+                Stretch(_reviewLetters[i].rectTransform);
+
+                _reviewAuthors[i] = MakeText(row.transform, "", 16, nameColor, TextAnchor.MiddleLeft);
+                Pin(_reviewAuthors[i].rectTransform, 68f, 10f, 980f, 26f);
+                _reviewBodies[i] = MakeText(row.transform, "", 18, Paper, TextAnchor.UpperLeft);
+                Pin(_reviewBodies[i].rectTransform, 68f, 36f, 1080f, 44f);
+
+                _reviewScores[i] = MakeText(row.transform, "", 15, Muted, TextAnchor.MiddleRight);
+                var likeRect = _reviewScores[i].rectTransform;
+                likeRect.anchorMin = likeRect.anchorMax = new Vector2(1f, 0.5f);
+                likeRect.pivot = new Vector2(1f, 0.5f);
+                likeRect.anchoredPosition = new Vector2(-18f, 0f);
+                likeRect.sizeDelta = new Vector2(90f, 28f);
+
+                var star = MakeButton(row.transform, "☆ взять", new Vector2(1f, 0.5f), new Vector2(1f, 0.5f), new Vector2(1f, 0.5f),
+                    new Vector2(-14f, 0f), new Vector2(150f, 34f), new Color(0.16f, 0.14f, 0.18f, 1f), ToggleTask);
                 star.gameObject.SetActive(false);
                 _stars[i] = star;
                 _starLabels[i] = star.GetComponentInChildren<Text>();
-
-                _reviewScores[i] = MakeText(row.transform, "", 46, Good, TextAnchor.MiddleRight);
-                var scoreRect = _reviewScores[i].rectTransform;
-                scoreRect.anchorMin = new Vector2(1f, 0.5f);
-                scoreRect.anchorMax = new Vector2(1f, 0.5f);
-                scoreRect.pivot = new Vector2(1f, 0.5f);
-                scoreRect.anchoredPosition = new Vector2(-18f, -4f);
-                scoreRect.sizeDelta = new Vector2(96f, 64f);
-
-                _reviewBodies[i] = MakeText(row.transform, "", 26, Paper, TextAnchor.UpperLeft);
-                var bodyRect = _reviewBodies[i].rectTransform;
-                bodyRect.anchorMin = new Vector2(0f, 0f);
-                bodyRect.anchorMax = new Vector2(1f, 1f);
-                bodyRect.offsetMin = new Vector2(22f, 12f);
-                bodyRect.offsetMax = new Vector2(-120f, -46f);
             }
 
-            _scoreText = MakeText(panel.transform, "7.0", 72, Good, TextAnchor.MiddleCenter);
-            Place(_scoreText.rectTransform, new Vector2(0.5f, 0f), new Vector2(-430f, 176f), new Vector2(280f, 84f));
-            var scoreCaption = MakeText(panel.transform, "оценка серии", 18, Muted, TextAnchor.MiddleCenter);
-            Place(scoreCaption.rectTransform, new Vector2(0.5f, 0f), new Vector2(-430f, 118f), new Vector2(280f, 28f));
+            var side = Panel("side", panel, new Color(0.085f, 0.07f, 0.1f, 1f));
+            Pin(side.rectTransform, 1452f, 72f, 440f, 984f);
+            var head = MakeText(side.transform, "ИТОГИ ЭФИРА", 22, new Color(0.93f, 0.34f, 0.28f, 1f), TextAnchor.MiddleLeft);
+            Pin(head.rectTransform, 22f, 18f, 390f, 36f);
+            _viewsText = SideStat(side.transform, "Просмотры", 68f);
+            _scoreText = SideStat(side.transform, "Рейтинг", 106f);
+            _qualityText = SideStat(side.transform, "Качество кадров", 144f);
+            _linkText = SideStat(side.transform, "Связность монтажа", 182f);
+            _bonusText = SideStat(side.transform, "Бонус за яркие моменты", 220f);
+            _payText = SideStat(side.transform, "Доход", 258f);
+            _payText.color = new Color(0.95f, 0.72f, 0.28f, 1f);
+            _wishText = MakeText(side.transform, "", 13, Muted, TextAnchor.MiddleLeft);
+            Pin(_wishText.rectTransform, 22f, 292f, 396f, 22f);
+            var cut = MakeText(side.transform, "МОНТАЖ", 14, Muted, TextAnchor.MiddleLeft);
+            Pin(cut.rectTransform, 22f, 330f, 390f, 24f);
+            _cutList = MakeText(side.transform, "", 16, Paper, TextAnchor.UpperLeft);
+            Pin(_cutList.rectTransform, 22f, 360f, 396f, 500f);
 
-            _wishText = MakeText(panel.transform, "", 20, Muted, TextAnchor.MiddleLeft);
-            Place(_wishText.rectTransform, new Vector2(0.5f, 0f), new Vector2(150f, 196f), new Vector2(520f, 52f));
-            _payText = MakeText(panel.transform, "", 22, new Color(0.95f, 0.82f, 0.45f, 1f), TextAnchor.MiddleLeft);
-            Place(_payText.rectTransform, new Vector2(0.5f, 0f), new Vector2(150f, 128f), new Vector2(520f, 36f));
+            var next = MakeButton(side.transform, "ДАЛЬШЕ (Space)", new Vector2(0f, 0f), new Vector2(1f, 0f), new Vector2(0.5f, 0f),
+                new Vector2(0f, 18f), new Vector2(-36f, 52f), new Color(0.93f, 0.36f, 0.28f, 1f), () => _feedbackNext?.Invoke());
+            var nextRect = next.GetComponent<RectTransform>();
+            nextRect.offsetMin = new Vector2(18f, 18f);
+            nextRect.offsetMax = new Vector2(-18f, 70f);
+        }
 
-            MakeButton(panel.transform, "ДАЛЬШЕ", new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(0.5f, 0f),
-                new Vector2(0f, 42f), new Vector2(320f, 58f), Accent, () => _feedbackNext?.Invoke());
-            return panel;
+        Text SideStat(Transform parent, string label, float y)
+        {
+            var name = MakeText(parent, label, 16, Muted, TextAnchor.MiddleLeft);
+            Pin(name.rectTransform, 22f, y, 230f, 30f);
+            var value = MakeText(parent, "", 16, Paper, TextAnchor.MiddleRight);
+            var rect = value.rectTransform;
+            rect.anchorMin = rect.anchorMax = new Vector2(1f, 1f);
+            rect.pivot = new Vector2(1f, 1f);
+            rect.anchoredPosition = new Vector2(-22f, -y);
+            rect.sizeDelta = new Vector2(150f, 30f);
+            return value;
+        }
+
+        void FillFrames(IReadOnlyList<CapturedMoment> moments)
+        {
+            int shown = 0;
+            if (moments != null)
+            {
+                for (int i = 0; i < moments.Count && shown < 3; i++)
+                {
+                    if (moments[i].photo == null)
+                        continue;
+                    SetFrame(shown, moments[i].photo);
+                    shown++;
+                }
+            }
+
+            for (int i = shown; i < 3; i++)
+            {
+                SetFrame(i, null);
+                _frames[i].gameObject.SetActive(false);
+            }
+
+            const float pad = 8f;
+            const float gap = 6f;
+            const float inner = 1400f - pad * 2f;
+            const float frameH = 392f - pad * 2f;
+            float frameW = shown <= 1 ? inner : (inner - gap * (shown - 1)) / shown;
+            for (int i = 0; i < shown; i++)
+            {
+                _frames[i].gameObject.SetActive(true);
+                Pin(_frames[i].rectTransform, pad + i * (frameW + gap), pad, frameW, frameH);
+            }
+
+            bool has = shown > 0;
+            if (_player != null)
+                _player.SetActive(has);
+            float lift = has ? 0f : 406f;
+            Pin(_tubeTitle.rectTransform, 28f, 478f - lift, 1380f, 40f);
+            Pin(_metaLine.rectTransform, 28f, 518f - lift, 1100f, 26f);
+            Pin(_likeTrack, 28f, 550f - lift, 260f, 6f);
+            Pin(_commentHead.rectTransform, 28f, 572f - lift, 400f, 28f);
+            for (int i = 0; i < _reviewRows.Length; i++)
+                Pin(_reviewRows[i].GetComponent<RectTransform>(), 28f, 608f + i * 96f - lift, 1400f, 88f);
+        }
+
+        void SetFrame(int index, Texture2D photo)
+        {
+            if (_frameSprites[index] != null)
+            {
+                Destroy(_frameSprites[index]);
+                _frameSprites[index] = null;
+            }
+
+            var image = _frames[index];
+            if (photo == null)
+            {
+                image.sprite = null;
+                image.color = new Color(0.05f, 0.04f, 0.06f, 1f);
+                return;
+            }
+
+            var sprite = Sprite.Create(photo, new Rect(0f, 0f, photo.width, photo.height), new Vector2(0.5f, 0.5f), 100f);
+            sprite.hideFlags = HideFlags.HideAndDontSave;
+            _frameSprites[index] = sprite;
+            image.sprite = sprite;
+            image.color = Color.white;
+        }
+
+        static float FrameQuality(IReadOnlyList<CapturedMoment> moments)
+        {
+            if (moments == null || moments.Count == 0)
+                return 0f;
+            float sum = 0f;
+            for (int i = 0; i < moments.Count; i++)
+            {
+                var grade = moments[i].grade;
+                sum += grade == CaptureGrade.Cast ? 8f : grade == CaptureGrade.Prop ? 5f : 2f;
+            }
+
+            return sum / moments.Count;
+        }
+
+        static int LinkPercent(IReadOnlyList<CapturedMoment> moments)
+        {
+            if (moments == null || moments.Count == 0)
+                return 0;
+            int framed = 0;
+            for (int i = 0; i < moments.Count; i++)
+            {
+                if (moments[i].Framed)
+                    framed++;
+            }
+
+            return Mathf.RoundToInt(100f * framed / moments.Count);
+        }
+
+        static int BrightCount(IReadOnlyList<CapturedMoment> moments)
+        {
+            if (moments == null)
+                return 0;
+            int n = 0;
+            for (int i = 0; i < moments.Count; i++)
+            {
+                if (moments[i].grade == CaptureGrade.Cast)
+                    n++;
+            }
+
+            return n;
+        }
+
+        static string CutList(IReadOnlyList<CapturedMoment> moments)
+        {
+            if (moments == null || moments.Count == 0)
+                return "Кадров не было.";
+            var seen = new Dictionary<string, int>();
+            var body = "";
+            int n = Mathf.Min(moments.Count, 5);
+            for (int i = 0; i < n; i++)
+            {
+                var moment = moments[i];
+                string title = moment.Title;
+                seen.TryGetValue(title, out int times);
+                times++;
+                seen[title] = times;
+                float mark = moment.grade == CaptureGrade.Cast ? 7f : moment.grade == CaptureGrade.Prop ? 4.5f : 2f;
+                if (times > 1)
+                    mark = Mathf.Max(1f, mark * 0.5f);
+                string who = moment.actorNames != null && moment.actorNames.Count > 0
+                    ? string.Join(", ", moment.actorNames)
+                    : moment.Framed ? "в кадре" : "пусто";
+                if (body.Length > 0)
+                    body += "\n";
+                string length = moment.duration > 0.05f ? "  " + Comma(moment.duration) + " с" : "";
+                body += (i + 1) + ". " + title + " — " + Comma(mark) + length + (times > 1 ? " (повтор)" : "") + "\n" + who;
+            }
+
+            if (moments.Count > n)
+                body += "\n… ещё " + (moments.Count - n);
+            return body;
+        }
+
+        static string Grouped(int value)
+        {
+            string digits = Mathf.Abs(value).ToString();
+            var buf = "";
+            for (int i = 0; i < digits.Length; i++)
+            {
+                if (i > 0 && (digits.Length - i) % 3 == 0)
+                    buf += " ";
+                buf += digits[i];
+            }
+
+            return value < 0 ? "-" + buf : buf;
+        }
+
+        static string Comma(float value)
+        {
+            return value.ToString("0.0").Replace('.', ',');
+        }
+
+        static void Pin(RectTransform rect, float x, float y, float w, float h)
+        {
+            rect.anchorMin = rect.anchorMax = new Vector2(0f, 1f);
+            rect.pivot = new Vector2(0f, 1f);
+            rect.anchoredPosition = new Vector2(x, -y);
+            rect.sizeDelta = new Vector2(w, h);
+        }
+
+        static Sprite _disc;
+
+        static Sprite Disc()
+        {
+            if (_disc != null)
+                return _disc;
+            const int n = 32;
+            var tex = new Texture2D(n, n, TextureFormat.RGBA32, false);
+            tex.hideFlags = HideFlags.HideAndDontSave;
+            tex.filterMode = FilterMode.Bilinear;
+            float r = n * 0.5f - 0.5f;
+            var px = new Color32[n * n];
+            for (int y = 0; y < n; y++)
+            {
+                for (int x = 0; x < n; x++)
+                {
+                    float dx = x + 0.5f - n * 0.5f;
+                    float dy = y + 0.5f - n * 0.5f;
+                    px[y * n + x] = dx * dx + dy * dy <= r * r
+                        ? new Color32(255, 255, 255, 255)
+                        : new Color32(255, 255, 255, 0);
+                }
+            }
+
+            tex.SetPixels32(px);
+            tex.Apply();
+            _disc = Sprite.Create(tex, new Rect(0f, 0f, n, n), new Vector2(0.5f, 0.5f), n);
+            _disc.hideFlags = HideFlags.HideAndDontSave;
+            return _disc;
         }
 
         GameObject BuildVision()

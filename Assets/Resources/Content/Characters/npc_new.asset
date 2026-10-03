@@ -10,20 +10,19 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 834fb89dd2ee475438ddff9dc6bac6a3, type: 3}
-  m_Name: npc_dobryak
+  m_Name: npc_new
   m_EditorClassIdentifier: Assembly-CSharp::RealityDirector.Meta.ActorDefinition
-  id: npc_dobryak
+  id: 
   designerNotes: 
-  displayName: "\u0414\u043E\u0431\u0440\u044F\u043A"
-  archetype: "\u0443\u0432\u0438\u0434\u0435\u043B \u043E\u0433\u043E\u043D\u044C \u2014 \u043D\u043E\u0441\u0438\u0442\u0441\u044F \u043F\u043E \u0432\u0441\u0435\u0439 \u043A\u0432\u0430\u0440\u0442\u0438\u0440\u0435"
+  displayName: "\u041D\u043E\u0432\u044B\u0439 \u0443\u0447\u0430\u0441\u0442\u043D\u0438\u043A"
+  archetype: 
   bio: 
   portrait: {fileID: 0}
-  artPrefix: dobryak
-  visibleTraits:
-  - "\u043F\u0430\u043D\u0438\u043A\u0435\u0440"
-  mainTrait: 3
-  hiddenTrait: 2
+  artPrefix: 
+  visibleTraits: []
+  mainTrait: 0
+  hiddenTrait: 0
   hiddenTraitLabel: "\u0441\u043A\u0440\u044B\u0442\u0430\u044F \u0447\u0435\u0440\u0442\u0430: ???"
-  order: 1
+  order: 2
   available: 1
   castingWeight: 1

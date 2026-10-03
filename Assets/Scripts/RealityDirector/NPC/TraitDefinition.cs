@@ -6,7 +6,15 @@ namespace RealityDirector.NPC
     {
         Aggressive,
         Sentimental,
-        Timid
+        Timid,
+        Panicker,
+        Jealous,
+        Cowardly,
+        Vain,
+        Opportunist,
+        Honest,
+        Shy,
+        Chaotic
     }
 
     public enum HiddenTrait

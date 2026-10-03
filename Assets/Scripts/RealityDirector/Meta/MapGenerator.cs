@@ -12,6 +12,25 @@ namespace RealityDirector.Meta
     {
         public const string MontageId = "montage";
 
+        // Обучение: одна съёмка, одно событие, монтаж. Без развилок и маркетинга.
+        public static MapGraph Tutorial(RoomCatalog catalog, RuleContext ctx)
+        {
+            var config = catalog.Config;
+            var graph = new MapGraph { Layers = 3, Lanes = 1 };
+            var shoot = new MapNode { id = "tut_shoot", layer = 0, row = 0f, type = RoomType.Situation };
+            var happening = new MapNode { id = "tut_event", layer = 1, row = 0f, type = RoomType.Event };
+            var montage = new MapNode { id = MontageId, layer = 2, row = 0f, type = RoomType.Montage };
+            SetRoom(shoot, config.opening != null ? config.opening : First(catalog.Available(RoomType.Situation, ctx)) ?? catalog.Placeholder(RoomType.Situation));
+            SetRoom(happening, First(catalog.Available(RoomType.Event, ctx)) ?? catalog.Placeholder(RoomType.Event));
+            SetRoom(montage, config.montage != null ? config.montage : First(catalog.Available(RoomType.Montage, ctx)) ?? catalog.Placeholder(RoomType.Montage));
+            shoot.next.Add(happening.id);
+            happening.next.Add(montage.id);
+            graph.nodes.Add(shoot);
+            graph.nodes.Add(happening);
+            graph.nodes.Add(montage);
+            return graph;
+        }
+
         public static MapGraph Generate(RoomCatalog catalog, int seed, RuleContext ctx)
         {
             var config = catalog.Config;

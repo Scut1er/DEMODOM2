@@ -62,6 +62,19 @@ namespace RealityDirector.UI.Hub
                 random.onClick.AddListener(() => Random?.Invoke());
         }
 
+        readonly List<MapNodeView> _spawned = new List<MapNodeView>();
+        readonly List<bool> _spawnedLive = new List<bool>();
+        bool _shootCan;
+
+        public RectTransform BoardFocus => board;
+        public RectTransform EnterFocus => shoot != null ? shoot.transform as RectTransform : null;
+        readonly Dictionary<RoomType, RectTransform> _nodeFocus = new Dictionary<RoomType, RectTransform>();
+
+        public RectTransform NodeFocus(RoomType type)
+        {
+            return _nodeFocus.TryGetValue(type, out var rect) ? rect : null;
+        }
+
         public void Show(MapService map, MapNode selected, StatsModel statsModel, int episodeNumber, int seasonLength, IList<string> tasks)
         {
             if (back != null)
@@ -118,6 +131,9 @@ namespace RealityDirector.UI.Hub
         void DrawNodes(MapService map, MapNode selected)
         {
             Clear(nodesRoot);
+            _spawned.Clear();
+            _spawnedLive.Clear();
+            _nodeFocus.Clear();
             if (nodePrefab == null)
                 return;
             var nodes = map.Map.nodes;
@@ -130,7 +146,13 @@ namespace RealityDirector.UI.Hub
                 float scale = _nodeScale * (node.type == RoomType.Montage ? 1.2f : 1f);
                 view.transform.localScale = Vector3.one * scale;
                 string id = node.id;
-                view.Show(node, map.StateOf(node), map.LockReason(node), selected == node, () => Select?.Invoke(id));
+                var state = map.StateOf(node);
+                view.Show(node, state, map.LockReason(node), selected == node, () => Select?.Invoke(id));
+                bool live = state == MapNodeState.Available || state == MapNodeState.Current;
+                _spawned.Add(view);
+                _spawnedLive.Add(live);
+                if (!_nodeFocus.ContainsKey(node.type))
+                    _nodeFocus[node.type] = (RectTransform)view.transform;
             }
         }
 
@@ -198,7 +220,7 @@ namespace RealityDirector.UI.Hub
                 if (infoTitle != null)
                     infoTitle.text = "Выберите следующую комнату";
                 if (infoBody != null)
-                    infoBody.text = "Сцена двигает "
+                    infoBody.text = "Карта эпизода. Комната двигает "
                         + MoodStyle.Paint("драму", ShowMood.Drama) + ", "
                         + MoodStyle.Paint("трэш", ShowMood.Trash) + " или "
                         + MoodStyle.Paint("семью", ShowMood.Family)
@@ -226,6 +248,7 @@ namespace RealityDirector.UI.Hub
                     infoBody.text = body;
             }
 
+            _shootCan = can;
             if (shoot != null)
                 shoot.interactable = can;
             if (shootLabel != null)
@@ -233,6 +256,27 @@ namespace RealityDirector.UI.Hub
         }
 
         // Сообщение в инфо-панели поверх обычного текста (например, «событие пока не реализовано»).
+        public void ApplyTutorial(bool teach, bool talking)
+        {
+            if (random != null)
+                random.interactable = !teach;
+            for (int i = 0; i < _spawned.Count; i++)
+            {
+                if (_spawned[i] == null)
+                    continue;
+                _spawned[i].SetEnabled(!teach || (!talking && _spawnedLive[i]));
+            }
+
+            if (shoot != null)
+                shoot.interactable = teach && talking ? false : _shootCan;
+            if (deck != null)
+                deck.SetLocked(teach && talking);
+            if (teach && deck != null)
+                deck.SetCancelEnabled(false);
+            else if (deck != null)
+                deck.SetCancelEnabled(true);
+        }
+
         public void Notice(string title, string body)
         {
             if (infoTitle != null)

@@ -110,8 +110,10 @@ namespace RealityDirector.EditorTools
 
             Object.DestroyImmediate(content.Aggressive);
             Object.DestroyImmediate(content.Sentimental);
+            Object.DestroyImmediate(content.Panicker);
             Object.DestroyImmediate(content.AggressiveRules);
             Object.DestroyImmediate(content.SentimentalRules);
+            Object.DestroyImmediate(content.PanickerRules);
             AssetDatabase.SaveAssets();
             DesignerData.Invalidate();
             Debug.Log("Cards: выгружено новых карт — " + created + " (" + DesignerData.CardsRoot + "). Уже существующие не тронуты.");
@@ -123,8 +125,8 @@ namespace RealityDirector.EditorTools
         {
             Character("npc_zloi", "Злой", "zloi", 0, "вспыльчивый, лезет в драку", RealityDirector.NPC.TraitId.Aggressive,
                 RealityDirector.NPC.HiddenTrait.Prankster, "агрессивный");
-            Character("npc_dobryak", "Добряк", "dobryak", 1, "мягкий, легко плачет", RealityDirector.NPC.TraitId.Sentimental,
-                RealityDirector.NPC.HiddenTrait.Kleptomaniac, "сентиментальный");
+            Character("npc_dobryak", "Добряк", "dobryak", 1, "увидел огонь — носится по всей квартире", RealityDirector.NPC.TraitId.Panicker,
+                RealityDirector.NPC.HiddenTrait.Kleptomaniac, "паникер");
             AssetDatabase.SaveAssets();
             DesignerData.Invalidate();
             Debug.Log("Characters: участники готовы (" + DesignerData.CharactersRoot + "). Существующие не тронуты.");

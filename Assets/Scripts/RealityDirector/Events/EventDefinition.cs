@@ -18,6 +18,8 @@ namespace RealityDirector.Events
         public string id;
         public string displayName;
         public string hint;
+        [Tooltip("Provocation, Environment, Social, Confession, Reveal, Comedy, Sponsor. Пусто — карта открыта сразу.")]
+        public string category;
         public TargetType targetType;
         public string requiredObjectId;
         public Color cardColor = Color.white;

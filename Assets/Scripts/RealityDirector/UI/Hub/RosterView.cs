@@ -44,7 +44,11 @@ namespace RealityDirector.UI.Hub
                 {
                     var m = members[i];
                     row.name = rowPrefab.name + "_" + m.id;
-                    row.Show(m.name, string.Join("\n", m.traits), m.portrait, false);
+                    string secret = castLevel >= 3 ? m.secretKnown : m.secretHidden;
+                    string about = string.Join("\n", m.traits);
+                    if (!string.IsNullOrEmpty(secret))
+                        about += "\n" + secret;
+                    row.Show(m.name, about, m.portrait, false);
                 }
                 else if (i < seats)
                 {

@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using RealityDirector.Core;
+using RealityDirector.Meta;
 using RealityDirector.Util;
 using RealityDirector.Events;
 using UnityEngine;
@@ -27,6 +28,7 @@ namespace RealityDirector.NPC
         public bool HasRage => Time.time < _rageUntil;
         public bool IsFighting => _action == NpcActionId.Fight;
         public bool IsCrying => _action == NpcActionId.Panic && Trait != null && Trait.traitId == TraitId.Sentimental;
+        public bool IsPanicker => Trait != null && Trait.traitId == TraitId.Panicker;
         public bool IsApproaching => _hasPending && _noticed;
         public bool CanChat => !IsFighting && !_hasPending && _action != NpcActionId.Panic && _action != NpcActionId.SeekFight;
         public NpcActionId Action => _action;
@@ -37,6 +39,16 @@ namespace RealityDirector.NPC
         public bool IsStealing => _stealing;
         public bool IsPlanting => _planting;
         public bool IsTripping => _tripping;
+        public int Anger;
+        public int Stress;
+        public int Sadness;
+        public int Attraction;
+        public int Confidence = 40;
+        public int SelfControl = 50;
+        public int Hostility;
+        public string Memory = "";
+        public bool Heat;
+        public int Chain;
 
         public static event Action<NPCController, NPCController> FightStarted;
 
@@ -75,6 +87,7 @@ namespace RealityDirector.NPC
         bool _trapArmed;
         Vector2 _trapPos;
         float _trapAfter;
+        int _lap;
 
         public void BindVisual(Transform visual, SpriteRenderer ring)
         {
@@ -116,8 +129,9 @@ namespace RealityDirector.NPC
             _planting = false;
             _tripping = false;
             _trapArmed = false;
+            _lap = 0;
             _nextThink = Time.time + UnityEngine.Random.Range(0.4f, 1.4f);
-            RelationToRival = 0f;
+            RelationToRival = -Hostility;
             transform.position = Home;
             RestoreVisual();
             if (_visual != null)
@@ -177,14 +191,20 @@ namespace RealityDirector.NPC
             if (Rules == null || Trait == null || IsFighting)
                 return;
 
+            Chain = worldEvent.depth;
             ReactionRule best = null;
+            int bestScore = int.MinValue;
             var rules = Rules.rules;
             for (int i = 0; i < rules.Count; i++)
             {
                 if (!Matches(rules[i], worldEvent))
                     continue;
-                if (best == null || rules[i].priority > best.priority)
+                int score = rules[i].priority + Bias(rules[i]);
+                if (best == null || score > bestScore)
+                {
                     best = rules[i];
+                    bestScore = score;
+                }
             }
 
             if (best == null)
@@ -200,6 +220,7 @@ namespace RealityDirector.NPC
                 return;
 
             Run(best.action, best.emote);
+            Bump(best.action);
         }
 
         void QueueApproach(ReactionRule rule, Vector2 locus)
@@ -242,12 +263,114 @@ namespace RealityDirector.NPC
             }
 
             Run(rule.action, rule.emote);
+            Bump(rule.action);
             if (rule.action == NpcActionId.Panic)
                 _reactHoldUntil = Time.time + 0.95f;
             else if (rule.action == NpcActionId.SeekFight)
                 _reactHoldUntil = Time.time + 0.4f;
             else
                 _reactHoldUntil = 0f;
+        }
+
+        public void LoadMood(ActorRuntime runtime)
+        {
+            if (runtime == null)
+                return;
+            Stress = runtime.stress;
+            Anger = runtime.anger;
+            Sadness = runtime.sadness;
+            Attraction = runtime.attraction;
+            Confidence = runtime.confidence;
+            SelfControl = runtime.selfControl;
+            Hostility = runtime.hostility;
+            Memory = runtime.memory ?? "";
+            RelationToRival = -Hostility;
+        }
+
+        public ActorRuntime SaveMood()
+        {
+            return new ActorRuntime
+            {
+                actorId = Id,
+                stress = Stress,
+                anger = Anger,
+                sadness = Sadness,
+                attraction = Attraction,
+                confidence = Confidence,
+                selfControl = SelfControl,
+                hostility = Mathf.Max(Hostility, Mathf.RoundToInt(Mathf.Max(0f, -RelationToRival))),
+                memory = Memory
+            };
+        }
+
+        public string Plate()
+        {
+            string trait = Trait != null ? Trait.displayName : "";
+            string emo = Loudest();
+            string edge = Anger >= 70 && SelfControl <= 40 ? "\nна грани" : "";
+            string mem = string.IsNullOrEmpty(Memory) ? "" : "\n" + Memory;
+            string bond = Hostility >= 30 ? "\nзлость к соседу" : "";
+            string chain = Chain >= 2 ? "\nцепочка" : "";
+            return DisplayName + "\n" + trait + "\n" + emo + edge + mem + bond + chain;
+        }
+
+        string Loudest()
+        {
+            if (Anger >= Stress && Anger >= Sadness && Anger >= 40)
+                return Anger >= 70 ? "злость высокая" : "злость";
+            if (Stress >= Sadness && Stress >= 40)
+                return Stress >= 70 ? "стресс высокий" : "стресс";
+            if (Sadness >= 40)
+                return Sadness >= 70 ? "грусть высокая" : "грусть";
+            if (Attraction >= 40)
+                return "тянет к кому-то";
+            return "спокоен";
+        }
+
+        int Bias(ReactionRule rule)
+        {
+            int n = 0;
+            bool brittle = SelfControl <= 35;
+            if (rule.action == NpcActionId.Panic && (Stress >= 40 || Heat || TraitIdMatch(TraitId.Panicker, TraitId.Cowardly, TraitId.Shy)))
+                n += 4 + Stress / 12;
+            if (rule.action == NpcActionId.SeekFight && (Anger >= 40 || TraitIdMatch(TraitId.Aggressive, TraitId.Jealous, TraitId.Chaotic)))
+                n += 4 + Anger / 10;
+            if (Heat && rule.action == NpcActionId.Panic)
+                n += 8;
+            if (brittle && (rule.action == NpcActionId.Panic || rule.action == NpcActionId.SeekFight))
+                n += 6;
+            if (Memory == "унижен" && rule.action == NpcActionId.SeekFight)
+                n += 10;
+            return n;
+        }
+
+        bool TraitIdMatch(params TraitId[] ids)
+        {
+            if (Trait == null)
+                return false;
+            for (int i = 0; i < ids.Length; i++)
+            {
+                if (Trait.traitId == ids[i])
+                    return true;
+            }
+
+            return false;
+        }
+
+        void Bump(NpcActionId action)
+        {
+            if (action == NpcActionId.Panic)
+            {
+                Stress = Mathf.Clamp(Stress + 15, 0, 100);
+                Sadness = Mathf.Clamp(Sadness + 8, 0, 100);
+                SelfControl = Mathf.Clamp(SelfControl - 6, 0, 100);
+            }
+            else if (action == NpcActionId.SeekFight)
+            {
+                Anger = Mathf.Clamp(Anger + 18, 0, 100);
+                SelfControl = Mathf.Clamp(SelfControl - 8, 0, 100);
+                Memory = "унижен";
+            }
         }
 
         bool Matches(ReactionRule rule, WorldEvent worldEvent)
@@ -270,6 +393,8 @@ namespace RealityDirector.NPC
                 case NpcActionId.Panic:
                     bool fresh = _action != NpcActionId.Panic;
                     _action = NpcActionId.Panic;
+                    if (IsPanicker)
+                        _lap = NextLap();
                     Say(string.IsNullOrEmpty(emote) ? "!" : emote, 99f, ThoughtLine(emote));
                     if (fresh && IsCrying)
                     {
@@ -621,6 +746,12 @@ namespace RealityDirector.NPC
             switch (_action)
             {
                 case NpcActionId.Panic:
+                    if (IsPanicker)
+                    {
+                        SprintLap();
+                        break;
+                    }
+
                     if (!_comfortTried)
                     {
                         _comfortTried = true;
@@ -646,6 +777,65 @@ namespace RealityDirector.NPC
             var color = _ring.color;
             color.a = 0.45f + Mathf.Sin(Time.time * 6f) * 0.35f;
             _ring.color = color;
+        }
+
+        static readonly Vector2[] LapHome =
+        {
+            new Vector2(-6.55f, 1.7f),
+            new Vector2(-3.4f, 2.55f),
+            new Vector2(-0.9f, 1.65f),
+            new Vector2(2.15f, 1.85f),
+            new Vector2(0.15f, 4.45f),
+            new Vector2(-5.1f, 3.55f)
+        };
+
+        static readonly Vector2[] LapOpen =
+        {
+            new Vector2(-6.55f, 1.7f),
+            new Vector2(-3.4f, 2.55f),
+            new Vector2(-0.9f, 1.65f),
+            new Vector2(2.2f, 1.8f),
+            new Vector2(4.7f, 1.7f),
+            new Vector2(6.25f, 1.75f),
+            new Vector2(4.4f, 3.3f),
+            new Vector2(0.15f, 4.45f),
+            new Vector2(-5.1f, 3.55f)
+        };
+
+        Vector2[] Lap()
+        {
+            return BlockEast ? LapHome : LapOpen;
+        }
+
+        int NextLap()
+        {
+            Vector2[] lap = Lap();
+            int best = 0;
+            float bestD = float.MaxValue;
+            Vector2 p = transform.position;
+            for (int i = 0; i < lap.Length; i++)
+            {
+                float d = (lap[i] - p).sqrMagnitude;
+                if (d < bestD)
+                {
+                    bestD = d;
+                    best = i;
+                }
+            }
+
+            return (best + 1) % lap.Length;
+        }
+
+        void SprintLap()
+        {
+            Vector2[] lap = Lap();
+            if (_lap < 0 || _lap >= lap.Length)
+                _lap = 0;
+            MoveTowards(lap[_lap], 3.85f);
+            if (_visual != null)
+                _visual.localPosition = new Vector3(0f, Mathf.Abs(Mathf.Sin(Time.time * 16f)) * 0.07f, 0f);
+            if (Vector2.Distance(transform.position, lap[_lap]) < 0.4f)
+                _lap = (_lap + 1) % lap.Length;
         }
 
         void Chase()
@@ -686,13 +876,16 @@ namespace RealityDirector.NPC
             other.ForceFight(this);
             other.MarkFightAnnounced();
 
+            Hostility = Mathf.Clamp(Hostility + 20, 0, 100);
+            other.Hostility = Mathf.Clamp(other.Hostility + 20, 0, 100);
             EventBus.Publish(new WorldEvent
             {
                 eventId = "fight",
                 tags = new List<string> { MomentTags.Fight, MomentTags.Slap, MomentTags.Conflict },
                 sourceActorId = Id,
                 targetActorId = other.Id,
-                time = Time.time
+                time = Time.time,
+                depth = Chain + 1
             });
             FightStarted?.Invoke(this, other);
         }

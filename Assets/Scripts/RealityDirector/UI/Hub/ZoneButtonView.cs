@@ -35,6 +35,12 @@ namespace RealityDirector.UI.Hub
             }
         }
 
+        public void SetEnabled(bool on)
+        {
+            if (button != null)
+                button.interactable = on;
+        }
+
         public void Show(int lvl, bool isSelected)
         {
             if (level != null)

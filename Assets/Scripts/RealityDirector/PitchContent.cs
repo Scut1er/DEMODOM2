@@ -11,8 +11,10 @@ namespace RealityDirector
     {
         public TraitDefinition Aggressive;
         public TraitDefinition Sentimental;
+        public TraitDefinition Panicker;
         public ReactionRuleSet AggressiveRules;
         public ReactionRuleSet SentimentalRules;
+        public ReactionRuleSet PanickerRules;
         public EventDefinition Provoke;
         public EventDefinition FridgeFire;
         public EventDefinition NoHotWater;
@@ -24,7 +26,12 @@ namespace RealityDirector
         public EventDefinition Confession;
         public EventDefinition SponsorCola;
         public EventDefinition SponsorEnergy;
+        public EventDefinition SponsorShip;
+        public EventDefinition Guest;
+        public EventDefinition Vote;
         public EventDefinition[] All;
+        readonly List<TraitDefinition> _traits = new List<TraitDefinition>();
+        readonly List<ReactionRuleSet> _sets = new List<ReactionRuleSet>();
 
         // Jam EventCatalog, не спавнить в питче:
         // fridge_fire, no_hot_water, provoke, cut_wifi, spoiled_food, broken_ac,
@@ -37,6 +44,7 @@ namespace RealityDirector
             var content = new PitchContent();
             content.Aggressive = Trait("trait_aggressive", TraitId.Aggressive, "агрессивный");
             content.Sentimental = Trait("trait_sentimental", TraitId.Sentimental, "сентиментальный");
+            content.Panicker = Trait("trait_panicker", TraitId.Panicker, "паникер");
 
             content.AggressiveRules = Rules(TraitId.Aggressive,
                 Rule(MomentTags.Fire, TraitId.Aggressive, false, true, NpcActionId.SeekFight, "!!!", 20),
@@ -49,6 +57,11 @@ namespace RealityDirector
                 Rule(MomentTags.Crying, TraitId.Sentimental, true, false, NpcActionId.Panic, "слёзы", 20),
                 Rule(MomentTags.Misery, TraitId.Sentimental, false, false, NpcActionId.Emote, "брр, холодно", 5),
                 Rule(MomentTags.Warmth, TraitId.Sentimental, false, false, NpcActionId.Emote, "уют", 5));
+
+            content.PanickerRules = Rules(TraitId.Panicker,
+                Rule(MomentTags.Fire, TraitId.Panicker, false, false, NpcActionId.Panic, "ааа", 20),
+                Rule(MomentTags.Misery, TraitId.Panicker, false, false, NpcActionId.Emote, "брр, холодно", 5),
+                Rule(MomentTags.Warmth, TraitId.Panicker, false, false, NpcActionId.Emote, "уют", 5));
 
             content.Provoke = Event("provoke", "Разозлить", "клик по Злому", TargetType.Actor, null,
                 new Color(0.62f, 0.16f, 0.16f, 1f), 90f, false, IllustratedArt.IconAnger, MomentTags.Conflict);
@@ -77,7 +90,7 @@ namespace RealityDirector
             content.Confession = Event("confession_cam", "Исповедь", "клик по Добряку", TargetType.Actor, null,
                 new Color(0.2f, 0.38f, 0.55f, 1f), 0f, false, IllustratedArt.IconTear, MomentTags.Crying);
             content.Confession.limitTrait = true;
-            content.Confession.targetTrait = TraitId.Sentimental;
+            content.Confession.targetTrait = TraitId.Panicker;
 
             content.SpoiledFood.price = 120;
             content.CutWifi.price = 110;
@@ -92,6 +105,14 @@ namespace RealityDirector
                 IllustratedArt.IconWater, 45, 110, 2);
             content.SponsorEnergy = Sponsor("sponsor_energy", "Энергетик", new Color(0.85f, 0.55f, 0.1f, 1f),
                 IllustratedArt.IconAnger, 25, 70, 1);
+            content.SponsorShip = Sponsor("sponsor_ship", "Верфь Инферно", new Color(0.35f, 0.12f, 0.18f, 1f),
+                IllustratedArt.IconAnger, 0, 200, 3);
+            content.Guest = Event("invite_guest", "Гость", "сразу на весь дом", TargetType.Global, null,
+                new Color(0.48f, 0.22f, 0.28f, 1f), 0f, false, IllustratedArt.IconAnger, MomentTags.Conflict, MomentTags.Chaos);
+            content.Vote = Event("night_vote", "Голосование", "сразу на весь дом", TargetType.Global, null,
+                new Color(0.32f, 0.18f, 0.42f, 1f), 0f, false, IllustratedArt.IconTear, MomentTags.Conflict);
+            content.Guest.price = 150;
+            content.Vote.price = 180;
 
             Stamp(content.Provoke, ShowMood.Trash, ShowMood.Drama);
             Stamp(content.FridgeFire, ShowMood.Trash);
@@ -102,13 +123,16 @@ namespace RealityDirector
             Stamp(content.CutWifi, ShowMood.Trash);
             Stamp(content.MeditationBell, ShowMood.Family);
             Stamp(content.Confession, ShowMood.Drama);
+            Stamp(content.Guest, ShowMood.Trash, ShowMood.Drama);
+            Stamp(content.Vote, ShowMood.Drama);
 
             // Ассеты из Resources/Content/Cards переопределяют встроенные карты и добавляют новые (мета, CardLibrary).
             content.All = Meta.CardLibrary.Merge(new[]
             {
                 content.Provoke, content.FridgeFire, content.NoHotWater, content.OpenBathroom, content.OpenBedroom,
                 content.SpoiledFood, content.CutWifi, content.MeditationBell, content.Confession,
-                content.SponsorCola, content.SponsorEnergy
+                content.SponsorCola, content.SponsorEnergy, content.SponsorShip,
+                content.Guest, content.Vote
             });
             // Ассет карты затирает поля, которых в нём ещё нет. Цены нала и спонсоров возвращаем, если пусто.
             KeepRun(content.All, "spoiled_food", 35);
@@ -116,6 +140,18 @@ namespace RealityDirector
             KeepRun(content.All, "meditation_bell", 40);
             KeepSponsor(content.All, "sponsor_cola", 45, 110, 2);
             KeepSponsor(content.All, "sponsor_energy", 25, 70, 1);
+            KeepSponsor(content.All, "sponsor_ship", 0, 200, 3);
+            Cat(content.All, "provoke", "Provocation");
+            Cat(content.All, "cut_wifi", "Provocation");
+            Cat(content.All, "fridge_fire", "Environment");
+            Cat(content.All, "spoiled_food", "Environment");
+            Cat(content.All, "no_hot_water", "Environment");
+            Cat(content.All, "open_bathroom", "Environment");
+            Cat(content.All, "open_bedroom", "Environment");
+            Cat(content.All, "meditation_bell", "Social");
+            Cat(content.All, "invite_guest", "Social");
+            Cat(content.All, "confession_cam", "Confession");
+            Cat(content.All, "night_vote", "Reveal");
             return content;
         }
 
@@ -127,6 +163,79 @@ namespace RealityDirector
             {
                 if (All[i] != null && All[i].id == id)
                     return All[i];
+            }
+
+            return null;
+        }
+
+        public TraitDefinition TraitOf(TraitId id)
+        {
+            var known = Known(id);
+            if (known != null)
+                return known;
+            string name = id == TraitId.Jealous ? "ревнивый"
+                : id == TraitId.Cowardly ? "трус"
+                : id == TraitId.Vain ? "тщеславный"
+                : id == TraitId.Opportunist ? "оппортунист"
+                : id == TraitId.Honest ? "честный"
+                : id == TraitId.Shy ? "застенчивый"
+                : id == TraitId.Chaotic ? "хаотичный"
+                : id == TraitId.Timid ? "робкий"
+                : id.ToString();
+            var trait = Trait("trait_" + id, id, name);
+            _traits.Add(trait);
+            return trait;
+        }
+
+        public ReactionRuleSet RulesFor(TraitId id)
+        {
+            if (id == TraitId.Aggressive)
+                return AggressiveRules;
+            if (id == TraitId.Sentimental)
+                return SentimentalRules;
+            if (id == TraitId.Panicker)
+                return PanickerRules;
+            for (int i = 0; i < _sets.Count; i++)
+            {
+                if (_sets[i].trait == id)
+                    return _sets[i];
+            }
+
+            bool fight = id == TraitId.Jealous || id == TraitId.Chaotic || id == TraitId.Vain;
+            bool panic = id == TraitId.Cowardly || id == TraitId.Shy || id == TraitId.Timid;
+            var source = fight ? AggressiveRules : panic ? PanickerRules : SentimentalRules;
+            var set = Rules(id);
+            for (int i = 0; i < source.rules.Count; i++)
+            {
+                var rule = source.rules[i];
+                set.rules.Add(new ReactionRule
+                {
+                    eventTag = rule.eventTag,
+                    requiredTrait = id,
+                    requireTargetSelf = rule.requireTargetSelf,
+                    requireRage = rule.requireRage,
+                    action = rule.action,
+                    emote = rule.emote,
+                    priority = rule.priority
+                });
+            }
+
+            _sets.Add(set);
+            return set;
+        }
+
+        TraitDefinition Known(TraitId id)
+        {
+            if (id == TraitId.Aggressive)
+                return Aggressive;
+            if (id == TraitId.Sentimental)
+                return Sentimental;
+            if (id == TraitId.Panicker)
+                return Panicker;
+            for (int i = 0; i < _traits.Count; i++)
+            {
+                if (_traits[i].traitId == id)
+                    return _traits[i];
             }
 
             return null;
@@ -150,8 +259,14 @@ namespace RealityDirector
         {
             Object.Destroy(Aggressive);
             Object.Destroy(Sentimental);
+            Object.Destroy(Panicker);
             Object.Destroy(AggressiveRules);
             Object.Destroy(SentimentalRules);
+            Object.Destroy(PanickerRules);
+            for (int i = 0; i < _traits.Count; i++)
+                Object.Destroy(_traits[i]);
+            for (int i = 0; i < _sets.Count; i++)
+                Object.Destroy(_sets[i]);
             if (All == null)
                 return;
             for (int i = 0; i < All.Length; i++)
@@ -204,12 +319,25 @@ namespace RealityDirector
         static void KeepSponsor(EventDefinition[] all, string id, int price, int pay, int hit)
         {
             var def = Find(all, id);
-            if (def == null || def.sponsor)
+            if (def == null)
                 return;
-            def.runPrice = price;
-            def.sponsor = true;
-            def.sponsorPay = pay;
-            def.sponsorScoreHit = hit;
+            if (!def.sponsor)
+            {
+                def.runPrice = price;
+                def.sponsor = true;
+            }
+
+            if (def.sponsorPay <= 0)
+                def.sponsorPay = pay;
+            if (def.sponsorScoreHit <= 0)
+                def.sponsorScoreHit = hit;
+        }
+
+        static void Cat(EventDefinition[] all, string id, string category)
+        {
+            var def = Find(all, id);
+            if (def != null && string.IsNullOrEmpty(def.category))
+                def.category = category;
         }
 
         static EventDefinition Find(EventDefinition[] all, string id)
@@ -227,7 +355,7 @@ namespace RealityDirector
 
         static EventDefinition Sponsor(string id, string title, Color color, Sprite art, int runPrice, int pay, int hit)
         {
-            var def = Event(id, title, "в эфир: чек выше, отзывы хуже", TargetType.Global, null, color, 0f, false, art);
+            var def = Event(id, title, "сыграй и сними кадр, в эфир — только через монтаж", TargetType.Global, null, color, 0f, false, art);
             def.runPrice = runPrice;
             def.sponsor = true;
             def.sponsorPay = pay;

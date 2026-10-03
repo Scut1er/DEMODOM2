@@ -8,6 +8,7 @@ namespace RealityDirector.Meta
     public class RoomCatalog
     {
         readonly List<RoomDefinition> _rooms = new List<RoomDefinition>();
+        readonly List<RoomDefinition> _runtime = new List<RoomDefinition>();
         readonly Dictionary<RoomType, RoomDefinition> _placeholders = new Dictionary<RoomType, RoomDefinition>();
 
         public EpisodeMapConfig Config { get; }
@@ -29,6 +30,7 @@ namespace RealityDirector.Meta
 
             Add(config.opening);
             Add(config.montage);
+            JamContent.Fill(_rooms, _runtime);
         }
 
         void Add(RoomDefinition room)
@@ -98,6 +100,17 @@ namespace RealityDirector.Meta
 
         public void DestroyPlaceholders()
         {
+            for (int i = 0; i < _runtime.Count; i++)
+            {
+                if (_runtime[i] == null)
+                    continue;
+                if (Application.isPlaying)
+                    Object.Destroy(_runtime[i]);
+                else
+                    Object.DestroyImmediate(_runtime[i]);
+            }
+
+            _runtime.Clear();
             foreach (var room in _placeholders.Values)
             {
                 if (Application.isPlaying)

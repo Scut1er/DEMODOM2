@@ -11,5 +11,6 @@ namespace RealityDirector.Core
         public const string Crying = "Crying";
         public const string Warmth = "Warmth";
         public const string Hug = "Hug";
+        public const string Sponsor = "Sponsor";
     }
 }
