@@ -68,6 +68,8 @@ namespace RealityDirector
         SeasonTone _tone => GameSession.Tone;
         SeasonState _state => GameSession.State;
         EventDefinition[] _hand = new EventDefinition[0];
+        // Когда в этой съёмке сыграна спонсорская карта (Time.time) — кадр до розыгрыша рекламу не несёт.
+        readonly Dictionary<string, float> _sponsorPlayedAt = new Dictionary<string, float>();
 
         void Awake()
         {
@@ -832,12 +834,24 @@ namespace RealityDirector
             }
         }
 
-        static void StampSponsor(EpisodeState episode, FootageClip clip)
+        void StampSponsor(EpisodeState episode, FootageClip clip)
         {
             if (episode.pendingSponsors == null || episode.pendingSponsors.Count == 0)
                 return;
-            string cardId = episode.pendingSponsors[0];
-            episode.pendingSponsors.RemoveAt(0);
+            // Рекламу несёт только кадр, снятый после розыгрыша карты. Спонсор из прошлой съёмки ждёт любой кадр.
+            int pick = -1;
+            for (int i = 0; i < episode.pendingSponsors.Count; i++)
+            {
+                if (_sponsorPlayedAt.TryGetValue(episode.pendingSponsors[i], out float playedAt) && clip.time < playedAt)
+                    continue;
+                pick = i;
+                break;
+            }
+
+            if (pick < 0)
+                return;
+            string cardId = episode.pendingSponsors[pick];
+            episode.pendingSponsors.RemoveAt(pick);
             if (!clip.tags.Contains(MomentTags.Sponsor))
                 clip.tags.Add(MomentTags.Sponsor);
             clip.sponsorCardId = cardId;
@@ -1608,6 +1622,7 @@ namespace RealityDirector
 
                 deal.cardWasPlayed = true;
                 episode.pendingSponsors.Add(def.id);
+                _sponsorPlayedAt[def.id] = Time.time;
             }
             _handUntil = Time.unscaledTime + 3.4f;
             _armed = null;
@@ -1663,7 +1678,7 @@ namespace RealityDirector
                         _frozen = false;
                         Time.timeScale = 1f;
                         _lesson = Lesson.TurnIn;
-                        BossCoach.Ensure().Order("СДАНО закрывает комнату. Клипы лягут в библиотеку, ты вернёшься на карту. Это ещё не эфир. ХАБ рядом сдаёт снятое и выкидывает с площадки, комнату при этом не закрывает.", _ui.DoneRect);
+                        BossCoach.Ensure().Order("СДАНО закрывает комнату. Клипы лягут в библиотеку, ты вернёшься на карту. Это ещё не эфир. ХАБ рядом тоже сдаёт снятое и закрывает комнату, только выкидывает в хаб, а не на карту.", _ui.DoneRect);
                     },
                     _ui.SlotRects())));
             }

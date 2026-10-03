@@ -450,6 +450,9 @@ namespace RealityDirector.UI
             go.transform.SetParent(_page.transform, false);
             var image = go.GetComponent<Image>();
             image.color = new Color(0.02f, 0.01f, 0.03f, 0.78f);
+            // Приказ ждёт действия, иногда в мире («зажми левую и веди рамку»): тень только затемняет,
+            // клики не ловит. Лишнее и так закрыто замками урока. В паузе с «Дальше» тень держит клики.
+            image.raycastTarget = !_wait;
             if (name == "full")
                 Stretch(image.rectTransform);
             return image;

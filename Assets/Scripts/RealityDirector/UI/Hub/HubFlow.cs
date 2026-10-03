@@ -312,7 +312,7 @@ namespace RealityDirector.UI.Hub
             BossCoach.Line(teach, BossMood.Aside, "Сверху — кр, рейтинг и тон сезона. кр тратишь здесь, на людей и карты. Hell Token — отдельные деньги, их жгут карты уже на площадке.", hub.StatsFocus());
             BossCoach.Line(teach, BossMood.Think, "Кастинг. Апгрейд даёт места в кадре и процент к чеку. С третьего уровня на карточке откроется скрытая черта. Раньше она закрыта.", hub.ZoneFocus(CrewTrack.Cast));
             BossCoach.Line(teach, BossMood.Annoyed, "Съёмочная. На сцене всегда 5 слотов футажа. Два апгрейда, каждый добавляет ещё один слот на сцену. В монтаже берёшь 3 кадра из всего, что снял за выпуск. Со второго уровня здесь ещё и общий тег соседних кадров.", hub.ZoneFocus(CrewTrack.Operators));
-            BossCoach.Line(teach, BossMood.Smug, "Сценарная. Больше карт берут в серию и открываются новые типы. На четвёртом уровне — второй рекламный контракт за выпуск.", hub.ZoneFocus(CrewTrack.Writers));
+            BossCoach.Line(teach, BossMood.Smug, "Сценарная. Открывает новые типы карт в магазине. Рука на площадке от неё не растёт. На четвёртом уровне — второй рекламный контракт за выпуск.", hub.ZoneFocus(CrewTrack.Writers));
             BossCoach.Line(teach, BossMood.Shock, "Магазин. Платишь кр один раз. Карта остаётся в колоде до конца сезона. На площадке её сдадут в руку вместе с остальными.", hub.ShopFocus());
             if (teach.Count > 0)
                 BossCoach.Guide(0, teach.ToArray(), () => StartCoroutine(ShowDeckLesson()));
@@ -602,7 +602,7 @@ namespace RealityDirector.UI.Hub
                 "Событие. Это не клип: в библиотеку футажа ничего не падает. Читаешь, что случилось между съёмками.",
                 () => BossCoach.Ensure().Freeze(
                     BossMood.Stern,
-                    "Варианты справа. Если на кнопке процент — это шанс, может не выйти. «Уйти» закрывает комнату и ничего не меняет. Назад выбор не переигрывается.",
+                    "Варианты справа. Если на кнопке процент — это шанс, может не выйти. «Уйти» появится, только если закрыты все варианты. Назад выбор не переигрывается.",
                     () => BossCoach.Ensure().Order(BossMood.Mad, "Выбери одну.", _eventView.Focus),
                     _eventView.Focus),
                 _eventView.BodyFocus);

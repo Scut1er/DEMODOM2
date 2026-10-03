@@ -159,6 +159,13 @@ namespace RealityDirector.Meta
                     return false;
                 }
 
+                // Колода сезона уже сдаёт эту карту: разовая копия ничего не добавит, а нал сгорит.
+                if (_state.Owns(offer.cardId))
+                {
+                    Reject = "Уже в колоде сезона.";
+                    return false;
+                }
+
                 if (Find(offer.cardId) == null)
                 {
                     Reject = "Карты нет в колоде контента.";

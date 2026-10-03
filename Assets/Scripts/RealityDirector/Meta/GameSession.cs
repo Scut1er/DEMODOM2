@@ -22,7 +22,7 @@ namespace RealityDirector.Meta
         public static string RoomNodeId;
         // Квартира закрыла сцену — хаб открывает карту, а не меню продакшена.
         public static bool ReturnToMap;
-        // Игрок сам вышел со съёмки. Комнату не закрываем, хаб не прыгает обратно на карту.
+        // Игрок сам вышел со съёмки («Хаб»). Комната засчитана, как по «Снято!», но хаб не прыгает обратно на карту.
         public static bool ExitToHub;
 
         public static bool Active => State != null;
