@@ -231,7 +231,19 @@ namespace RealityDirector.Meta
         public string ReputationLine()
         {
             int r = _state.sponsorReputation;
-            string tier = r <= 20 ? "токсичный" : r <= 40 ? "сомнительный" : r <= 60 ? "надёжный" : r <= 80 ? "востребованный" : "любимчик";
+            return "Репутация спонсоров " + r + " · " + ReputationTier(r)
+                   + "  ·  контракты " + ActiveContracts() + "/" + Progression.ContractSlots(_state.writerLevel)
+                   + (Reject != null ? "\n" + Reject : "");
+        }
+
+        public static string ReputationTier(int r)
+        {
+            return r <= 20 ? "токсичный" : r <= 40 ? "сомнительный" : r <= 60 ? "надёжный" : r <= 80 ? "востребованный" : "любимчик";
+        }
+
+        // Контракты выпуска, которые ещё ждут кадра в эфире.
+        public int ActiveContracts()
+        {
             var ep = _state.episode;
             int active = 0;
             if (ep != null)
@@ -244,9 +256,7 @@ namespace RealityDirector.Meta
                 }
             }
 
-            return "Репутация спонсоров " + r + " · " + tier
-                   + "  ·  контракты " + active + "/" + Progression.ContractSlots(_state.writerLevel)
-                   + (Reject != null ? "\n" + Reject : "");
+            return active;
         }
 
         // Начало съёмки (GDD 0.3): Deck → shuffle → Library → draw Hand. Разовые карты выпуска (магазин, спонсор)
