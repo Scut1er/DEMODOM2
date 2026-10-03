@@ -24,22 +24,36 @@ namespace RealityDirector.Meta
         public bool available;
         public bool done;
         public string reason;
+        // Карта предложения (арт на карточке) и значок бонуса, если карты нет (имя иконки пака EventScreen).
+        public EventDefinition cardDef;
+        public string icon;
+    }
+
+    // Шапка комнаты маркетинга: УЕ выпуска, репутация у спонсоров, занятые слоты контрактов.
+    public class MarketingStatus
+    {
+        public int cash;
+        public int reputation;
+        public string tier;
+        public int contracts;
+        public int contractSlots;
     }
 
     public static class MarketingDesk
     {
-        // Флаги покупок, которые игра исполняет (иначе предложение не продаётся — нельзя продать пустышку).
-        static readonly Dictionary<string, (string gets, string lifetime)> Flags = new Dictionary<string, (string, string)>
+        // Флаги покупок, которые игра исполняет (иначе предложение не продаётся — нельзя продать пустышку),
+        // и значок бонуса на карточке (иконки пака EventScreen).
+        static readonly Dictionary<string, (string gets, string lifetime, string icon)> Flags = new Dictionary<string, (string, string, string)>
         {
-            { "HellTokenPack", ("+$2 HellToken на следующую съёмку", "одна съёмка") },
-            { "ExtraCaptureSlot", ("+1 слот футажа на следующей съёмке", "одна съёмка") },
-            { "EnvDiscount", ("следующая карта окружения дешевле на $0.75", "до первой такой карты") },
-            { "EventReroll", ("после провала в событии — второй бросок", "до первого провала") },
-            { "SponsorShield", ("проваленный контракт не снизит репутацию", "до эфира") },
-            { "PeekLibrary", ("на следующей съёмке три сильнейшие карты колоды придут в руку первыми", "одна съёмка") },
-            { "TechFloor", ("первый кадр следующей съёмки — повышенного качества", "одна съёмка") },
-            { "MontageHint", ("в монтаже — совет: лучшая пара кадров", "до эфира") },
-            { "ToneForecast", ("перед эфиром — точный прогноз оценки", "до эфира") }
+            { "HellTokenPack", ("+$2 HellToken на следующую съёмку", "одна съёмка", "icon_budget_tint") },
+            { "ExtraCaptureSlot", ("+1 слот футажа на следующей съёмке", "одна съёмка", "icon_footage_tint") },
+            { "EnvDiscount", ("следующая карта окружения дешевле на $0.75", "до первой такой карты", "icon_budget_tint") },
+            { "EventReroll", ("после провала в событии — второй бросок", "до первого провала", "icon_diary") },
+            { "SponsorShield", ("проваленный контракт не снизит репутацию", "до эфира", "icon_contract_tint") },
+            { "PeekLibrary", ("на следующей съёмке три сильнейшие карты колоды придут в руку первыми", "одна съёмка", "icon_people") },
+            { "TechFloor", ("первый кадр следующей съёмки — повышенного качества", "одна съёмка", "icon_quality_tint") },
+            { "MontageHint", ("в монтаже — совет: лучшая пара кадров", "до эфира", "icon_footage_tint") },
+            { "ToneForecast", ("перед эфиром — точный прогноз оценки", "до эфира", "icon_rating_tint") }
         };
 
         public static bool Supports(string flag)
@@ -86,6 +100,8 @@ namespace RealityDirector.Meta
             var v = new OfferView { offer = o, contract = o.kind == OfferKind.Contract, title = o.title };
             var card = string.IsNullOrEmpty(o.cardId) ? null : find?.Invoke(o.cardId);
             v.card = card != null ? card.displayName : o.cardId;
+            v.cardDef = card;
+            v.icon = v.contract ? "icon_contract_tint" : "icon_drama_tint";
             int reputation = season != null ? season.sponsorReputation : 0;
 
             if (v.contract)
@@ -121,6 +137,7 @@ namespace RealityDirector.Meta
                 {
                     v.gets = f.gets;
                     v.lifetime = f.lifetime;
+                    v.icon = f.icon;
                 }
                 else
                 {

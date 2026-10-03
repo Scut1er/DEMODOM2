@@ -609,7 +609,14 @@ namespace RealityDirector.UI.Hub
             string title = _marketing != null && !string.IsNullOrEmpty(_marketing.title) ? _marketing.title.ToUpperInvariant() : "МАРКЕТИНГ";
             if (_marketing != null && !string.IsNullOrEmpty(_marketing.subtitle))
                 title += "  ·  " + _marketing.subtitle;
-            string status = "На выпуск: <b>" + (ep != null ? ep.cash : 0) + " УЕ</b>   ·   " + _meta.ReputationLine().Replace("\n", "   ·   ");
+            var status = new MarketingStatus
+            {
+                cash = ep != null ? ep.cash : 0,
+                reputation = state.sponsorReputation,
+                tier = MetaService.ReputationTier(state.sponsorReputation),
+                contracts = _meta.ActiveContracts(),
+                contractSlots = slots
+            };
             _market.Show(title, status, views, offer =>
             {
                 int before = ep != null ? ep.cash : 0;
