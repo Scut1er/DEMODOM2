@@ -14,9 +14,21 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::RealityDirector.Meta.SeasonConfig
   episodes: 4
   maps:
-  - {fileID: 11400000, guid: fd53ef3d380d4814ebe840f3c43e3323, type: 2}
+  - {fileID: 11400000, guid: ed54ef9ee4464b74fbc9f74e6d80f490, type: 2}
   - {fileID: 11400000, guid: 99d4cf5020201f04d98dcef38e9edbd1, type: 2}
   - {fileID: 11400000, guid: 7fd56dae914925041bc1fad142898b8b, type: 2}
   startingBudget: 0
   startingCash: 90
+  hellTokenBudget: 10
+  productionSlots: 3
+  handSize: 5
+  randomStarterCardCount: 2
+  randomStarterExclude:
+  - Sponsor
+  - DeckManagement
+  randomStarterIncludeTesting: 0
+  castCandidates: 5
+  castMin: 2
   castMax: 5
+  footageLimit: 5
+  finalCutSize: 3

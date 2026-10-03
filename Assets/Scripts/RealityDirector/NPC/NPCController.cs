@@ -341,7 +341,7 @@ namespace RealityDirector.NPC
         }
 
         // Цвет самой громкой эмоции: злость — красный, стресс — оранжевый, грусть — синий, симпатия — розовый.
-        string MoodHex()
+        public string MoodHex()
         {
             int top = Mathf.Max(Anger, Mathf.Max(Stress, Mathf.Max(Sadness, Attraction)));
             if (top < MildMood)

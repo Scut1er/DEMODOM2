@@ -264,12 +264,104 @@ namespace RealityDirector.UI.Hub
             if (deckButtonLabel != null)
                 deckButtonLabel.text = "Колода  ·  " + prep.available;
             if (shopButton != null)
-                shopButton.gameObject.SetActive(true);
+                shopButton.gameObject.SetActive(!_first);
             if (startCaption != null)
                 startCaption.text = "Выпуск " + prep.episodeNumber + "  ·  дальше карта выпуска";
 
             if (deck != null && deck.IsOpen)
                 deck.Show(prep);
+            ApplyFirst();
+        }
+
+        // ---------- Первый выпуск: студия закрыта ----------
+
+        // До первого эфира хаб показывает только старт съёмок и настройки, а вместо станций — как пройдёт выпуск.
+        // Механика апгрейдов не трогается: станции, колода и магазин просто откроются после эфира.
+        bool _first;
+        GameObject _firstNote;
+
+        public bool FirstEpisode => _first;
+
+        public void SetFirstEpisode(bool first)
+        {
+            _first = first;
+            if (first)
+                _selected = null;
+            ApplyFirst();
+        }
+
+        void ApplyFirst()
+        {
+            for (int i = 0; i < zones.Length; i++)
+            {
+                if (zones[i] != null)
+                    zones[i].gameObject.SetActive(!_first);
+            }
+
+            var zonePanel = transform.Find("ZonePanel");
+            if (zonePanel != null && _first)
+                zonePanel.gameObject.SetActive(false);
+            var rosterPanel = transform.Find("RosterPanel");
+            if (rosterPanel != null)
+                rosterPanel.gameObject.SetActive(!_first);
+            if (detail != null && _first)
+                detail.gameObject.SetActive(false);
+            if (deckButton != null)
+                deckButton.gameObject.SetActive(!_first);
+            if (shopButton != null)
+                shopButton.gameObject.SetActive(!_first);
+            if (menuButton != null)
+                menuButton.gameObject.SetActive(!_first);
+            if (_first && _firstNote == null)
+                BuildFirstNote();
+            if (_firstNote != null)
+                _firstNote.SetActive(_first);
+        }
+
+        void BuildFirstNote()
+        {
+            var card = UiKit.Img("FirstEpisode", transform, null, Color.white);
+            UiKit.DressSolid(card, UiKit.Frame.Dialog);
+            var rt = card.rectTransform;
+            UiKit.Place(rt, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(48f, -330f), new Vector2(1136f, 470f));
+            _firstNote = card.gameObject;
+            _firstNote.transform.SetSiblingIndex(Mathf.Max(0, (start != null ? start.transform.GetSiblingIndex() : 1) - 1));
+
+            var title = UiKit.Txt("Title", rt, "ПЕРВЫЙ ВЫПУСК", 34, UiKit.Gold, TextAnchor.UpperLeft, UiKit.Body);
+            title.fontStyle = FontStyle.Bold;
+            UiKit.Place(title.rectTransform, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(40f, -30f), new Vector2(900f, 46f));
+            var lead = UiKit.Txt("Lead", rt, "Студия пока закрыта — сначала сними выпуск. Вот как он пройдёт:", 20, UiKit.Muted, TextAnchor.UpperLeft, UiKit.Body);
+            UiKit.Place(lead.rectTransform, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(40f, -80f), new Vector2(1050f, 30f));
+
+            string[] heads = { "КАСТ", "КАРТА ВЫПУСКА", "МОНТАЖ И ЭФИР" };
+            string[] bodies =
+            {
+                "Из 5 кандидатов выбери 2. Видна их черта и как они реагируют. Скрытая черта всплывёт на съёмке.",
+                "Иди по комнатам: съёмки, событие, маркетинг. На съёмке карты меняют людей — снимай, что из этого вышло.",
+                "Собери 3 лучших кадра в историю. Зрители HellTube оценят — и платят за это."
+            };
+            string[] icons = { "icon_heart", "icon_camera", "icon_clapperboard" };
+            for (int i = 0; i < 3; i++)
+            {
+                var step = UiKit.Img("Step" + i, rt, null, Color.white);
+                UiKit.DressSolid(step, UiKit.Frame.Dark);
+                UiKit.Place(step.rectTransform, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(40f + i * 356f, -130f), new Vector2(336f, 228f));
+                var num = UiKit.Txt("N", step.rectTransform, (i + 1).ToString(), 44, UiKit.Ember, TextAnchor.UpperLeft, UiKit.Body);
+                num.fontStyle = FontStyle.Bold;
+                UiKit.Place(num.rectTransform, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(20f, -12f), new Vector2(60f, 56f));
+                var icon = UiKit.Img("Icon", step.rectTransform, UiKit.Icon(icons[i]), Color.white);
+                icon.preserveAspect = true;
+                UiKit.Place(icon.rectTransform, new Vector2(1f, 1f), new Vector2(1f, 1f), new Vector2(-18f, -16f), new Vector2(46f, 46f));
+                var head = UiKit.Txt("Head", step.rectTransform, heads[i], 21, UiKit.Paper, TextAnchor.UpperLeft, UiKit.Body);
+                head.fontStyle = FontStyle.Bold;
+                UiKit.Place(head.rectTransform, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(20f, -74f), new Vector2(300f, 30f));
+                var body = UiKit.Txt("Body", step.rectTransform, bodies[i], 17, UiKit.Muted, TextAnchor.UpperLeft, UiKit.Body);
+                body.horizontalOverflow = HorizontalWrapMode.Wrap;
+                UiKit.Place(body.rectTransform, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(20f, -108f), new Vector2(298f, 112f));
+            }
+
+            var lockLine = UiKit.Txt("Locked", rt, "После первого эфира откроются: кастинг, сценарная, съёмочная, колода и магазин карт.", 18, UiKit.GoldDim, TextAnchor.UpperLeft, UiKit.Body);
+            UiKit.Place(lockLine.rectTransform, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(40f, -386f), new Vector2(1050f, 30f));
         }
 
         public void SetStartCaption(string text)
@@ -335,8 +427,9 @@ namespace RealityDirector.UI.Hub
                 deckButton.interactable = chrome && !talking;
             if (shopButton != null)
                 shopButton.interactable = chrome && !talking;
+            // Настройки доступны всегда, кроме момента, когда говорит босс.
             if (settingsButton != null)
-                settingsButton.interactable = chrome;
+                settingsButton.interactable = !talking;
             if (menuButton != null)
                 menuButton.interactable = chrome;
             if (start != null)

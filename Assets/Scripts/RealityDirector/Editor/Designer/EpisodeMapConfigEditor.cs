@@ -109,6 +109,12 @@ namespace RealityDirector.EditorTools
                 list.Add("Не задан монтаж и в пуле нет комнаты-монтажа — будет заглушка.");
             if (config.guaranteedMarketingFloor >= config.floors - 1)
                 list.Add("guaranteedMarketingFloor за пределами карты (последний ряд — монтаж).");
+            if (config.guaranteedEventFloor >= config.floors - 1)
+                list.Add("guaranteedEventFloor за пределами карты (последний ряд — монтаж).");
+            if (config.guaranteedEventFloor >= 0 && config.guaranteedEventFloor == config.guaranteedMarketingFloor)
+                list.Add("Ряд события и ряд маркетинга совпадают — сработает только маркетинг.");
+            if (config.guaranteedEventFloor == 0 || config.guaranteedMarketingFloor == 0)
+                list.Add("Ряд 0 — всегда стартовая съёмка: гарантия на нём не сработает.");
             if (config.paths > 1 && config.lanes == 1)
                 list.Add("Одна дорожка — развилок не будет, сколько бы ни было путей.");
             return list;

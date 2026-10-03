@@ -101,6 +101,13 @@ namespace RealityDirector.Meta
         public const int DefaultHandSize = 5;
         [Tooltip("Карт в руке на съёмке (из SeasonConfig).")]
         public int handSize = DefaultHandSize;
+        [Tooltip("Production Slots на съёмку (из SeasonConfig).")]
+        public int productionSlots = 3;
+        // Какая съёмка (SituationRoomDefinition) идёт в комнате и для какого узла её постановка уже применена.
+        public string situationId;
+        public string setupNode;
+        // HellToken этой съёмки, если постановка задала свой бюджет (иначе 0 — как hellMax).
+        public float hellRoomMax;
         public string setRoom;
         public bool setOnFire;
         public bool setBathOpen;
@@ -144,6 +151,7 @@ namespace RealityDirector.Meta
             if (hellRoom != room)
             {
                 hellRoom = room;
+                hellRoomMax = 0f;
                 hell = hellMax + pack;
                 if (pack > 0f)
                     flags.Remove("HellTokenPack");

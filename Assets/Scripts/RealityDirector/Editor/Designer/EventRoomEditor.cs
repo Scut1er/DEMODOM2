@@ -51,15 +51,26 @@ namespace RealityDirector.EditorTools
             Buttons(e);
         }
 
+        static string CardName(string id)
+        {
+            foreach (var c in DesignerData.LoadAll<RealityDirector.Events.EventDefinition>())
+            {
+                if (c != null && c.id == id)
+                    return c.displayName;
+            }
+
+            return id;
+        }
+
         // ---------- предпросмотр ----------
 
         void DrawPreview(EventRoomDefinition e)
         {
             var ctx = Sandbox.Context();
             var roles = EventResolver.CastRoles(e, ctx.episode, "preview");
-            var choices = EventResolver.Choices(e, ctx, roles, EventActions.ActorName);
+            var choices = EventResolver.Choices(e, ctx, roles, EventActions.ActorName, CardName);
 
-            var area = GUILayoutUtility.GetRect(10, 250 + Mathf.Max(1, choices.Count) * 34, GUILayout.ExpandWidth(true));
+            var area = GUILayoutUtility.GetRect(10, 250 + Mathf.Max(1, choices.Count) * 48, GUILayout.ExpandWidth(true));
             EditorGUI.DrawRect(area, new Color(0.12f, 0.11f, 0.15f));
             EditorGUI.DrawRect(new Rect(area.x, area.y, area.width, 4), e.color);
 
@@ -84,18 +95,24 @@ namespace RealityDirector.EditorTools
             float y = area.y + 236;
             if (choices.Count == 0)
                 GUI.Label(new Rect(area.x + 12, y, area.width - 24, 30), "Нет вариантов — игрок увидит только «Уйти».", muted);
+            var rich = new GUIStyle(muted) { richText = true };
             foreach (var c in choices)
             {
-                var row = new Rect(area.x + 12, y, area.width - 24, 30);
+                var row = new Rect(area.x + 12, y, area.width - 24, 44);
                 EditorGUI.DrawRect(row, c.available ? new Color(0.2f, 0.18f, 0.24f) : new Color(0.14f, 0.13f, 0.16f));
                 var label = new GUIStyle(EditorStyles.boldLabel);
                 label.normal.textColor = c.available ? new Color(0.96f, 0.93f, 0.88f) : new Color(0.62f, 0.58f, 0.66f);
                 GUI.Label(new Rect(row.x + 8, row.y + 1, row.width * 0.6f, 16), c.label, label);
-                GUI.Label(new Rect(row.x + 8, row.y + 15, row.width * 0.75f, 14), c.available ? c.description : "Закрыто: " + c.reason, muted);
+                // Как в игре: что будет при успехе и при провале — собрано из эффектов.
+                string preview = (c.available ? "" : "Закрыто: " + c.reason + "   ") + "<color=#7FE08A>Если получится:</color> "
+                                 + (string.IsNullOrEmpty(c.preview) ? "без видимых последствий" : c.preview);
+                if (c.chance < 100)
+                    preview += "   <color=#FF7A5C>Если нет:</color> " + (string.IsNullOrEmpty(c.failPreview) ? "ничего" : c.failPreview);
+                GUI.Label(new Rect(row.x + 8, row.y + 16, row.width * 0.8f, 28), preview, rich);
                 var side = new GUIStyle(EditorStyles.miniBoldLabel) { alignment = TextAnchor.MiddleRight };
                 side.normal.textColor = new Color(0.93f, 0.76f, 0.36f);
                 GUI.Label(new Rect(row.xMax - 170, row.y, 160, row.height), (c.costLabel + "  " + c.chanceLabel).Trim(), side);
-                y += 34;
+                y += 48;
             }
 
             _sandboxOpen = EditorGUILayout.Foldout(_sandboxOpen, "Песочница: как будто выпуск " + Sandbox.episode + ", " + Sandbox.money + " кр, " + Sandbox.cash + " нал", true);
@@ -223,6 +240,8 @@ namespace RealityDirector.EditorTools
 
                     Sub(c, "label", "Кнопка", "Текст кнопки (можно {роли}).");
                     Sub(c, "description", "Пояснение", "Мелко под кнопкой.");
+                    Sub(c, "designNote", "Заметка дизайна", "Для команды: что вариант должен делать по таблице. Игрок её не видит — "
+                                                            + "он видит последствия, собранные из эффектов (превью сверху).");
                     EditorGUILayout.Space(2);
                     EditorGUILayout.LabelField("Доступность", EditorStyles.miniBoldLabel);
                     Sub(c, "conditions", "Условия", "Невыполненное условие закрывает вариант с пояснением.");

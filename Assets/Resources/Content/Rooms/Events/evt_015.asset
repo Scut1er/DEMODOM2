@@ -1,0 +1,99 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 02272d7a344fc244480fb4a1622e26e9, type: 3}
+  m_Name: evt_015
+  m_EditorClassIdentifier: Assembly-CSharp::RealityDirector.Meta.EventRoomDefinition
+  id: evt_015
+  title: "\u0421\u043B\u0443\u0445 \u043E \u043F\u043E\u0434\u0441\u0442\u0430\u0432\u043D\u043E\u043C \u0440\u043E\u043C\u0430\u043D\u0435"
+  subtitle: Romance / rumor
+  description: "\u0412 \u043A\u043E\u043C\u0430\u043D\u0434\u0435 \u0443\u0432\u0435\u0440\u0435\u043D\u044B, \u0447\u0442\u043E \u043E\u0434\u043D\u0430 \u0438\u0437 \u043F\u0430\u0440 \xAB\u0440\u043E\u043C\u0430\u043D\u0442\u0438\u0447\u0435\u0441\u043A\u0438 \u0438\u043D\u0442\u0435\u0440\u0435\u0441\u043D\u0430\xBB \u0442\u043E\u043B\u044C\u043A\u043E \u043F\u043E \u043F\u0440\u043E\u0441\u044C\u0431\u0435 \u043F\u0440\u043E\u0434\u044E\u0441\u0435\u0440\u043E\u0432."
+  goal: 
+  icon: 13
+  color: {r: 0.28, g: 0.32, b: 0.48, a: 1}
+  art: {fileID: 0}
+  weight: 8
+  conditions: []
+  uniquePerEpisode: 0
+  onEnter: []
+  body: "\u0412 \u043A\u043E\u043C\u0430\u043D\u0434\u0435 \u0443\u0432\u0435\u0440\u0435\u043D\u044B, \u0447\u0442\u043E \u043E\u0434\u043D\u0430 \u0438\u0437 \u043F\u0430\u0440 \xAB\u0440\u043E\u043C\u0430\u043D\u0442\u0438\u0447\u0435\u0441\u043A\u0438 \u0438\u043D\u0442\u0435\u0440\u0435\u0441\u043D\u0430\xBB \u0442\u043E\u043B\u044C\u043A\u043E \u043F\u043E \u043F\u0440\u043E\u0441\u044C\u0431\u0435 \u043F\u0440\u043E\u0434\u044E\u0441\u0435\u0440\u043E\u0432."
+  eventTags:
+  - Romance
+  - Rumour
+  - Meta
+  roles:
+  - key: "\u0430\u043A\u0442\u0451\u0440"
+    actorId: 
+  - key: "\u0432\u0442\u043E\u0440\u043E\u0439"
+    actorId: 
+  choices:
+  - label: "\u041F\u043E\u0434\u0434\u0435\u0440\u0436\u0430\u0442\u044C \u0441\u043B\u0443\u0445"
+    description: 
+    conditions: []
+    hideIfUnavailable: 0
+    costMoney: 0
+    costCash: 0
+    chance: 100
+    effects:
+    - type: 1
+      key: 
+      value: 2
+      mood: 1
+    - type: 2
+      key: Suspicious
+      value: 0
+      mood: 0
+    - type: 6
+      key: Suspicious
+      value: 0
+      mood: 0
+    resultText: 
+    resultTags: []
+    failEffects: []
+    failText: 
+    failTags: []
+    designNote: "\u0423\u0441\u043F\u0435\u0445: RumourSpread; Trash +2; Suspicious +1"
+  - label: "\u041E\u043F\u0440\u043E\u0432\u0435\u0440\u0433\u043D\u0443\u0442\u044C"
+    description: 
+    conditions: []
+    hideIfUnavailable: 0
+    costMoney: 0
+    costCash: 0
+    chance: 100
+    effects:
+    - type: 1
+      key: 
+      value: 2
+      mood: 2
+    resultText: 
+    resultTags: []
+    failEffects: []
+    failText: 
+    failTags: []
+    designNote: "\u0423\u0441\u043F\u0435\u0445: Family +2; Trust \u043F\u0430\u0440\u044B +1"
+  - label: "\u041F\u0440\u0435\u0434\u043B\u043E\u0436\u0438\u0442\u044C \u0438\u043C \u0434\u043E\u043A\u0430\u0437\u0430\u0442\u044C \u043E\u0431\u0440\u0430\u0442\u043D\u043E\u0435"
+    description: 
+    conditions: []
+    hideIfUnavailable: 0
+    costMoney: 0
+    costCash: 0
+    chance: 65
+    effects: []
+    resultText: 
+    resultTags: []
+    failEffects:
+    - type: 9
+      key: stress
+      value: 1
+      mood: 0
+    failText: 
+    failTags: []
+    designNote: "\u0423\u0441\u043F\u0435\u0445: Romance setup; Attraction +2\n\u041F\u0440\u043E\u0432\u0430\u043B: Awkward; Stress +1"

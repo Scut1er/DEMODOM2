@@ -189,12 +189,13 @@ namespace RealityDirector.Meta
         }
 
         // Зритель видит только финальный кат. context сюда не передаём — вырезанное он не знает.
-        public static FeedbackResult BuildCut(IReadOnlyList<CapturedMoment> cut, SeasonTone tone, int coherence, bool sponsorAired)
+        public static FeedbackResult BuildCut(IReadOnlyList<CapturedMoment> cut, SeasonTone tone, int coherence, bool sponsorAired,
+            CutReport report = null, string brand = null)
         {
             var result = Build(null, cut, tone);
             if (result.reviews == null)
                 result.reviews = new List<ViewerReview>();
-            var extra = HellTubeComments.Pick(cut, tone, coherence, sponsorAired, 4);
+            var extra = HellTubeComments.Pick(cut, tone, coherence, sponsorAired, 4, report, brand);
             var seen = new HashSet<string>();
             var people = new HashSet<string>();
             for (int i = 0; i < result.reviews.Count; i++)
@@ -218,6 +219,9 @@ namespace RealityDirector.Meta
             result.score = result.reviews.Count > 0
                 ? UnityEngine.Mathf.Round(sum * 10f / result.reviews.Count) / 10f
                 : 0f;
+            // Монтаж двигает оценку: связность, комбо и повторы (CutAnalysis) — до ±1.5.
+            if (report != null && report.clips.Count > 0 && result.score > 0f)
+                result.score = UnityEngine.Mathf.Clamp(UnityEngine.Mathf.Round((result.score + report.ratingBonus) * 10f) / 10f, 1f, 10f);
             return result;
         }
 

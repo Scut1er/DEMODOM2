@@ -61,12 +61,9 @@ namespace RealityDirector
             content.OpenBedroom = Event("open_bedroom", "Спальня", "клик по заколоченной двери", TargetType.Object, "bed_door",
                 new Color(0.38f, 0.24f, 0.32f, 1f), 0f, false, IllustratedArt.IconDoor, MomentTags.Warmth);
 
-            content.Provoke.starter = true;
             content.Provoke.limitTrait = true;
             content.Provoke.targetTrait = TraitId.Aggressive;
             content.FridgeFire.starter = true;
-            content.NoHotWater.starter = true;
-            content.OpenBathroom.starter = true;
 
             content.SpoiledFood = Event("spoiled_food", "Тухлятина", "сразу на весь дом", TargetType.Global, null,
                 new Color(0.42f, 0.38f, 0.16f, 1f), 0f, false, IllustratedArt.IconWater, MomentTags.Misery);
@@ -361,6 +358,50 @@ namespace RealityDirector
                 default:
                     return new ReactionRule[0];
             }
+        }
+
+        // Колода нового сезона: стартовые (галочка у карты) + случайные рабочие карты из SeasonConfig.
+        // Случайные выбираются один раз — дальше живут в сейве (SeasonState.owned) и после загрузки не меняются.
+        public List<string> SeasonDeck(RealityDirector.Meta.SeasonConfig config)
+        {
+            var ids = StarterIds();
+            var pool = RandomStarterPool(config);
+            int count = config != null ? config.randomStarterCardCount : 2;
+            for (int i = 0; i < count && pool.Count > 0; i++)
+            {
+                int at = Random.Range(0, pool.Count);
+                ids.Add(pool[at].id);
+                pool.RemoveAt(at);
+            }
+
+            return ids;
+        }
+
+        // Из чего тянутся случайные стартовые: не стартовые, не спонсорские, нужный статус, всё в карте исполняется.
+        public List<EventDefinition> RandomStarterPool(RealityDirector.Meta.SeasonConfig config)
+        {
+            var pool = new List<EventDefinition>();
+            if (All == null)
+                return pool;
+            bool testing = config != null && config.randomStarterIncludeTesting;
+            var exclude = config != null ? config.randomStarterExclude : new List<string> { "Sponsor", "DeckManagement" };
+            foreach (var def in All)
+            {
+                if (def == null || def.starter || def.sponsor || string.IsNullOrEmpty(def.id))
+                    continue;
+                // Только карты из таблицы (с эффектами): старые карты без эффектов в случайный старт не идут.
+                if (def.effects == null || def.effects.Count == 0)
+                    continue;
+                if (def.status != CardStatus.Ready && !(testing && def.status == CardStatus.Testing))
+                    continue;
+                if (exclude != null && exclude.Contains(def.category))
+                    continue;
+                if (!RealityDirector.Cards.CardRuntime.Playable(def))
+                    continue;
+                pool.Add(def);
+            }
+
+            return pool;
         }
 
         public List<string> StarterIds()

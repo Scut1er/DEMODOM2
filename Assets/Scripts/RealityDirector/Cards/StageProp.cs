@@ -16,6 +16,8 @@ namespace RealityDirector.Cards
         public EventDefinition Def { get; private set; }
         public Room Room { get; private set; }
         public bool Sponsor;
+        // Декорация съёмки (стоит с начала по постановке) — не занимает Production Slot.
+        public bool Dressing;
 
         CardStage _stage;
         SpriteRenderer _body;
@@ -30,6 +32,7 @@ namespace RealityDirector.Cards
         bool _trap;
         bool _spent;
         float _radius = 2.5f;
+        public float Radius => _radius;
         Color _tint = Color.white;
         float _nextUse;
         float _nextStamp;
@@ -162,7 +165,7 @@ namespace RealityDirector.Cards
             }
         }
 
-        static string LabelOf(string kind)
+        public static string LabelOf(string kind)
         {
             switch (kind)
             {
@@ -209,49 +212,79 @@ namespace RealityDirector.Cards
         {
             _aura = true;
             _rates.Clear();
-            var aura = Def != null ? Def.aura : null;
+            _rates.AddRange(RatesFor(Def));
+            _disc.color = new Color(_tint.r, _tint.g, _tint.b, 0.09f);
+            _ring.color = new Color(_tint.r, _tint.g, _tint.b, 0.35f);
+        }
+
+        // Что аура делает с людьми в радиусе (в секунду): из таблицы, а если там пусто — по смыслу тегов ауры.
+        // onlyFor: null — всем, "shy" — стеснительным, "vain" — тщеславным.
+        public static List<(ActorStat stat, float rate, string onlyFor)> RatesFor(EventDefinition def)
+        {
+            var rates = new List<(ActorStat, float, string)>();
+            var aura = def != null ? def.aura : null;
             if (aura != null && aura.actorModifiers != null)
             {
                 foreach (var m in aura.actorModifiers)
                 {
                     if (m != null && Mathf.Abs(m.perSecond) > 0.001f)
-                        _rates.Add((m.stat, m.perSecond, null));
+                        rates.Add((m.stat, m.perSecond, null));
                 }
             }
 
-            // Модификаторов в таблице нет — по смыслу тегов ауры.
             var tags = aura != null ? aura.tags : null;
-            if (tags != null)
+            if (tags == null)
+                return rates;
+            if (tags.Contains("Alcohol"))
             {
-                if (tags.Contains("Alcohol"))
-                {
-                    _rates.Add((ActorStat.SelfControl, -1.6f, null));
-                    _rates.Add((ActorStat.Anger, 0.6f, null));
-                }
-
-                if (tags.Contains("Party"))
-                {
-                    _rates.Add((ActorStat.Stress, -1f, null));
-                    _rates.Add((ActorStat.Sadness, -0.8f, null));
-                }
-
-                if (tags.Contains("Romance"))
-                    _rates.Add((ActorStat.Attraction, 2f, null));
-                if (tags.Contains("Music"))
-                    _rates.Add((ActorStat.Stress, -0.6f, null));
-                if (tags.Contains("Pressure"))
-                    _rates.Add((ActorStat.Stress, 2.2f, null));
-                if (tags.Contains("Private") || tags.Contains("Confession"))
-                    _rates.Add((ActorStat.Stress, -1.4f, null));
-                if (tags.Contains("Public") || tags.Contains("Visual"))
-                {
-                    _rates.Add((ActorStat.Stress, 2f, "shy"));
-                    _rates.Add((ActorStat.Confidence, 2f, "vain"));
-                }
+                rates.Add((ActorStat.SelfControl, -1.6f, null));
+                rates.Add((ActorStat.Anger, 0.6f, null));
             }
 
-            _disc.color = new Color(_tint.r, _tint.g, _tint.b, 0.09f);
-            _ring.color = new Color(_tint.r, _tint.g, _tint.b, 0.35f);
+            if (tags.Contains("Party"))
+            {
+                rates.Add((ActorStat.Stress, -1f, null));
+                rates.Add((ActorStat.Sadness, -0.8f, null));
+            }
+
+            if (tags.Contains("Romance"))
+                rates.Add((ActorStat.Attraction, 2f, null));
+            if (tags.Contains("Music"))
+                rates.Add((ActorStat.Stress, -0.6f, null));
+            if (tags.Contains("Pressure"))
+                rates.Add((ActorStat.Stress, 2.2f, null));
+            if (tags.Contains("Private") || tags.Contains("Confession"))
+                rates.Add((ActorStat.Stress, -1.4f, null));
+            if (tags.Contains("Public") || tags.Contains("Visual"))
+            {
+                rates.Add((ActorStat.Stress, 2f, "shy"));
+                rates.Add((ActorStat.Confidence, 2f, "vain"));
+            }
+
+            return rates;
+        }
+
+        // Что люди делают с реквизитом сами — одной строкой для подсказки карты.
+        public static string UseOf(string kind)
+        {
+            switch (kind)
+            {
+                case "AlcoholCrate": return "люди пьют и пьянеют — хуже держат себя в руках";
+                case "RomanceSofa": return "садятся вдвоём — флирт и признания";
+                case "OpenMic": return "берут микрофон — признание или спор при всех";
+                case "GiftBox": return "дарят, крадут или разбивают (бросок d6)";
+                case "KaraokeMachine": return "выходят петь: успех — овации, провал — смех (d8)";
+                case "OilSpill": return "кто наступит — бросок d8, может поскользнуться";
+                case "RomanticSpeaker": return "музыка сближает тех, кто рядом";
+                case "AnxietyLight": return "мигает — нервы сдают";
+                case "HiddenCameraProp": return "люди забывают о камерах и говорят лишнее";
+                case "Spotlight": return "кадр ярче, стеснительным тяжело";
+                case "UnattendedPhone": return "любопытный или ревнивый прочтёт чужой телефон";
+                case "RedButton": return "кто-то нажмёт — исход по d10";
+                case "Poster_Leviathan": return "кадры с постером засчитываются спонсору";
+                case "HellColaFridge": return "берут колу в кадре — спонсору";
+                default: return null;
+            }
         }
 
         public void EnableUse()

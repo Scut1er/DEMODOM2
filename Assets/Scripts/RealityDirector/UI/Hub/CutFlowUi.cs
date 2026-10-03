@@ -71,6 +71,12 @@ namespace RealityDirector.UI.Hub
         public bool TaskTaken => _taken;
 
         Image _meter;
+        MontagePanel _panel;
+        // Доп. строки итога монтажа от хаба: спонсор, задача зрителей, купленные подсказки.
+        public Func<List<FootageClip>, List<string>> Extra;
+        public CutReport Report { get; private set; }
+        public RectTransform AudienceFocus => _panel != null ? _panel.AudienceFocus : _coherence != null ? _coherence.rectTransform : null;
+        public RectTransform BreakdownFocus => _panel != null ? _panel.BreakdownFocus : null;
 
         public static CutFlowUi Create()
         {
@@ -211,13 +217,14 @@ namespace RealityDirector.UI.Hub
             meterRect.offsetMin = Vector2.zero;
             meterRect.offsetMax = Vector2.zero;
 
-            var shot = TextOn(page, "ОТСНЯТО ЗА ВЫПУСК  ·  клик — в один из 3 слотов, колёсико листает ряд, ▶ смотрит ролик", 16, new Color(0.7f, 0.64f, 0.6f, 1f), TextAnchor.UpperLeft);
-            Pin(shot.rectTransform, 36f, 160f, 1400f, 28f);
-            _libraryView = ScrollRow(page, 36f, 196f, 1848f, 250f, out _libraryRow);
+            var shot = TextOn(page, "ОТСНЯТО ЗА ВЫПУСК  ·  клик — в слот, наведи — почему кадр интересен, колёсико листает ряд, ▶ смотрит ролик", 16, new Color(0.7f, 0.64f, 0.6f, 1f), TextAnchor.UpperLeft);
+            Pin(shot.rectTransform, 36f, 150f, 1600f, 28f);
+            _libraryView = ScrollRow(page, 36f, 178f, 1848f, 288f, out _libraryRow);
 
-            var airLabel = TextOn(page, "В ЭФИР  ·  порядок имеет значение, ↔ — соседние кадры про одно", 16, new Color(0.7f, 0.64f, 0.6f, 1f), TextAnchor.UpperLeft);
-            Pin(airLabel.rectTransform, 36f, 470f, 1200f, 28f);
-            _cutRow = Row(page, 36f, 508f, 1400f, 230f);
+            var airLabel = TextOn(page, "В ЭФИР  ·  порядок имеет значение: стрелка между кадрами — сила связи (наведи — почему)", 16, new Color(0.7f, 0.64f, 0.6f, 1f), TextAnchor.UpperLeft);
+            Pin(airLabel.rectTransform, 36f, 474f, 1380f, 28f);
+            _cutRow = Row(page, 36f, 502f, 1380f, 284f);
+            _panel = MontagePanel.Build(page, _font);
 
             ButtonAt(page, "РАНЬШЕ", new Vector2(36f, 78f), () => Move(-1));
             ButtonAt(page, "ПОЗЖЕ", new Vector2(220f, 78f), () => Move(1));
@@ -299,13 +306,22 @@ namespace RealityDirector.UI.Hub
         {
             Clear(_cutRow);
             var chosen = new List<FootageClip>();
+            for (int i = 0; i < _order.Count && i < _slots; i++)
+            {
+                var c = Find(_order[i]);
+                if (c != null)
+                    chosen.Add(c);
+            }
+
+            // Склейка оценивается целиком: связи соседей, повторы, комбо, как это увидит аудитория.
+            var report = CutAnalysis.Analyze(chosen);
+            Report = report;
+            int linkIndex = 0;
             for (int i = 0; i < _slots; i++)
             {
                 FootageClip clip = null;
                 if (i < _order.Count)
                     clip = Find(_order[i]);
-                if (clip != null)
-                    chosen.Add(clip);
                 int index = i;
                 var card = clip != null ? Card(_cutRow, clip, index == _picked) : EmptySlot(_cutRow, i + 1);
                 if (clip == null)
@@ -315,20 +331,13 @@ namespace RealityDirector.UI.Hub
                     _picked = index;
                     RefreshCut();
                 });
-                if (i < _order.Count - 1)
-                {
-                    var next = Find(_order[i + 1]);
-                    bool link = next != null && MontageCut.Shares(clip, next);
-                    bool named = link && GameSession.State != null && GameSession.State.operatorLevel >= 2;
-                    string markText = named ? MontageCut.SharedTag(clip, next) : link ? "↔" : "·";
-                    var mark = TextOn(_cutRow, markText, named ? 14 : 28, link ? new Color(0.96f, 0.78f, 0.22f, 1f) : new Color(0.45f, 0.4f, 0.42f, 1f), TextAnchor.MiddleCenter);
-                    var element = mark.gameObject.AddComponent<LayoutElement>();
-                    element.preferredWidth = named ? 88f : 36f;
-                    element.preferredHeight = 200f;
-                }
+                if (i < _order.Count - 1 && linkIndex < report.links.Count && _panel != null)
+                    _panel.LinkMark(_cutRow, report.links[linkIndex++]);
             }
 
-            int coherence = MontageCut.Coherence(chosen);
+            int coherence = report.coherence;
+            if (_panel != null)
+                _panel.Show(report, _slots, Extra != null ? Extra(chosen) : null);
             _boss.text = MontageCut.Boss(coherence, chosen.Count, _library.Count);
             bool paired = chosen.Count >= 2;
             _coherence.text = paired ? "связность " + coherence + "%" : "связность — нужны 2 кадра";
@@ -608,8 +617,8 @@ namespace RealityDirector.UI.Hub
             var go = new GameObject("card", typeof(RectTransform), typeof(Image), typeof(Button), typeof(LayoutElement));
             go.transform.SetParent(parent, false);
             var element = go.GetComponent<LayoutElement>();
-            element.preferredWidth = 200f;
-            element.preferredHeight = 230f;
+            element.preferredWidth = 212f;
+            element.preferredHeight = 276f;
             var plate = go.GetComponent<Image>();
             UiKit.Dress(plate, picked ? UiKit.Frame.GoldTile : UiKit.Frame.Dialog, picked ? 1f : 1.6f);
             // Полоска тона кадра сверху — по ней склейку читают с одного взгляда.
@@ -629,16 +638,24 @@ namespace RealityDirector.UI.Hub
                 rect.anchorMax = new Vector2(0f, 1f);
                 rect.pivot = new Vector2(0f, 1f);
                 rect.anchoredPosition = new Vector2(8f, -8f);
-                rect.sizeDelta = new Vector2(184f, 140f);
+                rect.sizeDelta = new Vector2(196f, 104f);
                 raw.GetComponent<RawImage>().texture = clip.photo;
                 raw.GetComponent<RawImage>().raycastTarget = false;
             }
 
-            string name = clip.title ?? "КАДР";
-            if (clip.tags != null && clip.tags.Contains(MomentTags.Sponsor))
-                name = "РЕКЛАМА · " + name;
-            var label = TextOn(go.transform, "<b>" + name + "</b>\n<color=#B9A4A8>" + Comma(clip.duration) + " с  ·  " + MoodStyle.Short(clip.mood) + "</color>", 16, Color.white, TextAnchor.UpperLeft);
-            Pin(label.rectTransform, 12f, 156f, 176f, 64f);
+            if (_panel != null)
+            {
+                // Что в кадре, роль в истории, тон, сила и качество — и подсказка «почему интересен».
+                _panel.Decorate(go, clip);
+            }
+            else
+            {
+                string name = clip.title ?? "КАДР";
+                if (clip.tags != null && clip.tags.Contains(MomentTags.Sponsor))
+                    name = "РЕКЛАМА · " + name;
+                var label = TextOn(go.transform, "<b>" + name + "</b>\n<color=#B9A4A8>" + Comma(clip.duration) + " с  ·  " + MoodStyle.Short(clip.mood) + "</color>", 16, Color.white, TextAnchor.UpperLeft);
+                Pin(label.rectTransform, 12f, 156f, 176f, 64f);
+            }
             var watch = new GameObject("watch", typeof(RectTransform), typeof(Image), typeof(Button));
             watch.transform.SetParent(go.transform, false);
             var watchRect = watch.GetComponent<RectTransform>();
@@ -769,8 +786,8 @@ namespace RealityDirector.UI.Hub
             var go = new GameObject("empty", typeof(RectTransform), typeof(Image), typeof(LayoutElement));
             go.transform.SetParent(parent, false);
             var element = go.GetComponent<LayoutElement>();
-            element.preferredWidth = 200f;
-            element.preferredHeight = 230f;
+            element.preferredWidth = 212f;
+            element.preferredHeight = 276f;
             var slot = go.GetComponent<Image>();
             slot.sprite = UiKit.Load("Art/UI/CoreGameplay/UI/HUD/capture_frame_corners");
             slot.type = Image.Type.Simple;

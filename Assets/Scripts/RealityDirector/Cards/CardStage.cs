@@ -14,7 +14,7 @@ namespace RealityDirector.Cards
     // карта влетает в точку, кубики решают силу, эффекты карты (данные из таблицы) превращаются
     // в действия людей, реквизит, связи, запертые двери. Работает по данным карты — новые карты дизайнера
     // оживают без кода; старые карты без эффектов получили свою постановку.
-    public class CardStage : MonoBehaviour
+    public partial class CardStage : MonoBehaviour
     {
         // Сила эмоции из кубика: грань × множитель (d6 → до 30 пунктов из 100).
         public const int DiePoints = 5;
@@ -27,6 +27,7 @@ namespace RealityDirector.Cards
         Transform _fridge;
         StageFx _fx;
         readonly List<StageProp> _props = new List<StageProp>();
+        public IReadOnlyList<StageProp> Props => _props;
         readonly List<GameObject> _junk = new List<GameObject>();
         readonly List<Guest> _guests = new List<Guest>();
 
@@ -103,6 +104,34 @@ namespace RealityDirector.Cards
             return RoomAt(p) != Room.None;
         }
 
+        // Production Slots (GDD: объект окружения занимает слот до конца съёмки). Сколько — SeasonConfig.productionSlots.
+        public int ProductionSlots = 3;
+
+        public static bool UsesSlot(EventDefinition def)
+        {
+            return def != null && def.specialRules != null && def.specialRules.Contains(SpecialRule.UsesProductionSlot);
+        }
+
+        public int SlotsUsed
+        {
+            get
+            {
+                int used = 0;
+                foreach (var prop in _props)
+                {
+                    if (prop != null && !prop.Dressing && UsesSlot(prop.Def))
+                        used++;
+                }
+
+                return used;
+            }
+        }
+
+        public bool SlotFree(EventDefinition def)
+        {
+            return !UsesSlot(def) || SlotsUsed < ProductionSlots;
+        }
+
         // ---------- Прицел карты на комнату ----------
 
         SpriteRenderer _previewDisc;
@@ -110,7 +139,26 @@ namespace RealityDirector.Cards
         SpriteRenderer _previewIcon;
         string _previewKind;
 
-        // Пока карта на комнату в руке — под курсором круг ауры и призрак реквизита. Красный — сюда нельзя.
+        // Карта наведена на участника: над ним — прогноз реакции (уровень и причины, без формул).
+        public void PreviewActor(EventDefinition def, NPCController npc)
+        {
+            if (def == null || npc == null)
+            {
+                _fx.Hint(null, null);
+                return;
+            }
+
+            var f = CardBrief.Predict(def, npc);
+            string text = f.level == CardBrief.Level.None
+                ? npc.DisplayName
+                : "РЕАКЦИЯ: <color=" + CardBrief.LevelColor(f.level) + ">" + CardBrief.LevelName(f.level) + "</color>";
+            if (f.reasons.Count > 0)
+                text += "\n<size=13>" + string.Join(" · ", f.reasons) + "</size>";
+            _fx.Hint(npc.transform, text);
+        }
+
+        // Пока карта на комнату в руке — под курсором круг ауры и призрак реквизита. Красный — сюда нельзя
+        // (не пол открытой комнаты или заняты все Production Slots).
         public void Preview(EventDefinition def, Vector2 point)
         {
             if (def == null)
@@ -133,7 +181,7 @@ namespace RealityDirector.Cards
             var rootT = _previewDisc.transform.parent;
             rootT.gameObject.SetActive(true);
             _previewDisc.gameObject.SetActive(true);
-            bool ok = CanPlace(point);
+            bool ok = CanPlace(point) && SlotFree(def);
             float radius = def.aura != null && def.aura.enabled && def.aura.radius > 0.1f ? def.aura.radius : 1.4f;
             rootT.position = point;
             float pulse = 1f + Mathf.Sin(Time.time * 5f) * 0.03f;
@@ -211,8 +259,8 @@ namespace RealityDirector.Cards
         IEnumerator Run(Ctx c)
         {
             var def = c.def;
-            // Колодные карты меняют руку, а не комнату — их видно в руке (PitchFlow.DeckPlay).
-            if (def.category == "DeckManagement")
+            // Колодные эффекты меняют руку, а не комнату — их видно в руке (PitchFlow.DeckPlay).
+            if (CardRuntime.OnlyDeck(def))
                 yield break;
             yield return _fx.CardFly(def, (Vector3)c.point + Vector3.up * 0.6f);
             if (_shake != null)
@@ -250,7 +298,7 @@ namespace RealityDirector.Cards
                 if (r.used || r.dice.subject != DiceSubject.Stat || c.target == null)
                     continue;
                 r.used = true;
-                c.target.ShiftStat(r.dice.stat, Sign(def, r.dice.stat) * r.value * DiePoints);
+                c.target.ShiftStat(r.dice.stat, DieSign(r.dice) * r.value * DiePoints);
             }
 
             yield return new WaitForSeconds(0.25f);
@@ -287,7 +335,7 @@ namespace RealityDirector.Cards
             return text;
         }
 
-        static string LegacyPitch(string id)
+        public static string LegacyPitch(string id)
         {
             switch (id)
             {
@@ -324,19 +372,79 @@ namespace RealityDirector.Cards
                 // Кубик реквизита бросается, когда им пользуются, — не при постановке.
                 if (d.subject == DiceSubject.Check && HasEffect(c.def, CardEffectType.SpawnObject))
                     continue;
-                int faces = Dice.Faces(d.die);
-                int value = 0;
-                int count = Mathf.Max(1, d.count);
-                for (int k = 0; k < count; k++)
-                    value += UnityEngine.Random.Range(1, faces + 1);
-                value += d.bonus;
-                value = Mathf.Max(0, value);
-                c.rolls.Add(new Roll { dice = d, value = value });
-                string label = DiceLabel(d);
+                var roll = Dice.Roll(d, StepsFor(d, c.target, c.point));
+                c.rolls.Add(new Roll { dice = d, value = roll.value });
+                string label = DiceLabel(d) + (roll.steps > 0 ? " ↑" : "");
                 Color color = d.subject == DiceSubject.Stat ? StageFx.StatColor(d.stat) : d.subject == DiceSubject.Relationship ? new Color(1f, 0.5f, 0.7f) : UiKit.Gold;
-                StartCoroutine(_fx.Dice(Anchor(c), d.die, value, label, color, slot, slot * 0.08f));
+                StartCoroutine(_fx.Dice(Anchor(c), roll.die, roll.value, label, color, slot, slot * 0.08f));
                 slot++;
             }
+        }
+
+        // Ступени кубика: условия из таблицы (черта, состояние, эмоция цели, тег окружения рядом)
+        // и аура реквизита, в которой стоит цель.
+        public int StepsFor(DiceEffect d, NPCController target, Vector2 at)
+        {
+            int steps = 0;
+            if (d.stepUps != null)
+            {
+                foreach (var s in d.stepUps)
+                {
+                    if (s != null && StepHolds(s, target, at))
+                        steps += Mathf.Max(1, s.steps);
+                }
+            }
+
+            if (d.subject == DiceSubject.Stat && target != null)
+            {
+                foreach (var prop in _props)
+                {
+                    if (prop == null || prop.Def == null || prop.Def.aura == null || prop.Def.aura.diceModifiers == null)
+                        continue;
+                    if (Vector2.Distance(prop.transform.position, target.transform.position) > prop.Radius)
+                        continue;
+                    foreach (var m in prop.Def.aura.diceModifiers)
+                    {
+                        if (m != null && m.stat == d.stat)
+                            steps += m.steps;
+                    }
+                }
+            }
+
+            return Mathf.Max(0, steps);
+        }
+
+        bool StepHolds(DiceStepUp s, NPCController npc, Vector2 at)
+        {
+            switch (s.condition)
+            {
+                case StepUpCondition.TargetHasTrait:
+                    return npc != null && HasTrait(npc, s.key);
+                case StepUpCondition.TargetHasState:
+                    return npc != null && npc.HasState(s.key);
+                case StepUpCondition.TargetStatAtLeast:
+                    return npc != null && npc.Read(s.stat) >= s.value;
+                default:
+                    Vector2 where = npc != null ? (Vector2)npc.transform.position : at;
+                    foreach (var prop in _props)
+                    {
+                        if (prop == null || prop.Def == null || Vector2.Distance(prop.transform.position, where) > prop.Radius)
+                            continue;
+                        if (prop.Kind == s.key || (prop.Def.aura != null && prop.Def.aura.tags != null && prop.Def.aura.tags.Contains(s.key)))
+                            return true;
+                    }
+
+                    return false;
+            }
+        }
+
+        public static bool HasTrait(NPCController npc, string key)
+        {
+            if (npc == null || npc.Trait == null || string.IsNullOrEmpty(key))
+                return false;
+            string k = key.Trim();
+            return string.Equals(npc.Trait.traitId.ToString(), k, StringComparison.OrdinalIgnoreCase)
+                   || (!string.IsNullOrEmpty(npc.Trait.displayName) && npc.Trait.displayName.IndexOf(k, StringComparison.OrdinalIgnoreCase) >= 0);
         }
 
         static bool HasEffect(EventDefinition def, CardEffectType type)
@@ -366,8 +474,14 @@ namespace RealityDirector.Cards
             }
         }
 
-        // Забирает бросок под эффект: сначала точное совпадение по эмоции, потом первый свободный нужного вида.
+        // Забирает бросок под эффект: сначала точное совпадение по эмоции/оси, потом первый свободный нужного вида.
         int Take(Ctx c, DiceSubject subject, ActorStat? stat, int fallback)
+        {
+            var roll = TakeRoll(c, subject, stat, null);
+            return roll != null ? roll.value : fallback;
+        }
+
+        Roll TakeRoll(Ctx c, DiceSubject subject, ActorStat? stat, RelationshipAxis? axis)
         {
             for (int pass = 0; pass < 2; pass++)
             {
@@ -378,12 +492,20 @@ namespace RealityDirector.Cards
                         continue;
                     if (pass == 0 && stat.HasValue && r.dice.stat != stat.Value)
                         continue;
+                    if (pass == 0 && axis.HasValue && r.dice.axis != axis.Value)
+                        continue;
                     r.used = true;
-                    return r.value;
+                    return r;
                 }
             }
 
-            return fallback;
+            return null;
+        }
+
+        // Знак броска — из таблицы: галочка «понижает» у кубика.
+        static int DieSign(DiceEffect d)
+        {
+            return d != null && d.lower ? -1 : 1;
         }
 
         // ---------- Эффекты по данным карты ----------
@@ -395,9 +517,11 @@ namespace RealityDirector.Cards
             {
                 case CardEffectType.ChangeStat:
                 {
-                    int faces = Take(c, DiceSubject.Stat, e.stat, 0);
-                    int amount = e.amount != 0f ? Mathf.RoundToInt(e.amount) : (faces > 0 ? faces : 2) * DiePoints;
-                    int signed = Sign(def, e.stat) * Mathf.Abs(amount);
+                    // Сила — из кубика (грань × DiePoints) или из «Силы» эффекта; знак — «понижает» у кубика или минус в силе.
+                    var roll = TakeRoll(c, DiceSubject.Stat, e.stat, null);
+                    int amount = e.amount != 0f ? Mathf.RoundToInt(e.amount) : (roll != null ? roll.value : 2) * DiePoints;
+                    int sign = e.amount < 0f ? -1 : roll != null ? DieSign(roll.dice) : Sign(def, e.stat);
+                    int signed = sign * Mathf.Abs(amount);
                     foreach (var npc in Receivers(e, c))
                     {
                         if (!Condition(e.onlyIf, npc, c))
@@ -425,8 +549,13 @@ namespace RealityDirector.Cards
                     break;
                 }
                 case CardEffectType.ChangeRelationship:
-                    Bond(e.axis, c, Take(c, DiceSubject.Relationship, null, 3) * DiePoints);
+                {
+                    var roll = TakeRoll(c, DiceSubject.Relationship, null, e.axis);
+                    int amount = e.amount != 0f ? Mathf.Abs(Mathf.RoundToInt(e.amount)) : (roll != null ? roll.value : 3) * DiePoints;
+                    int sign = e.amount < 0f ? -1 : roll != null ? DieSign(roll.dice) : (e.axis == RelationshipAxis.Hostility && Calming(def) ? -1 : 1);
+                    Bond(e.axis, c, sign * amount);
                     break;
+                }
                 case CardEffectType.AddState:
                 {
                     float seconds = e.duration == StateDuration.Timed ? (e.seconds > 0f ? e.seconds : 25f) : 0f;
@@ -525,6 +654,7 @@ namespace RealityDirector.Cards
                         Outcome(c.point, c.room, Take(c, DiceSubject.Check, null, UnityEngine.Random.Range(1, 11)));
                     break;
                 case CardEffectType.NextCaptureBonus:
+                    Capture.CaptureSystem.BonusUntil = Time.unscaledTime + (e.seconds > 0f ? e.seconds : 10f);
                     _fx.Banner(() => (Vector3)HouseMap.Center(c.room) + Vector3.up * 1.5f, "НУЖНЫЙ МОМЕНТ", "камера: качество кадра выше " + Mathf.RoundToInt(e.seconds > 0f ? e.seconds : 10f) + " с", new Color(0.55f, 0.9f, 1f), 3f);
                     break;
                 default:
@@ -556,23 +686,7 @@ namespace RealityDirector.Cards
         // Условие эффекта/кубика из таблицы — по смыслу: черта, рейтинг, романтический контекст.
         bool Condition(string onlyIf, NPCController npc, Ctx c)
         {
-            if (string.IsNullOrEmpty(onlyIf))
-                return true;
-            string s = onlyIf.ToLowerInvariant();
-            if (npc == null)
-                return true;
-            var trait = npc.Trait != null ? npc.Trait.traitId : TraitId.Sentimental;
-            if (s.Contains("shy") || s.Contains("anxious") || s.Contains("застенч"))
-                return trait == TraitId.Shy || trait == TraitId.Timid || trait == TraitId.Panicker || trait == TraitId.Cowardly;
-            if (s.Contains("низк"))
-                return npc.Confidence < 50;
-            if (s.Contains("высок"))
-                return npc.Confidence >= 50;
-            if (s.Contains("романт"))
-                return npc.Attraction >= 15 || (c.def.tags != null && c.def.tags.Contains("Romance"));
-            if (s.Contains("при входе"))
-                return true;
-            return true;
+            return CardRuntime.Holds(onlyIf, npc, c.def);
         }
 
         static ActorStat HighestNegative(NPCController npc)
@@ -779,6 +893,12 @@ namespace RealityDirector.Cards
             Vector2 side = ((Vector2)a.transform.position - mid).normalized;
             if (side.sqrMagnitude < 0.01f)
                 side = Vector2.left;
+            if (amount < 0)
+            {
+                Cool(axis, a, b, mid, side, -amount);
+                return;
+            }
+
             switch (axis)
             {
                 case RelationshipAxis.Hostility:
@@ -824,6 +944,37 @@ namespace RealityDirector.Cards
                     Stamp(mid, a, "Flirt", "Romance", MomentTags.Warmth);
                     break;
             }
+        }
+
+        // Отношения вниз: вражда тает (мирятся), доверие/влечение остывают (отворачиваются).
+        void Cool(RelationshipAxis axis, NPCController a, NPCController b, Vector2 mid, Vector2 side, int amount)
+        {
+            if (axis == RelationshipAxis.Hostility)
+            {
+                a.ShiftBond(-amount, 0);
+                b.ShiftBond(-amount, 0);
+                a.ShiftStat(ActorStat.Anger, -amount / 2);
+                b.ShiftStat(ActorStat.Anger, -amount / 2);
+                _fx.Link(a, b, "Handshake", new Color(0.55f, 0.95f, 0.6f), 3.5f);
+                Face(a, mid + side * 0.5f, "давай без войны", StageAnim.None);
+                Face(b, mid - side * 0.5f, "давай...", StageAnim.None);
+                _fx.FloatText(() => (Vector3)mid + Vector3.up * 1.6f, "вражда −" + amount, new Color(0.55f, 0.95f, 0.6f), 26);
+                Stamp(mid, a, "Reconcile", MomentTags.Warmth);
+                return;
+            }
+
+            if (axis == RelationshipAxis.Trust)
+                a.ShiftBond(0, -amount);
+            else
+            {
+                a.ShiftStat(ActorStat.Attraction, -amount);
+                b.ShiftStat(ActorStat.Attraction, -amount);
+            }
+
+            _fx.Link(a, b, "Bolt", new Color(0.6f, 0.65f, 0.8f), 3f);
+            Face(a, mid + side * 1.2f, axis == RelationshipAxis.Trust ? "я тебе больше не верю" : "знаешь, нет", StageAnim.None);
+            _fx.FloatText(() => (Vector3)mid + Vector3.up * 1.6f, (axis == RelationshipAxis.Trust ? "доверие −" : "влечение −") + amount, new Color(0.6f, 0.7f, 0.9f), 26);
+            Stamp(mid, a, "Cold");
         }
 
         // Подойти к точке и сыграть реплику.
