@@ -35,6 +35,8 @@ namespace RealityDirector.UI.Hub
         string _hubNotice;
         bool _runShop;
         MarketingRoomDefinition _marketing;
+        MarketingView _market;
+        string _marketNode;
         CutFlowUi _cut;
         HubOverlays _screens;
         ViewerWishId _airWish;
@@ -53,6 +55,7 @@ namespace RealityDirector.UI.Hub
             EnsureEventSystem();
             Sfx.Bind(gameObject);
             _eventView = EventRoomView.Create(map.transform.parent, TitleFont());
+            _market = MarketingView.Create(map.transform.parent);
 
             menu.NewSeason += () => { Click(); BeginSeason(); };
             menu.Continue += () => { Click(); ContinueSeason(); };
@@ -552,31 +555,53 @@ namespace RealityDirector.UI.Hub
 
             _meta.ClearReject();
             _marketing = node.room as MarketingRoomDefinition;
+            _marketNode = node.id;
             Sfx.Play(Cue.Coin, 0.4f);
             GameSession.Save();
             RefreshDeals();
         }
 
-        // Пул маркетинга — OWM. Старый список комнаты больше не режет витрину.
+        // Витрина комнаты маркетинга: предложения из её ассета (пул OWM, если ассет пуст), часть — по сиду узла.
+        // Предложения, до которых не хватает репутации, видны, но закрыты с причиной.
         List<MarketingOffer> Deals()
         {
-            int reputation = GameSession.State.sponsorReputation;
-            return OwmOffers.All(reputation);
+            var ep = GameSession.State.episode;
+            int seed = (ep != null ? ep.mapSeed : 0) ^ (_marketNode ?? "").GetHashCode();
+            return MarketingDesk.Pick(_marketing, OwmOffers.All(int.MaxValue), seed);
         }
 
         void RefreshDeals()
         {
             if (!_episode.Active)
                 return;
-            string head = _meta.ReputationLine();
-            if (!string.IsNullOrEmpty(_meta.Reject))
-                head += "\n" + _meta.Reject;
-            _screens.ShowDeals(head, Deals(), offer =>
+            var state = GameSession.State;
+            var ep = state.episode;
+            int slots = Progression.ContractSlots(state.writerLevel);
+            var views = new List<OfferView>();
+            foreach (var offer in Deals())
+                views.Add(MarketingDesk.Describe(offer, state, ep, slots, _meta.Find));
+            string title = _marketing != null && !string.IsNullOrEmpty(_marketing.title) ? _marketing.title.ToUpperInvariant() : "МАРКЕТИНГ";
+            if (_marketing != null && !string.IsNullOrEmpty(_marketing.subtitle))
+                title += "  ·  " + _marketing.subtitle;
+            string status = "Нал выпуска: <b>" + (ep != null ? ep.cash : 0) + "</b>   ·   " + _meta.ReputationLine().Replace("\n", "   ·   ");
+            _market.Show(title, status, views, offer =>
             {
+                int before = ep != null ? ep.cash : 0;
                 bool ok = _meta.TryBuyOffer(offer);
                 Sfx.Play(ok ? Cue.Coin : Cue.Miss, ok ? 0.5f : 0.45f);
                 if (ok)
+                {
                     GameSession.Save();
+                    var v = MarketingDesk.Describe(offer, state, ep, slots, _meta.Find);
+                    _market.Notice(offer.kind == OfferKind.Contract
+                        ? "Контракт подписан: «" + offer.title + "». Карта «" + v.card + "» в колоде выпуска — снимите бренд и вставьте кадр в эфир."
+                        : "Куплено: «" + offer.title + "» — " + v.gets + ".  Нал: " + before + " → " + (ep != null ? ep.cash : 0), true);
+                }
+                else
+                {
+                    _market.Notice("Не вышло: " + (_meta.Reject ?? "предложение недоступно"), false);
+                }
+
                 RefreshDeals();
             }, LeaveRunShop);
         }
@@ -585,6 +610,8 @@ namespace RealityDirector.UI.Hub
         {
             _runShop = false;
             _screens.Hide();
+            if (_market != null)
+                _market.Hide();
             if (!_episode.Active)
             {
                 RefreshMap();
@@ -647,7 +674,7 @@ namespace RealityDirector.UI.Hub
         {
             var roles = EventResolver.CastRoles(def, ctx.episode, nodeId);
             Func nameOf = ActorName;
-            var choices = EventResolver.Choices(def, ctx, roles, nameOf);
+            var choices = EventResolver.Choices(def, ctx, roles, nameOf, CardName);
             Sfx.PlayHellCall();
             // Подзаголовок «Событие» не повторяем после «СОБЫТИЕ».
             string sub = def.subtitle != null ? def.subtitle.Trim() : "";
@@ -657,7 +684,8 @@ namespace RealityDirector.UI.Hub
                 def.art != null ? def.art : MapNodeView.Icon(def.icon), def.color, choices, "Уйти", index =>
                 {
                     EventOutcome outcome;
-                    bool chancy = false;
+                    // Результат всегда со штампом: «получилось» или «не получилось» и что изменилось.
+                    bool chancy = index >= 0;
                     if (index < 0 || index >= def.choices.Count)
                     {
                         outcome = new EventOutcome { success = true, text = "Вы уходите, ничего не решив.", summary = "" };
@@ -665,7 +693,6 @@ namespace RealityDirector.UI.Hub
                     else
                     {
                         var choice = def.choices[index];
-                        chancy = choice.chance < 100;
                         outcome = EventResolver.Resolve(choice, ctx, roles, nameOf, CardName);
                     }
 

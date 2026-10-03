@@ -738,6 +738,13 @@ namespace RealityDirector
             if (_state.episode != null)
                 _state.episode.OpenHell(GameSession.RoomNodeId);
             ApplySituation();
+            // «Запасной микрофон» (маркетинг): первый кадр этой съёмки — повышенного качества.
+            if (_state.episode != null && _state.episode.HasFlag("TechFloor"))
+            {
+                _state.episode.flags.Remove("TechFloor");
+                CaptureSystem.BonusUntil = float.MaxValue;
+            }
+
             _hand = SelectedHand();
             _ui.ClearHand();
             _ui.BindCards(_hand, Arm);

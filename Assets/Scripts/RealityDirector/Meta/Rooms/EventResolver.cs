@@ -15,6 +15,10 @@ namespace RealityDirector.Meta
         public string chanceLabel;
         public bool available;
         public string reason;
+        // Что будет: при успехе и при провале (направление каждого эффекта), шанс.
+        public string preview;
+        public string failPreview;
+        public int chance = 100;
     }
 
     public class EventOutcome
@@ -82,7 +86,8 @@ namespace RealityDirector.Meta
             return sb.ToString();
         }
 
-        public static List<EventChoiceModel> Choices(EventRoomDefinition def, RuleContext ctx, Dictionary<string, string> roles, Func<string, string> nameOf)
+        public static List<EventChoiceModel> Choices(EventRoomDefinition def, RuleContext ctx, Dictionary<string, string> roles, Func<string, string> nameOf,
+            Func<string, string> cardName = null)
         {
             var list = new List<EventChoiceModel>();
             if (def == null || def.choices == null)
@@ -103,7 +108,10 @@ namespace RealityDirector.Meta
                     costLabel = CostLabel(c),
                     chanceLabel = c.chance < 100 ? "шанс " + Mathf.Clamp(c.chance, 1, 100) + "%" : "",
                     available = reason == null,
-                    reason = reason
+                    reason = reason,
+                    preview = Rules.Preview(c.effects, cardName),
+                    failPreview = c.chance < 100 ? Rules.Preview(c.failEffects, cardName) : "",
+                    chance = Mathf.Clamp(c.chance, 1, 100)
                 });
             }
 
@@ -162,6 +170,8 @@ namespace RealityDirector.Meta
             }
 
             string text = success ? c.resultText : (string.IsNullOrEmpty(c.failText) ? c.resultText : c.failText);
+            if (string.IsNullOrEmpty(text))
+                text = success ? "Сработало так, как вы хотели." : "Не вышло — и это заметили.";
             var summary = new List<string>();
             string cost = CostLabel(c);
             if (cost.Length > 0)
@@ -169,12 +179,27 @@ namespace RealityDirector.Meta
             string fx = Rules.Describe(effects, cardName);
             if (fx.Length > 0)
                 summary.Add(fx);
+            if (summary.Count == 0)
+                summary.Add(HasHidden(effects) ? "видимых изменений нет — последствия скажутся позже" : "ничего не изменилось");
             return new EventOutcome
             {
                 success = success,
                 text = Fill(text, roles, nameOf),
                 summary = string.Join("   ·   ", summary)
             };
+        }
+
+        static bool HasHidden(IList<Effect> effects)
+        {
+            if (effects == null)
+                return false;
+            foreach (var e in effects)
+            {
+                if (e != null && (e.type == EffectType.SetEpisodeFlag || e.type == EffectType.SetSeasonFlag || e.type == EffectType.BroadcastModifier || e.type == EffectType.AddNarrativeTag))
+                    return true;
+            }
+
+            return false;
         }
 
         // Вход в событие: сюжетные теги события.

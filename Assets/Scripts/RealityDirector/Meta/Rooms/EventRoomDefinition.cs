@@ -47,6 +47,10 @@ namespace RealityDirector.Meta
         public List<Effect> failEffects = new List<Effect>();
         [TextArea(2, 5)] public string failText;
         public List<string> failTags = new List<string>();
+
+        [Tooltip("Для команды: что вариант должен делать по таблице дизайна (игроку не показывается). "
+                 + "Игрок видит последствия, собранные из «Эффектов» автоматически.")]
+        [TextArea(1, 4)] public string designNote;
     }
 
     // Текстовое событие (GDD §26, §32): иллюстрация, текст и 2–3 выбора с последствиями.

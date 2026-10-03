@@ -157,6 +157,72 @@ namespace RealityDirector.Meta
             return Describe(list, null);
         }
 
+        // Куда сдвинет выбор — до выбора, коротко: «+80 кр · Трэш ↑ · стресс каста ↑». Без скрытых формул,
+        // но направление видно у каждого эффекта. Флаги и теги — одной строкой «последствия позже».
+        public static string Preview(IList<Effect> list, Func<string, string> cardName)
+        {
+            if (list == null)
+                return "";
+            var parts = new List<string>();
+            bool later = false;
+            foreach (var fx in list)
+            {
+                if (fx == null)
+                    continue;
+                string card = cardName != null ? cardName(fx.key) : fx.key;
+                switch (fx.type)
+                {
+                    case EffectType.Budget:
+                        if (fx.value != 0)
+                            parts.Add((fx.value > 0 ? "+" : "") + fx.value + " кр");
+                        break;
+                    case EffectType.Cash:
+                        if (fx.value != 0)
+                            parts.Add((fx.value > 0 ? "+" : "") + fx.value + " нал");
+                        break;
+                    case EffectType.Tone:
+                        if (fx.value != 0)
+                            parts.Add(MoodStyle.Paint(MoodStyle.Short(fx.mood) + (fx.value > 0 ? (fx.value >= 5 ? " ↑↑" : " ↑") : " ↓"), fx.mood));
+                        break;
+                    case EffectType.AddTempCard:
+                        parts.Add("карта «" + card + "»");
+                        break;
+                    case EffectType.AddDeckCard:
+                        parts.Add("в колоду «" + card + "»");
+                        break;
+                    case EffectType.RemoveTempCard:
+                    case EffectType.RemoveDeckCard:
+                        parts.Add("минус карта «" + card + "»");
+                        break;
+                    case EffectType.NextRoomModifier:
+                        if (fx.value != 0)
+                            parts.Add(ModifierName(fx.key) + (fx.value > 0 ? " ↑" : " ↓") + " в след. съёмке");
+                        break;
+                    case EffectType.SetEpisodeFlag:
+                    case EffectType.SetSeasonFlag:
+                    case EffectType.BroadcastModifier:
+                        later = true;
+                        break;
+                }
+            }
+
+            if (later)
+                parts.Add("последствия позже");
+            return string.Join("  ·  ", parts);
+        }
+
+        static string ModifierName(string key)
+        {
+            switch ((key ?? "").ToLowerInvariant())
+            {
+                case "stress": return "стресс каста";
+                case "anger": return "злость каста";
+                case "sadness": return "грусть каста";
+                case "hostility": return "вражда в касте";
+                default: return key;
+            }
+        }
+
         // Видимая игроку часть эффектов. cardName — имя карты по id (null — показать id).
         public static string Describe(IList<Effect> list, Func<string, string> cardName)
         {
@@ -180,8 +246,12 @@ namespace RealityDirector.Meta
                             parts.Add((fx.value > 0 ? "+" : "") + fx.value + " нал");
                         break;
                     case EffectType.Tone:
-                        if (fx.value > 0)
-                            parts.Add(MoodStyle.Paint(MoodStyle.Short(fx.mood) + " +" + fx.value, fx.mood));
+                        if (fx.value != 0)
+                            parts.Add(MoodStyle.Paint(MoodStyle.Short(fx.mood) + (fx.value > 0 ? " +" : " ") + fx.value, fx.mood));
+                        break;
+                    case EffectType.NextRoomModifier:
+                        if (fx.value != 0)
+                            parts.Add(ModifierName(fx.key) + (fx.value > 0 ? " +" : " ") + fx.value + " в следующей съёмке");
                         break;
                     case EffectType.AddTempCard:
                         parts.Add("карта «" + card + "» до эфира");

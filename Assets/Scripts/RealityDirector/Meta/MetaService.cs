@@ -314,6 +314,17 @@ namespace RealityDirector.Meta
             }
 
             _state.retained.Clear();
+            // «Подкупить ассистента» (маркетинг): три сильнейшие карты колоды приходят в руку первыми.
+            if (ep != null && ep.HasFlag("PeekLibrary"))
+            {
+                ep.flags.Remove("PeekLibrary");
+                var strong = new List<string>(deck);
+                strong.RemoveAll(id => first.Contains(id));
+                strong.Sort((a, b) => (Find(b) != null ? Find(b).cost : 0f).CompareTo(Find(a) != null ? Find(a).cost : 0f));
+                for (int i = 0; i < strong.Count && i < 3; i++)
+                    first.Add(strong[i]);
+            }
+
             foreach (var id in first)
                 deck.Remove(id);
             order.AddRange(first);
