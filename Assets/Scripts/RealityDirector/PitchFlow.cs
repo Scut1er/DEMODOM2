@@ -744,8 +744,9 @@ namespace RealityDirector
             _ui.SetArmed(null);
             _ui.SetCaptureMode(false);
             GameSession.ReturnToMap = true;
-            Sfx.Play(Cue.Card, 0.5f, 0.9f);
-            BackToHub();
+            _phase = PitchPhase.Feedback;
+            int scene = _state.episodeIndex + 1;
+            _ui.PlaySlate(scene, BackToHub);
         }
 
         void DepositFootage()
