@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using RealityDirector.Core;
 using RealityDirector.Meta;
+using RealityDirector.Util;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
@@ -77,6 +78,25 @@ namespace RealityDirector.UI
                 steps.Add(new CoachStep(line, targets));
                 return;
             }
+        }
+
+        public static void Guide(int beat, CoachStep[] steps, Action then)
+        {
+            var state = GameSession.State;
+            if (state == null || !state.wantsTutorial || state.tutorialBeat != beat || steps == null || steps.Length == 0)
+            {
+                then?.Invoke();
+                return;
+            }
+
+            var coach = Ensure();
+            if (coach == null)
+            {
+                then?.Invoke();
+                return;
+            }
+
+            coach.Chain(steps, then);
         }
 
         public static void Play(int beat, int next, params CoachStep[] steps)
@@ -384,7 +404,11 @@ namespace RealityDirector.UI
             var text = Text(go.transform, label, 20, Color.white);
             Stretch(text.rectTransform);
             text.alignment = TextAnchor.MiddleCenter;
-            go.GetComponent<Button>().onClick.AddListener(() => click());
+            go.GetComponent<Button>().onClick.AddListener(() =>
+            {
+                Sfx.Play(Cue.Click, 0.3f);
+                click();
+            });
             return image;
         }
 

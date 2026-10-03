@@ -39,6 +39,10 @@ namespace RealityDirector.UI.Hub
         bool _shopOpen;
         bool _browse;
         string _closeCaption;
+        bool _hardLock;
+        bool _cardsOn = true;
+        bool _closeOn = true;
+        string _onlyId;
 
         public bool IsOpen => gameObject.activeSelf;
         // Магазин доступен только на узле «Магазин» карты сезона.
@@ -80,20 +84,100 @@ namespace RealityDirector.UI.Hub
 
         public void Hide()
         {
+            _hardLock = false;
+            _cardsOn = true;
+            _closeOn = true;
+            _onlyId = null;
             gameObject.SetActive(false);
+        }
+
+        public RectTransform CardsFocus()
+        {
+            return deckRoot != null ? deckRoot : transform as RectTransform;
+        }
+
+        public RectTransform ExplainFocus()
+        {
+            if (deckInfo != null)
+                return deckInfo.rectTransform;
+            return FooterFocus();
+        }
+
+        public RectTransform FooterFocus()
+        {
+            if (footer != null)
+                return footer.rectTransform;
+            return CardsFocus();
+        }
+
+        public RectTransform CloseFocus()
+        {
+            return close != null ? close.transform as RectTransform : null;
+        }
+
+        public RectTransform CardRect(string id)
+        {
+            if (deckRoot == null)
+                return CardsFocus();
+            var views = deckRoot.GetComponentsInChildren<EventCardView>(true);
+            for (int i = 0; i < views.Length; i++)
+            {
+                if (views[i] != null && views[i].CardId == id)
+                    return views[i].transform as RectTransform;
+            }
+
+            return views.Length > 0 ? views[0].transform as RectTransform : CardsFocus();
+        }
+
+        public void SetOnly(string cardId)
+        {
+            _onlyId = cardId;
+            _cardsOn = true;
+            PaintGates();
+        }
+
+        public void SetCardsEnabled(bool on)
+        {
+            _cardsOn = on;
+            PaintGates();
+        }
+
+        public void SetCloseEnabled(bool on)
+        {
+            _closeOn = on;
+            PaintGates();
         }
 
         public void SetLocked(bool locked)
         {
-            var buttons = GetComponentsInChildren<Button>(true);
-            for (int i = 0; i < buttons.Length; i++)
-                buttons[i].interactable = !locked;
+            _hardLock = locked;
+            PaintGates();
         }
 
         public void SetCancelEnabled(bool on)
         {
             if (cancel != null)
-                cancel.interactable = on;
+                cancel.interactable = on && !_hardLock;
+        }
+
+        void PaintGates()
+        {
+            if (close != null)
+                close.interactable = !_hardLock && _closeOn;
+            for (int i = 0; i < tabButtons.Length; i++)
+            {
+                if (tabButtons[i] != null)
+                    tabButtons[i].interactable = !_hardLock && _onlyId == null && _cardsOn;
+            }
+
+            var views = GetComponentsInChildren<EventCardView>(true);
+            for (int i = 0; i < views.Length; i++)
+            {
+                if (views[i] == null)
+                    continue;
+                bool allow = !_hardLock && _cardsOn && (_onlyId == null || views[i].CardId == _onlyId);
+                views[i].SetInteractable(allow);
+            }
         }
 
         public void SetTab(int tab)
@@ -129,6 +213,7 @@ namespace RealityDirector.UI.Hub
             Fill(shopRoot, shopEmpty, model.shop, true);
             if (footer != null)
                 footer.text = Footer(model);
+            PaintGates();
         }
 
         void Fill(RectTransform root, GameObject empty, PrepCard[] cards, bool shop)
