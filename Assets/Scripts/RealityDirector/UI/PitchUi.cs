@@ -90,7 +90,7 @@ namespace RealityDirector.UI
         readonly List<Tag> _tags = new List<Tag>();
         readonly List<Bubble> _bubbles = new List<Bubble>();
         readonly List<Card> _cards = new List<Card>();
-        readonly Slot[] _slots = new Slot[5];
+        readonly Slot[] _slots = new Slot[Progression.BaseCaptureSlots + 2];
         readonly Text[] _reviewAuthors = new Text[3];
         readonly Text[] _reviewBodies = new Text[3];
         readonly Text[] _reviewScores = new Text[3];
@@ -705,7 +705,9 @@ namespace RealityDirector.UI
         public void SetCaptureCapacity(int capacity)
         {
             capacity = Mathf.Clamp(capacity, 1, _slots.Length);
-            float span = (capacity - 1) * 58f;
+            const float step = 52f;
+            float span = (capacity - 1) * step;
+            float origin = -span * 0.5f - (capacity > 5 ? 40f : 0f);
             for (int i = 0; i < _slots.Length; i++)
             {
                 bool on = i < capacity;
@@ -713,7 +715,7 @@ namespace RealityDirector.UI
                 if (!on)
                     continue;
                 var rect = _slots[i].Root.GetComponent<RectTransform>();
-                rect.anchoredPosition = new Vector2(-span * 0.5f + i * 58f, -52f);
+                rect.anchoredPosition = new Vector2(origin + i * step, -52f);
             }
 
             SetFootage(0, capacity);
@@ -1310,6 +1312,8 @@ namespace RealityDirector.UI
                 var well = NewRect("well", slotImg.transform);
                 _slots[i] = new Slot { Root = slotImg.gameObject, Well = well.GetComponent<RectTransform>(), Placeholder = placeholder };
             }
+
+            SetCaptureCapacity(Progression.BaseCaptureSlots);
 
             var end = MakeButton(_hud.transform, "СНЯТО!", new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0.5f, 1f),
                 new Vector2(230f, -18f), new Vector2(160f, 44f), new Color(0.75f, 0.16f, 0.18f, 1f), () => _onEnd?.Invoke());

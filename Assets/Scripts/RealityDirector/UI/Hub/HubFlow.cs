@@ -41,10 +41,10 @@ namespace RealityDirector.UI.Hub
         CastMember[] _cast;
         GameObject _back;
         EventRoomView _eventView;
-        AudioSource _bed;
 
         void Awake()
         {
+            SilenceMenuSource();
             _content = PitchContent.Create();
             _cast = CastRoster.All();
             if (season == null)
@@ -255,7 +255,7 @@ namespace RealityDirector.UI.Hub
             Bind();
             if (GameSession.Embarked && GameSession.InEpisode && !string.IsNullOrEmpty(GameSession.RoomNodeId))
             {
-                StopBed();
+                MusicBed.Play(MusicBed.Scene);
                 SceneFlow.ToScene(string.IsNullOrEmpty(GameSession.SceneId) ? SceneFlow.Episode : GameSession.SceneId);
                 return;
             }
@@ -311,7 +311,7 @@ namespace RealityDirector.UI.Hub
             var teach = new List<CoachStep>();
             BossCoach.Line(teach, BossMood.Aside, "Сверху — кр, рейтинг и тон сезона. кр тратишь здесь, на людей и карты. Hell Token — отдельные деньги, их жгут карты уже на площадке.", hub.StatsFocus());
             BossCoach.Line(teach, BossMood.Think, "Кастинг. Апгрейд даёт места в кадре и процент к чеку. С третьего уровня на карточке откроется скрытая черта. Раньше она закрыта.", hub.ZoneFocus(CrewTrack.Cast));
-            BossCoach.Line(teach, BossMood.Annoyed, "Съёмочная. Каждый уровень — ещё один ролик за выпуск. Со второго монтаж подписывает общий тег соседних кадров. Слоты кончились — хоть потолок снимай, в эфир он не просится.", hub.ZoneFocus(CrewTrack.Operators));
+            BossCoach.Line(teach, BossMood.Annoyed, "Съёмочная. На сцене всегда 5 слотов футажа. Два апгрейда, каждый добавляет ещё один слот на сцену. В монтаже берёшь 3 кадра из всего, что снял за выпуск. Со второго уровня здесь ещё и общий тег соседних кадров.", hub.ZoneFocus(CrewTrack.Operators));
             BossCoach.Line(teach, BossMood.Smug, "Сценарная. Больше карт берут в серию и открываются новые типы. На четвёртом уровне — второй рекламный контракт за выпуск.", hub.ZoneFocus(CrewTrack.Writers));
             BossCoach.Line(teach, BossMood.Shock, "Магазин. Платишь кр один раз. Карта остаётся в колоде до конца сезона. На площадке её сдадут в руку вместе с остальными.", hub.ShopFocus());
             if (teach.Count > 0)
@@ -502,7 +502,7 @@ namespace RealityDirector.UI.Hub
                 _episode.Current.roleBrief = situation.roleBrief;
             BossCoach.Ensure().Hide();
             GameSession.Save();
-            StopBed();
+            MusicBed.Play(MusicBed.Scene);
             SceneFlow.ToScene(GameSession.SceneId);
         }
 
@@ -621,7 +621,7 @@ namespace RealityDirector.UI.Hub
             var roles = EventResolver.CastRoles(def, ctx.episode, nodeId);
             Func nameOf = ActorName;
             var choices = EventResolver.Choices(def, ctx, roles, nameOf);
-            Sfx.Play(Cue.Bell, 0.35f, 1.2f);
+            Sfx.PlayHellCall();
             // Подзаголовок «Событие» не повторяем после «СОБЫТИЕ».
             string sub = def.subtitle != null ? def.subtitle.Trim() : "";
             bool echo = sub.Length == 0 || sub.Equals("событие", System.StringComparison.OrdinalIgnoreCase);
@@ -726,11 +726,11 @@ namespace RealityDirector.UI.Hub
             map.Deck.Hide();
             _episode.Current.EnsureLists();
             Sfx.Play(Cue.Blip, 0.5f);
-            int slots = season != null && season.finalCutSize > 0 ? season.finalCutSize : 3;
+            int slots = Progression.AirSlots;
             _cut.ShowMontage(Library(_episode.Current), slots);
             var cutTeach = new List<CoachStep>();
-            BossCoach.Line(cutTeach, BossMood.Sigh, "Сверху библиотека выпуска. Клик по карточке кладёт ролик в кат или убирает. ▶ смотрит черновик, в эфир от этого ничего не уезжает.", _cut.LibraryFocus);
-            BossCoach.Line(cutTeach, BossMood.Annoyed, "Снизу то, что увидит ад. Слотов мало. Выдели кадр: РАНЬШЕ и ПОЗЖЕ меняют порядок, УБРАТЬ выкидывает. Соседние про одно и то же поднимают связность. Про разное — это нарезка.", _cut.CutFocus);
+            BossCoach.Line(cutTeach, BossMood.Sigh, "Сверху всё, что снял за выпуск. Клик кладёт ролик в один из трёх слотов эфира или убирает. Если ряд длинный — крути колёсико. ▶ смотрит черновик, в эфир от этого ничего не уезжает.", _cut.LibraryFocus);
+            BossCoach.Line(cutTeach, BossMood.Annoyed, "Снизу три кадра, которые увидит ад. Выдели кадр: РАНЬШЕ и ПОЗЖЕ меняют порядок, УБРАТЬ выкидывает. Соседние про одно и то же поднимают связность. Про разное — это нарезка.", _cut.CutFocus);
             BossCoach.Line(cutTeach, BossMood.Grin, "Связность справа. Высокая — зритель видит историю. Низкая — крики без нитки. Со второго уровня съёмочной здесь ещё и общий тег соседей.", _cut.CoherenceFocus);
             BossCoach.Line(cutTeach, BossMood.Yell, "Строчка сверху — это я ору. Не подсказка. Давление. Игнорируешь — я не замолкаю, просто злюсь.", _cut.BossFocus);
             BossCoach.Line(cutTeach, BossMood.Mad, "В ЭФИР. Чего нет в кате — для зрителя не было. Рекламу, которую выкинул, я не оплачу, и репутация спонсора просядет.", _cut.AirFocus);
@@ -980,67 +980,29 @@ namespace RealityDirector.UI.Hub
             SyncBed();
         }
 
-        // Меню — MainMenu.mp3. Intro.mp3 — тема хаба, карты, монтажа и эфира. В съёмочных сценах тишина.
+        // Меню — MainMenu. Хаб, карта, монтаж, эфир — Intro. Съёмка — SceneMainTheme. Смена трека кроссфейдом.
         void SyncBed()
         {
-            var src = Bed();
+            SilenceMenuSource();
             bool menuUp = menu != null && menu.gameObject.activeSelf
                 || settings != null && settings.gameObject.activeSelf && _back == menu.gameObject;
-            if (menuUp)
-                PlayBed(src, "Music/MainMenu");
-            else
-                PlayBed(src, "Music/Intro");
+            MusicBed.Play(menuUp ? MusicBed.Menu : MusicBed.Theme);
         }
 
-        AudioSource Bed()
+        static void SilenceMenuSource()
         {
-            if (_bed != null)
-                return _bed;
             var sources = FindObjectsByType<AudioSource>(FindObjectsInactive.Include);
             for (int i = 0; i < sources.Length; i++)
             {
-                if (sources[i].GetComponent<MainMenuView>() != null)
+                var src = sources[i];
+                if (src == null || src.gameObject.name != "MainMenu")
                     continue;
-                if (sources[i].gameObject.name != "MainMenu")
+                if (src.GetComponent<MainMenuView>() != null)
                     continue;
-                _bed = sources[i];
-                break;
-            }
-
-            if (_bed == null)
-            {
-                var go = new GameObject("BedMusic");
-                go.transform.SetParent(transform, false);
-                _bed = go.AddComponent<AudioSource>();
-            }
-
-            _bed.playOnAwake = false;
-            _bed.loop = true;
-            _bed.spatialBlend = 0f;
-            return _bed;
-        }
-
-        static void PlayBed(AudioSource src, string path)
-        {
-            if (src == null)
-                return;
-            var clip = Resources.Load<AudioClip>(path);
-            if (clip == null)
-                return;
-            if (clip.loadState == AudioDataLoadState.Unloaded)
-                clip.LoadAudioData();
-            if (src.clip == clip && src.isPlaying)
-                return;
-            src.clip = clip;
-            src.loop = true;
-            src.Play();
-        }
-
-        void StopBed()
-        {
-            var src = Bed();
-            if (src != null && src.isPlaying)
+                src.playOnAwake = false;
                 src.Stop();
+                src.enabled = false;
+            }
         }
 
         static void Click()

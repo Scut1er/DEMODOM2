@@ -28,9 +28,9 @@ namespace RealityDirector.Meta
         [Min(1)] public int castMax = 5;
 
         [Header("Монтаж")]
-        [Tooltip("Сколько клипов может накопиться за выпуск.")]
+        [Tooltip("Не режет библиотеку. Слоты футажа считаются на сцену: 5, каждый из двух апгрейдов съёмочной даёт +1.")]
         [Min(1)] public int footageLimit = 5;
-        [Tooltip("Сколько клипов входит в финальный эфир.")]
+        [Tooltip("Сколько клипов входит в финальный эфир. Сейчас эфир всегда берёт Progression.AirSlots (3) из всей библиотеки выпуска.")]
         [Min(1)] public int finalCutSize = 3;
 
         public EpisodeMapConfig MapFor(int episodeIndex)

@@ -91,10 +91,11 @@ namespace RealityDirector.Meta
         public bool TryUpgrade(CrewTrack track)
         {
             int level = Level(track);
-            int cost = Progression.UpgradeCost(track == CrewTrack.Cast, level);
-            if (level >= Progression.MaxLevel || cost <= 0 || _state.money < cost)
+            int max = Progression.MaxFor(track);
+            int cost = Progression.UpgradeCost(track == CrewTrack.Cast, level, max);
+            if (level >= max || cost <= 0 || _state.money < cost)
             {
-                Reject = level >= Progression.MaxLevel ? "Уже максимум." : "Не хватает кр.";
+                Reject = level >= max ? "Уже максимум." : "Не хватает кр.";
                 return false;
             }
 
@@ -337,7 +338,7 @@ namespace RealityDirector.Meta
                 crew = new[]
                 {
                     CrewButtonOf("УЧАСТНИКИ", true, _state.castLevel, "ур. " + _state.castLevel + "\nмест: " + CastRoster.Seats(_state.castLevel) + "\nчек +" + hype + "%"),
-                    CrewButtonOf("ОПЕРАТОРЫ", false, _state.operatorLevel, "ур. " + _state.operatorLevel + "\nкадров: " + Progression.CaptureSlots(_state.operatorLevel) + (_state.operatorLevel >= 2 ? "\nтег в монтаже" : "")),
+                    CrewButtonOf("ОПЕРАТОРЫ", false, _state.operatorLevel, "ур. " + Mathf.Min(_state.operatorLevel, Progression.OperatorMaxLevel) + "\nза сцену: " + Progression.CaptureSlots(_state.operatorLevel) + (_state.operatorLevel >= 2 ? "\nтег в монтаже" : ""), Progression.OperatorMaxLevel),
                     CrewButtonOf("СЦЕНАРИСТЫ", false, _state.writerLevel, writers + "\n" + CategoryLine(_state.writerLevel))
                 },
                 deck = CollectCards(false),
@@ -347,20 +348,22 @@ namespace RealityDirector.Meta
 
         public CrewInfo Crew(CrewTrack track)
         {
-            int level = Level(track);
-            bool maxed = level >= Progression.MaxLevel;
-            int cost = Progression.UpgradeCost(track == CrewTrack.Cast, level);
+            int max = Progression.MaxFor(track);
+            int level = Mathf.Min(Level(track), max);
+            bool maxed = Level(track) >= max;
+            int cost = Progression.UpgradeCost(track == CrewTrack.Cast, Level(track), max);
             var info = new CrewInfo
             {
                 track = track,
                 level = level,
+                maxLevel = max,
                 maxed = maxed,
                 affordable = !maxed && _state.money >= cost,
                 cost = maxed ? "—" : cost + " кр",
                 upgradeLabel = maxed ? "МАКСИМУМ" : "УЛУЧШИТЬ ДО УРОВНЯ " + (level + 1)
             };
 
-            int up = Mathf.Min(level + 1, Progression.MaxLevel);
+            int up = Mathf.Min(level + 1, max);
             switch (track)
             {
                 case CrewTrack.Cast:
@@ -371,7 +374,7 @@ namespace RealityDirector.Meta
                     break;
                 case CrewTrack.Operators:
                     info.title = "СЪЁМОЧНАЯ";
-                    info.description = "Сколько клипов влезает в выпуск. Со 2 уровня монтаж показывает общий тег соседних кадров.";
+                    info.description = "Слоты футажа на одну сцену. Старт — 5. Два апгрейда, каждый +1. В монтаже берёшь 3 кадра из всего, что снял за выпуск. Со 2 уровня виден общий тег соседних кадров.";
                     info.now = OpLines(level);
                     info.next = OpLines(up);
                     break;
@@ -398,7 +401,8 @@ namespace RealityDirector.Meta
 
         static string OpLines(int level)
         {
-            return "• клипов за выпуск: " + Progression.CaptureSlots(level)
+            return "• слотов за сцену: " + Progression.CaptureSlots(level)
+                   + "\n• в эфир: " + Progression.AirSlots + " из всей библиотеки выпуска"
                    + "\n• монтаж: " + (level >= 2 ? "имя общего тега" : "только связка");
         }
 
@@ -463,10 +467,10 @@ namespace RealityDirector.Meta
             return lines;
         }
 
-        CrewButton CrewButtonOf(string title, bool cast, int level, string detail)
+        CrewButton CrewButtonOf(string title, bool cast, int level, string detail, int maxLevel = Progression.MaxLevel)
         {
-            bool maxed = level >= Progression.MaxLevel;
-            int cost = Progression.UpgradeCost(cast, level);
+            bool maxed = level >= maxLevel;
+            int cost = Progression.UpgradeCost(cast, level, maxLevel);
             return new CrewButton
             {
                 title = title,

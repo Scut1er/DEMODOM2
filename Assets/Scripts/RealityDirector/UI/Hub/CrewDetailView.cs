@@ -39,7 +39,7 @@ namespace RealityDirector.UI.Hub
             if (title != null)
                 title.text = info.title;
             if (level != null)
-                level.text = "Уровень " + info.level + " из " + Progression.MaxLevel;
+                level.text = "Уровень " + info.level + " из " + (info.maxLevel > 0 ? info.maxLevel : Progression.MaxLevel);
             if (description != null)
                 description.text = info.description;
             if (now != null)
