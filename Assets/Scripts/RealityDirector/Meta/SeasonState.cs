@@ -45,6 +45,8 @@ namespace RealityDirector.Meta
         public int sponsorReputation = 25;
         public bool wantsTutorial;
         public int tutorialBeat;
+        // Одноразовые подсказки, которые показываются в момент первого появления, а не в стартовом туре.
+        public readonly List<string> tips = new List<string>();
         public readonly List<string> hand = new List<string>();
         public bool embarked;
         public string roomNodeId;
@@ -81,6 +83,7 @@ namespace RealityDirector.Meta
             sponsorReputation = 25;
             wantsTutorial = false;
             tutorialBeat = 0;
+            tips.Clear();
             hand.Clear();
             embarked = false;
             roomNodeId = null;

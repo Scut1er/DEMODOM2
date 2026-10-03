@@ -192,16 +192,26 @@ namespace RealityDirector.Meta
         public static FeedbackResult BuildCut(IReadOnlyList<CapturedMoment> cut, SeasonTone tone, int coherence, bool sponsorAired,
             CutReport report = null, string brand = null)
         {
+            // Пустой эфир: смотреть нечего. Раньше общие отзывы давали ~4/10 и 50–60 кр за пустоту.
+            if (cut == null || cut.Count == 0)
+                return EmptyAir(tone);
             var result = Build(null, cut, tone);
             if (result.reviews == null)
                 result.reviews = new List<ViewerReview>();
             var extra = HellTubeComments.Pick(cut, tone, coherence, sponsorAired, 4, report, brand);
             var seen = new HashSet<string>();
+            var people = new HashSet<string>();
             for (int i = 0; i < result.reviews.Count; i++)
+            {
                 seen.Add(result.reviews[i].body ?? "");
+                if (!string.IsNullOrEmpty(result.reviews[i].author))
+                    people.Add(result.reviews[i].author);
+            }
             for (int i = 0; i < extra.Count && result.reviews.Count < 6; i++)
             {
                 if (!seen.Add(extra[i].body ?? ""))
+                    continue;
+                if (!string.IsNullOrEmpty(extra[i].author) && !people.Add(extra[i].author))
                     continue;
                 result.reviews.Add(extra[i]);
             }
@@ -216,6 +226,32 @@ namespace RealityDirector.Meta
             if (report != null && report.clips.Count > 0 && result.score > 0f)
                 result.score = UnityEngine.Mathf.Clamp(UnityEngine.Mathf.Round((result.score + report.ratingBonus) * 10f) / 10f, 1f, 10f);
             return result;
+        }
+
+        static FeedbackResult EmptyAir(SeasonTone tone)
+        {
+            var reviews = new List<ViewerReview>
+            {
+                new ViewerReview { author = "Аня", score = 1, body = "Серия вышла, а смотреть нечего. Это шутка такая?" },
+                new ViewerReview { author = "Кирилл", score = 1, body = "Пустой эфир. Даже обоев не показали." },
+                new ViewerReview
+                {
+                    author = "Марина",
+                    score = 1,
+                    offer = true,
+                    wish = ViewerWishId.Cry,
+                    body = OfferBody(ViewerWishId.Cry, new List<string>(), tone)
+                },
+                new ViewerReview { author = "суккуб_с_попкорном", score = 1, body = "серия вышла, а смотреть нечего" }
+            };
+
+            return new FeedbackResult
+            {
+                reviews = reviews,
+                score = 1f,
+                wish = OfferLabel(ViewerWishId.Cry, tone),
+                nextWish = ViewerWishId.Cry
+            };
         }
 
         static List<ViewerReview> Extras(IReadOnlyList<CapturedMoment> cut, int coherence, bool sponsorAired)

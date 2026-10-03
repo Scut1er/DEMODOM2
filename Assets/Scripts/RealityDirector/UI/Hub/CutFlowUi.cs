@@ -28,6 +28,9 @@ namespace RealityDirector.UI.Hub
         public RectTransform AirFocus => _airButton;
         public RectTransform BossFocus => _boss != null ? _boss.transform as RectTransform : null;
         public RectTransform CoherenceFocus => _coherence != null ? _coherence.transform as RectTransform : null;
+        public int CutCount => _order.Count;
+        public int LibraryCount => _library.Count;
+        public event Action Edited;
         public RectTransform WatchFocus => _watch;
         public RectTransform NumbersFocus => _numbers;
         public RectTransform CommentsFocus => _comments;
@@ -103,12 +106,28 @@ namespace RealityDirector.UI.Hub
             _air.SetActive(false);
         }
 
+        bool _holdAir;
+
+        public void HoldAir(bool hold)
+        {
+            _holdAir = hold;
+            var button = _airButton != null ? _airButton.GetComponent<Button>() : null;
+            if (button != null)
+                button.interactable = !hold;
+        }
+
         public void SetLocked(bool locked)
         {
             if (_montage != null)
                 LockButtons(_montage, locked);
             if (_air != null)
                 LockButtons(_air, locked);
+            if (_holdAir && _airButton != null)
+            {
+                var button = _airButton.GetComponent<Button>();
+                if (button != null)
+                    button.interactable = false;
+            }
         }
 
         static void LockButtons(GameObject root, bool locked)
@@ -242,7 +261,7 @@ namespace RealityDirector.UI.Hub
 
             if (_library.Count == 0)
             {
-                var empty = TextOn(_libraryRow, "Пусто. В эфир можно сдать и так.", 18, new Color(0.7f, 0.64f, 0.6f, 1f), TextAnchor.MiddleLeft);
+                var empty = TextOn(_libraryRow, "Пусто. Сдать можно, но пустой эфир не оплачивается.", 18, new Color(0.7f, 0.64f, 0.6f, 1f), TextAnchor.MiddleLeft);
                 empty.rectTransform.sizeDelta = new Vector2(600f, 40f);
             }
         }
@@ -266,6 +285,7 @@ namespace RealityDirector.UI.Hub
             }
 
             RefreshCut();
+            Edited?.Invoke();
         }
 
         void Move(int dir)
@@ -280,6 +300,7 @@ namespace RealityDirector.UI.Hub
             _order.Insert(next, id);
             _picked = next;
             RefreshCut();
+            Edited?.Invoke();
         }
 
         void RemovePicked()
@@ -289,6 +310,7 @@ namespace RealityDirector.UI.Hub
             _order.RemoveAt(_picked);
             _picked = -1;
             RefreshCut();
+            Edited?.Invoke();
         }
 
         void RefreshCut()
@@ -328,12 +350,13 @@ namespace RealityDirector.UI.Hub
             if (_panel != null)
                 _panel.Show(report, _slots, Extra != null ? Extra(chosen) : null);
             _boss.text = MontageCut.Boss(coherence, chosen.Count, _library.Count);
-            _coherence.text = "связность " + coherence + "%";
+            bool paired = chosen.Count >= 2;
+            _coherence.text = paired ? "связность " + coherence + "%" : "связность — нужны 2 кадра";
             if (_meter != null)
             {
                 var r = _meter.rectTransform;
-                r.anchorMax = new Vector2(Mathf.Clamp01(coherence / 100f), 1f);
-                _meter.color = coherence >= 70 ? UiKit.Good : coherence >= 40 ? UiKit.Gold : UiKit.Ember;
+                r.anchorMax = new Vector2(paired ? Mathf.Clamp01(coherence / 100f) : 0f, 1f);
+                _meter.color = !paired ? UiKit.Muted : coherence >= 70 ? UiKit.Good : coherence >= 40 ? UiKit.Gold : UiKit.Ember;
                 _coherence.color = _meter.color;
             }
             PaintLibrary();
@@ -463,7 +486,8 @@ namespace RealityDirector.UI.Hub
             var heading = TextOn(page, string.IsNullOrEmpty(title) ? "Серия" : title, 30, Color.white, TextAnchor.UpperLeft);
             heading.fontStyle = FontStyle.Bold;
             Pin(heading.rectTransform, 40f, 436f, 1200f, 44f);
-            var meta = TextOn(page, Group(views) + " просмотров   ·   нравится " + likes + "%   ·   связность " + coherence + "%   ·   рейтинг " + Comma(result.score) + " / 10",
+            string linked = cut != null && cut.Count >= 2 ? "связность " + coherence + "%   ·   " : "";
+            var meta = TextOn(page, Group(views) + " просмотров   ·   нравится " + likes + "%   ·   " + linked + "рейтинг " + Comma(result.score) + " / 10",
                 17, TubeMuted, TextAnchor.UpperLeft);
             Pin(meta.rectTransform, 40f, 482f, 1200f, 28f);
             _numbers = meta.rectTransform;
@@ -493,7 +517,9 @@ namespace RealityDirector.UI.Hub
             Pin(sideTitle.rectTransform, 72f, 22f, 480f, 42f);
             _viewsStat = Stat(side, 84f, "icon_eye_tint", "Просмотры", Group(views), -1f);
             _ratingStat = Stat(side, 146f, "icon_star_tint", "Рейтинг", Comma(result.score) + " / 10", result.score / 10f);
-            _linkStat = Stat(side, 208f, "icon_link_tint", "Связность монтажа", coherence + "%", coherence / 100f);
+            // Связность — между соседними кадрами: с одним кадром её нет.
+            bool paired = cut != null && cut.Count >= 2;
+            _linkStat = Stat(side, 208f, "icon_link_tint", "Связность монтажа", paired ? coherence + "%" : "нужны 2 кадра", paired ? coherence / 100f : -1f);
             _incomeStat = Stat(side, 270f, "icon_coins_tint", "Доход", "+" + pay + " кр", -1f);
             var note = TextOn(side, payLine ?? "", 16, UiKit.Gold, TextAnchor.UpperLeft);
             note.supportRichText = true;

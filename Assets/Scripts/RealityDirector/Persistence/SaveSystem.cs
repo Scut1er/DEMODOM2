@@ -43,6 +43,7 @@ namespace RealityDirector.Persistence
         public int sponsorReputation = 25;
         public bool wantsTutorial;
         public int tutorialBeat;
+        public List<string> tips = new List<string>();
         public List<string> hand = new List<string>();
         public bool embarked;
         public string roomNodeId;
@@ -109,6 +110,7 @@ namespace RealityDirector.Persistence
                 sponsorReputation = state.sponsorReputation,
                 wantsTutorial = state.wantsTutorial,
                 tutorialBeat = state.tutorialBeat,
+                tips = new List<string>(state.tips),
                 hand = new List<string>(state.hand),
                 embarked = state.embarked,
                 roomNodeId = state.roomNodeId,
@@ -124,7 +126,7 @@ namespace RealityDirector.Persistence
 
             try
             {
-                File.WriteAllText(FilePath, JsonUtility.ToJson(data, true));
+                WriteAtomic(FilePath, JsonUtility.ToJson(data, true));
             }
             catch (Exception e)
             {
@@ -174,6 +176,8 @@ namespace RealityDirector.Persistence
             state.sponsorReputation = data.sponsorReputation;
             state.wantsTutorial = data.wantsTutorial;
             state.tutorialBeat = data.tutorialBeat;
+            if (data.tips != null)
+                state.tips.AddRange(data.tips);
             if (data.hand != null)
                 state.hand.AddRange(data.hand);
             state.embarked = data.embarked;
@@ -212,10 +216,43 @@ namespace RealityDirector.Persistence
             return true;
         }
 
+        // Сначала во временный файл, потом подмена: падение посреди записи не портит прошлый сейв.
+        static void WriteAtomic(string path, string text)
+        {
+            string tmp = path + ".tmp";
+            File.WriteAllText(tmp, text);
+            if (!File.Exists(path))
+            {
+                File.Move(tmp, path);
+                return;
+            }
+
+            try
+            {
+                File.Replace(tmp, path, null);
+            }
+            catch (Exception)
+            {
+                // Файловая система без атомарной подмены — копия поверх и уборка.
+                File.Copy(tmp, path, true);
+                File.Delete(tmp);
+            }
+        }
+
+        // Удаляет и сейв чужой версии, и недописанный временный файл.
         public static void Delete()
         {
-            if (HasSave)
-                File.Delete(FilePath);
+            try
+            {
+                if (File.Exists(FilePath))
+                    File.Delete(FilePath);
+                if (File.Exists(FilePath + ".tmp"))
+                    File.Delete(FilePath + ".tmp");
+            }
+            catch (Exception e)
+            {
+                Debug.LogWarning("Save delete failed: " + e.Message);
+            }
         }
     }
 }

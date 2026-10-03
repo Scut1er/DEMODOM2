@@ -38,6 +38,11 @@ namespace RealityDirector.Cards
             var lines = new List<string>();
             if (def == null)
                 return lines;
+            if (def.id == "CARD_REVEAL_005")
+            {
+                lines.Add("Чужой телефон на виду. Любопытные и ревнивые полезут.");
+                return lines;
+            }
             var effects = def.effects ?? new List<CardEffect>();
             var dice = def.diceEffects ?? new List<DiceEffect>();
             var usedDice = new HashSet<DiceEffect>();
@@ -68,7 +73,27 @@ namespace RealityDirector.Cards
             }
 
             foreach (var (who, parts) in byWho)
-                lines.Add(who + ": " + string.Join(", ", parts));
+            {
+                bool anger = false;
+                bool stress = false;
+                bool onlyHeat = parts.Count > 0;
+                for (int i = 0; i < parts.Count; i++)
+                {
+                    string part = parts[i];
+                    bool up = part.Contains("+") || part.Contains("↑");
+                    if (part.StartsWith("злость ") && up)
+                        anger = true;
+                    else if (part.StartsWith("стресс ") && up)
+                        stress = true;
+                    else
+                        onlyHeat = false;
+                }
+
+                if (onlyHeat && anger && stress)
+                    lines.Add("Злится и заводится. Насколько — как ляжет.");
+                else
+                    lines.Add(who + ": " + string.Join(", ", parts));
+            }
 
             var rel = new List<string>();
             foreach (var e in effects)
@@ -767,6 +792,12 @@ namespace RealityDirector.Cards
                     for (int i = 0; i < list.Count && i < 3; i++)
                     {
                         var f = list[i];
+                        if (f.level == Level.High)
+                        {
+                            sb.Append("\n<color=").Append(LevelColor(f.level)).Append(">").Append(f.actor.DisplayName).Append(" сорвётся.</color>");
+                            continue;
+                        }
+
                         sb.Append("\n").Append(f.actor.DisplayName).Append(" — <color=").Append(LevelColor(f.level)).Append(">").Append(LevelName(f.level)).Append("</color>");
                         if (f.reasons.Count > 0)
                             sb.Append(": ").Append(string.Join(", ", f.reasons));

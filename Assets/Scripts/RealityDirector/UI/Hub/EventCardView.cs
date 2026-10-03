@@ -85,7 +85,7 @@ namespace RealityDirector.UI.Hub
 
             bool poor = shop && !card.affordable;
             if (shop)
-                _face.SetCost(card.price + " " + (string.IsNullOrEmpty(card.unit) ? "кр" : card.unit), poor);
+                _face.SetCost(card.price + " " + (string.IsNullOrEmpty(card.unit) ? "кр" : card.unit == "нал" ? "касса" : card.unit), poor);
             _face.SetBanner(card.temporary ? "В РУКЕ" : null, UiKit.Gold);
             if (!string.IsNullOrEmpty(card.hint))
                 _face.SetHint(card.hint);

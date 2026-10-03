@@ -48,7 +48,7 @@ namespace RealityDirector.UI.Hub
             }
 
             // Закрытые места — одной строкой: сколько ещё и с какого уровня кастинга первое.
-            int rows = Mathf.Min(CastRoster.MaxSeats, seats + 1);
+            int rows = Mathf.Min(CastRoster.SeatLimit, seats + 1);
             for (int i = 0; i < rows; i++)
             {
                 var row = Instantiate(rowPrefab, list);
@@ -70,7 +70,7 @@ namespace RealityDirector.UI.Hub
                 else
                 {
                     row.name = rowPrefab.name + "_locked" + i;
-                    int more = CastRoster.MaxSeats - seats;
+                    int more = CastRoster.SeatLimit - seats;
                     row.Show("Ещё " + more + " " + Places(more), "с Кастинга ур. " + i, null, true);
                 }
             }

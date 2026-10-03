@@ -14,6 +14,7 @@ namespace RealityDirector.UI.Hub
         Font _font;
         GameObject _page;
         public RectTransform Focus { get; private set; }
+        public RectTransform ConfirmFocus { get; private set; }
 
         public static HubOverlays Create()
         {
@@ -300,7 +301,7 @@ namespace RealityDirector.UI.Hub
                 Pin(name.rectTransform, 14f, Photo + 24f, width - 36f, 44f);
 
                 // Видимые черты — «чипы».
-                float chipX = 14f;
+                float chipX = 22f;
                 float chipY = Photo + 76f;
                 foreach (var trait in member.traits ?? new string[0])
                 {
@@ -308,19 +309,27 @@ namespace RealityDirector.UI.Hub
                         continue;
                     var chipText = Label(body.transform, trait, 16, CastLight);
                     UiTypography.Apply(chipText, TextRole.Caption);
-                    float w = chipText.preferredWidth + 20f;
+                    chipText.resizeTextForBestFit = true;
+                    chipText.resizeTextMinSize = 10;
+                    chipText.resizeTextMaxSize = 16;
+                    chipText.horizontalOverflow = HorizontalWrapMode.Wrap;
+                    chipText.verticalOverflow = VerticalWrapMode.Truncate;
+                    float w = Mathf.Clamp(Mathf.Max(chipText.preferredWidth, trait.Length * 9f) + 20f, 64f, width - 56f);
                     if (chipX + w > width - 22f)
                     {
-                        chipX = 14f;
+                        chipX = 22f;
                         chipY += 34f;
                     }
 
                     var chip = Box(body.transform, "chip", CastChip);
                     UiKit.Dress(chip, UiKit.Frame.RedTile);
                     Pin(chip.rectTransform, chipX, chipY, w, 28f);
+                    chip.gameObject.AddComponent<RectMask2D>();
                     chipText.transform.SetParent(chip.transform, false);
                     chipText.alignment = TextAnchor.MiddleCenter;
                     Stretch(chipText.rectTransform);
+                    chipText.rectTransform.offsetMin = new Vector2(8f, 2f);
+                    chipText.rectTransform.offsetMax = new Vector2(-8f, -2f);
                     chipX += w + 8f;
                 }
 
@@ -384,17 +393,26 @@ namespace RealityDirector.UI.Hub
 
             // Низ: кнопка «Утвердить» и подсказка.
             confirm = Box(_page.transform, "confirm", CastGold);
-            Pin(confirm.rectTransform, 80f, Top + Height + 34f, 460f, 76f);
+            Pin(confirm.rectTransform, 80f, Top + Height + 48f, 400f, 72f);
             confirmButton = confirm.gameObject.AddComponent<Button>();
             UiKit.Primary(confirmButton);
             confirmText = Label(confirm.transform, "УТВЕРДИТЬ КАСТ", 20, CastInk);
             UiTypography.Apply(confirmText, TextRole.Button);
             confirmText.alignment = TextAnchor.MiddleCenter;
+            confirmText.resizeTextForBestFit = true;
+            confirmText.resizeTextMinSize = 14;
+            confirmText.resizeTextMaxSize = 22;
+            confirmText.horizontalOverflow = HorizontalWrapMode.Wrap;
             Stretch(confirmText.rectTransform);
+            confirmText.rectTransform.offsetMin = new Vector2(16f, 8f);
+            confirmText.rectTransform.offsetMax = new Vector2(-16f, -8f);
+            ConfirmFocus = confirm.rectTransform;
             status = Label(_page.transform, "", 19, CastMuted);
             UiTypography.Apply(status, TextRole.Label);
             status.alignment = TextAnchor.MiddleLeft;
-            Pin(status.rectTransform, 564f, Top + Height + 40f, 860f, 64f);
+            status.horizontalOverflow = HorizontalWrapMode.Wrap;
+            status.verticalOverflow = VerticalWrapMode.Truncate;
+            Pin(status.rectTransform, 504f, Top + Height + 48f, 900f, 72f);
             confirmButton.onClick.AddListener(() =>
             {
                 if (picked.Count < min)
@@ -624,7 +642,7 @@ namespace RealityDirector.UI.Hub
         {
             string price = offer.kind == OfferKind.Contract
                 ? "контракт · +" + offer.payout + " кр"
-                : offer.price + " нал";
+                : offer.price + " касса";
             var go = new GameObject("deal", typeof(RectTransform), typeof(Image), typeof(Button), typeof(LayoutElement));
             go.transform.SetParent(parent, false);
             go.GetComponent<LayoutElement>().preferredHeight = 72f;

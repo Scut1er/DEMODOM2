@@ -9,10 +9,9 @@ namespace RealityDirector.Meta
         // Доля соседних пар, у которых совпал тег или настроение. 0–100.
         public static int Coherence(IReadOnlyList<FootageClip> cut)
         {
-            if (cut == null || cut.Count == 0)
+            // Связность — про соседние кадры. Одного ролика не с чем сравнивать.
+            if (cut == null || cut.Count < 2)
                 return 0;
-            if (cut.Count == 1)
-                return cut[0].Framed ? 40 : 0;
             int links = 0;
             int pairs = cut.Count - 1;
             for (int i = 0; i < pairs; i++)
@@ -66,7 +65,9 @@ namespace RealityDirector.Meta
         public static string Boss(int coherence, int cutCount, int libraryCount)
         {
             if (cutCount <= 0)
-                return "В эфир пустоту? Я такое подписывал. Потом спрашивали, куда делся сезон.";
+                return "В эфир пустоту? Ни оценки, ни денег. Я такое подписывал — потом спрашивали, куда делся сезон.";
+            if (cutCount == 1)
+                return "Один кадр. Соседних нет — связность не из чего считать. Добавь второй.";
             if (libraryCount > cutCount && coherence >= 70)
                 return "Связно. Даже слишком. Зритель любит, когда его не уважают. Ладно, пусть так.";
             if (coherence >= 70)

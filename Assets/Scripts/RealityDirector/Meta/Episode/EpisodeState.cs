@@ -112,6 +112,8 @@ namespace RealityDirector.Meta
         public bool setOnFire;
         public bool setBathOpen;
         public bool setBedOpen;
+        [Tooltip("Слотов футажа у текущей съёмки (setRoom). Возврат в ту же съёмку после выхода из игры держит прежний лимит.")]
+        public int setCapacity;
         [Tooltip("Сыгранные спонсорские карты, которым ещё нужен кадр.")]
         public List<string> pendingSponsors = new List<string>();
         [Tooltip("Больше не режет библиотеку. Слоты считаются на сцену.")]

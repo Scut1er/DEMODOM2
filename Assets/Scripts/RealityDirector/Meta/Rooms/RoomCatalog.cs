@@ -90,8 +90,10 @@ namespace RealityDirector.Meta
             room.SetId("placeholder_" + type.ToString().ToLowerInvariant());
             room.hideFlags = HideFlags.DontSave;
             room.title = TypeTitle(type);
-            room.subtitle = "нет контента";
-            room.description = "Комнат этого типа нет в Resources/Content — подставлена заглушка.";
+            room.subtitle = type == RoomType.Montage ? "финальная склейка" : "комната";
+            room.description = type == RoomType.Montage
+                ? "Собери до трёх роликов и отправь выпуск в эфир."
+                : "Запасная комната этого типа.";
             room.icon = type == RoomType.Montage ? MapNodeKind.Climax : type == RoomType.Marketing ? MapNodeKind.Shop
                 : type == RoomType.Event ? MapNodeKind.Mystery : MapNodeKind.Scene;
             _placeholders[type] = room;

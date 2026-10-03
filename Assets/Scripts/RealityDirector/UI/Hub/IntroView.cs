@@ -134,8 +134,9 @@ namespace RealityDirector.UI.Hub
 
             bool caption = beat.type == "caption";
             bool input = beat.type == "input";
-            _mat.SetActive(!caption);
-            _caption.SetActive(caption);
+            bool baked = caption && beat.bg == "intro_01_hell_corp";
+            _mat.SetActive(!caption && !input);
+            _caption.SetActive(caption && !baked);
             _dialog.SetActive(!caption && !input);
             _input.SetActive(input);
             _catcher.gameObject.SetActive(!input);
@@ -143,6 +144,12 @@ namespace RealityDirector.UI.Hub
 
             if (caption)
             {
+                if (baked)
+                {
+                    StartCoroutine(HoldCaption(_epoch));
+                    return;
+                }
+
                 _captionText.text = beat.text ?? "";
                 _captionText.fontSize = beat.small ? 30 : 72;
                 _captionText.fontStyle = beat.small ? FontStyle.Italic : FontStyle.BoldAndItalic;
@@ -347,7 +354,7 @@ namespace RealityDirector.UI.Hub
             dim.color = new Color(0f, 0f, 0f, 0.4f);
             Stretch(dim.rectTransform);
             var panel = ArtImage(_input.transform, "panel", Art + "vn/input_panel", true);
-            Pin(panel.rectTransform, 560f, 330f, 800f, 360f);
+            Pin(panel.rectTransform, 560f, 300f, 800f, 440f);
             _inputTitle = Words(panel.transform, 34, Hex("#f3e2c0"), FontStyle.Bold, TextAnchor.MiddleCenter);
             _inputTitle.text = "ПОДПИСЬ ПРОДЮСЕРА";
             Pin(_inputTitle.rectTransform, 40f, 48f, 720f, 48f);
@@ -374,6 +381,16 @@ namespace RealityDirector.UI.Hub
             _field.lineType = InputField.LineType.SingleLine;
             _field.caretColor = Color.white;
             _field.onValueChanged.AddListener(value => _sign.interactable = !string.IsNullOrWhiteSpace(value));
+            var ink = new GameObject("ink", typeof(RectTransform), typeof(Image));
+            ink.transform.SetParent(fieldGo.transform, false);
+            var inkImage = ink.GetComponent<Image>();
+            inkImage.color = new Color(0.08f, 0.04f, 0.06f, 1f);
+            inkImage.raycastTarget = false;
+            var inkRect = ink.GetComponent<RectTransform>();
+            Stretch(inkRect);
+            inkRect.offsetMin = new Vector2(10f, 22f);
+            inkRect.offsetMax = new Vector2(-10f, -22f);
+            ink.transform.SetAsFirstSibling();
             var skin = fieldGo.AddComponent<FieldSkin>();
             skin.image = fieldImage;
             skin.normal = fieldImage.sprite;
@@ -404,7 +421,8 @@ namespace RealityDirector.UI.Hub
             Stretch(_inputButton.rectTransform);
 
             _inputFine = Words(panel.transform, 15, Hex("#a8898f"), FontStyle.Italic, TextAnchor.UpperCenter);
-            Pin(_inputFine.rectTransform, 70f, 302f, 660f, 40f);
+            _inputFine.verticalOverflow = VerticalWrapMode.Truncate;
+            Pin(_inputFine.rectTransform, 80f, 318f, 640f, 72f);
             _input.SetActive(false);
         }
 
