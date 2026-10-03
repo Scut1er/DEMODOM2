@@ -60,6 +60,7 @@ namespace RealityDirector
         bool _inputLock;
         float _rumble;
         bool _panning;
+        bool _rmbLatched;
         Vector2 _panLast;
         float _handUntil;
         SeasonTone _tone => GameSession.Tone;
@@ -224,9 +225,14 @@ namespace RealityDirector
             if (mouse == null || cam == null || _shake == null)
                 return;
 
-            bool drag = mouse.rightButton.isPressed || mouse.middleButton.isPressed;
+            bool right = mouse.rightButton.isPressed;
+            if (!right)
+                _rmbLatched = false;
+            else if (_armed != null)
+                _rmbLatched = true;
+            bool drag = mouse.middleButton.isPressed || (right && !_rmbLatched);
             float raw = mouse.scroll.ReadValue().y;
-            if (!mouse.middleButton.isPressed && Mathf.Abs(raw) > 0.01f)
+            if (!OverUi() && !mouse.middleButton.isPressed && Mathf.Abs(raw) > 0.01f)
             {
                 float notches = Mathf.Abs(raw) > 8f ? raw / 120f : raw;
                 cam.orthographicSize = Mathf.Clamp(cam.orthographicSize - notches * 0.9f, 3.15f, 11.5f);
@@ -241,6 +247,8 @@ namespace RealityDirector
 
             if (!_panning)
             {
+                if (OverUi())
+                    return;
                 _panning = true;
                 _panLast = now;
                 return;
@@ -1089,7 +1097,7 @@ namespace RealityDirector
             if (_lesson == Lesson.Throw && played.id == "fridge_fire")
             {
                 _lesson = Lesson.Holding;
-                StartCoroutine(FreezeSoon(0.9f, () => BossCoach.Ensure().Freeze(
+                StartCoroutine(FreezeSoon(1.15f, () => BossCoach.Ensure().Freeze(
                     "Вот так. Карта не ставит оценку. Она портит им день. Смотри, кто уже идёт к огню.",
                     () =>
                     {
