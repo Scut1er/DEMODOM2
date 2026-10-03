@@ -1,0 +1,23 @@
+{
+  "id": "",
+  "title": "",
+  "category": "",
+  "tier": 1,
+  "hellTokenCost": 0.0,
+  "targetType": "None|Actor|ActorPair|Zone|Prop|CardInHand",
+  "targetFilters": [],
+  "tags": [],
+  "effects": [],
+  "diceEffects": [],
+  "environmentPrefab": "",
+  "auraDefinition": null,
+  "footage": {
+    "requiresVisibleInFrame": false,
+    "tags": [],
+    "valueModifier": 0
+  },
+  "sponsorId": "",
+  "lifetime": "UntilEndOfSituation",
+  "specialRules": [],
+  "designIntent": ""
+}

@@ -1,0 +1,73 @@
+{
+  "canvas": {
+    "renderMode": "Screen Space - Overlay",
+    "canvasScaler": {
+      "uiScaleMode": "Scale With Screen Size",
+      "referenceResolution": [
+        1920,
+        1080
+      ],
+      "screenMatchMode": "Match Width Or Height",
+      "match": 0.5
+    }
+  },
+  "nineSliceBordersPx": {
+    "panel_dark_9slice.png": [
+      24,
+      24,
+      24,
+      24
+    ],
+    "panel_actor_9slice.png": [
+      24,
+      24,
+      24,
+      24
+    ],
+    "panel_gold_9slice.png": [
+      24,
+      24,
+      24,
+      24
+    ],
+    "panel_red_9slice.png": [
+      24,
+      24,
+      24,
+      24
+    ],
+    "panel_token_9slice.png": [
+      24,
+      24,
+      24,
+      24
+    ],
+    "button_camera_bg_9slice.png": [
+      18,
+      18,
+      18,
+      18
+    ],
+    "button_pause_bg_9slice.png": [
+      18,
+      18,
+      18,
+      18
+    ],
+    "button_done_bg_9slice.png": [
+      18,
+      18,
+      18,
+      18
+    ]
+  },
+  "sortingOrder": [
+    "World",
+    "WorldOverlay",
+    "HUD",
+    "Cards",
+    "Tooltips",
+    "Pause"
+  ],
+  "textRule": "No gameplay text is baked into PNG assets. Use TextMeshPro for all labels, numbers, card copy, tooltips and dialogue."
+}

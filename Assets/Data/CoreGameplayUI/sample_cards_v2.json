@@ -1,0 +1,128 @@
+[
+  {
+    "id": "provocative_question",
+    "title": "Провокационный вопрос",
+    "category": "Provocation",
+    "hellTokenCost": 1.5,
+    "targetType": "Actor",
+    "tags": [
+      "Provocation",
+      "Public",
+      "Conflict"
+    ],
+    "effects": [
+      {
+        "type": "ModifyEmotion",
+        "stat": "Anger",
+        "dice": "1d6"
+      },
+      {
+        "type": "ModifyEmotion",
+        "stat": "Stress",
+        "dice": "1d4"
+      },
+      {
+        "type": "CreateWorldEvent",
+        "tags": [
+          "Provocation",
+          "Public"
+        ]
+      }
+    ],
+    "frame": "UI/CardFrames/card_frame_provocation.png",
+    "placeholderArt": "PlaceholderContent/Cards/card_art_provocation_placeholder.png"
+  },
+  {
+    "id": "leave_alone",
+    "title": "Оставить наедине",
+    "category": "Social",
+    "hellTokenCost": 0.75,
+    "targetType": "ActorPair",
+    "tags": [
+      "Social",
+      "Private",
+      "Romance"
+    ],
+    "effects": [
+      {
+        "type": "MoveActorsToPrivateZone"
+      },
+      {
+        "type": "ModifyRelationship",
+        "stat": "Attraction",
+        "dice": "1d6"
+      }
+    ],
+    "frame": "UI/CardFrames/card_frame_social.png",
+    "placeholderArt": "PlaceholderContent/Cards/card_art_social_placeholder.png"
+  },
+  {
+    "id": "hell_alcohol_crate",
+    "title": "Ящик адского алкоголя",
+    "category": "Environment",
+    "hellTokenCost": 2.5,
+    "targetType": "Zone",
+    "tags": [
+      "Alcohol",
+      "Chaos",
+      "Party"
+    ],
+    "effects": [
+      {
+        "type": "SpawnEnvironmentObject",
+        "prefab": "HellAlcoholCrate"
+      },
+      {
+        "type": "CreateAura",
+        "selfControl": "down",
+        "angerDiceStep": "+1",
+        "attractionDiceStep": "+1"
+      }
+    ],
+    "frame": "UI/CardFrames/card_frame_environment.png",
+    "placeholderArt": "PlaceholderContent/Cards/card_art_environment_placeholder.png"
+  },
+  {
+    "id": "reschedule",
+    "title": "Перепланировка",
+    "category": "Deck Management",
+    "hellTokenCost": 1.0,
+    "targetType": "CardInHand",
+    "tags": [
+      "Deck"
+    ],
+    "effects": [
+      {
+        "type": "ReturnCardToLibrary",
+        "count": 1
+      },
+      {
+        "type": "SearchLibrary",
+        "mode": "ChooseAny",
+        "count": 1
+      }
+    ],
+    "frame": "UI/CardFrames/card_frame_deck.png",
+    "placeholderArt": "PlaceholderContent/Cards/card_art_deck_placeholder.png"
+  },
+  {
+    "id": "hell_cola_poster",
+    "title": "Постер Hell Cola",
+    "category": "Sponsor",
+    "hellTokenCost": 1.75,
+    "targetType": "Zone",
+    "tags": [
+      "Sponsor",
+      "Advertisement"
+    ],
+    "effects": [
+      {
+        "type": "SpawnEnvironmentObject",
+        "prefab": "HellColaPoster"
+      }
+    ],
+    "footageRule": "Only footage where the poster is visible receives the matching SponsorTag.",
+    "frame": "UI/CardFrames/card_frame_sponsor.png",
+    "placeholderArt": "PlaceholderContent/Cards/card_art_sponsor_placeholder.png"
+  }
+]

@@ -35,6 +35,7 @@ namespace RealityDirector.UI
         GameObject _feedback;
         GameObject _vision;
         GameObject _captureBanner;
+        GameObject _captureFrame;
         Text _bannerText;
         Transform _cardBar;
         RectTransform _camRect;
@@ -522,7 +523,11 @@ namespace RealityDirector.UI
         // Не хватает бюджета — цена на карте красная.
         static void PaintPrice(Card card, bool poor)
         {
-            if (card.Pill != null)
+            if (card.Pill == null)
+                return;
+            if (card.Pill.sprite != null)
+                card.Pill.color = poor ? new Color(1f, 0.35f, 0.32f, 1f) : Color.white;
+            else
                 card.Pill.color = poor ? new Color(0.62f, 0.12f, 0.1f, 0.95f) : new Color(0.14f, 0.09f, 0.08f, 0.92f);
         }
 
@@ -671,6 +676,7 @@ namespace RealityDirector.UI
         void BuildCastRow(int index)
         {
             var row = Panel("who" + index, _castRoot, new Color(0.1f, 0.08f, 0.12f, 1f));
+            CoreGameplayArt.Slice(row, "UI/Panels/panel_actor_9slice");
             var rect = row.rectTransform;
             rect.anchorMin = new Vector2(0f, 1f);
             rect.anchorMax = new Vector2(1f, 1f);
@@ -711,6 +717,7 @@ namespace RealityDirector.UI
         RectTransform Meter(Transform parent, Color color, float y)
         {
             var track = Panel("track", parent, new Color(0f, 0f, 0f, 0.45f));
+            CoreGameplayArt.Paint(track, "UI/HUD/stat_bar_bg", false);
             var trackRect = track.rectTransform;
             trackRect.anchorMin = trackRect.anchorMax = new Vector2(0f, 1f);
             trackRect.pivot = new Vector2(0f, 1f);
@@ -718,6 +725,8 @@ namespace RealityDirector.UI
             trackRect.sizeDelta = new Vector2(78f, 6f);
             track.raycastTarget = false;
             var fill = Panel("fill", track.transform, color);
+            if (CoreGameplayArt.Paint(fill, "UI/HUD/stat_bar_fill_white", false))
+                fill.color = color;
             var fillRect = fill.rectTransform;
             fillRect.anchorMin = new Vector2(0f, 0.5f);
             fillRect.anchorMax = new Vector2(0f, 0.5f);
@@ -831,6 +840,7 @@ namespace RealityDirector.UI
 
             for (int i = 0; i < _slots.Length; i++)
             {
+                PaintSlot(i, false);
                 _slots[i].Placeholder.gameObject.SetActive(true);
                 for (int c = _slots[i].Well.childCount - 1; c >= 0; c--)
                     DestroyPolaroid(_slots[i].Well.GetChild(c).gameObject);
@@ -975,14 +985,19 @@ namespace RealityDirector.UI
         {
             if (_endPlate == null)
                 return;
-            _endPlate.color = on
-                ? new Color(0.86f, 0.62f, 0.16f, 1f)
-                : new Color(0.22f, 0.2f, 0.24f, 1f);
+            if (_endPlate.sprite != null)
+                _endPlate.color = on ? Color.white : new Color(0.45f, 0.45f, 0.48f, 1f);
+            else
+                _endPlate.color = on
+                    ? new Color(0.86f, 0.62f, 0.16f, 1f)
+                    : new Color(0.22f, 0.2f, 0.24f, 1f);
         }
 
         public void SetCaptureMode(bool on)
         {
             _captureBanner.SetActive(on);
+            if (_captureFrame != null)
+                _captureFrame.SetActive(on);
             _camLabel.text = on ? "КАМЕРА ВКЛ" : "КАМЕРА   C";
             if (_bannerText != null && on)
                 _bannerText.text = "REC  00 / 03";
@@ -993,6 +1008,8 @@ namespace RealityDirector.UI
             if (_bannerText == null || !on)
                 return;
             _captureBanner.SetActive(true);
+            if (_captureFrame != null)
+                _captureFrame.SetActive(true);
             int sec = Mathf.FloorToInt(seconds);
             _bannerText.text = "REC  " + sec.ToString("00") + " / 03";
         }
@@ -1180,6 +1197,7 @@ namespace RealityDirector.UI
         void BuildHud()
         {
             var left = Panel("cast", _hud.transform, new Color(0.05f, 0.04f, 0.07f, 0.94f));
+            CoreGameplayArt.Slice(left, "UI/Panels/panel_dark_9slice");
             var leftRect = left.rectTransform;
             // Плашка по высоте каста (растёт в SetCast), а не тёмная колонна до самой руки.
             leftRect.anchorMin = leftRect.anchorMax = new Vector2(0f, 1f);
@@ -1201,6 +1219,8 @@ namespace RealityDirector.UI
             _camButton = cam;
             _camRect = cam.transform as RectTransform;
             _camLabel = cam.GetComponentInChildren<Text>();
+            if (CoreGameplayArt.Slice(cam.GetComponent<Image>(), "UI/Buttons/button_camera_bg_9slice"))
+                ParkIcon(cam.transform, "UI/Icons/icon_camera", _camLabel);
 
             var castGo = NewRect("rows", left.transform);
             _castRoot = castGo.GetComponent<RectTransform>();
@@ -1209,6 +1229,19 @@ namespace RealityDirector.UI
             _castRoot.pivot = new Vector2(0.5f, 1f);
             _castRoot.anchoredPosition = new Vector2(0f, -142f);
             _castRoot.sizeDelta = new Vector2(-16f, 520f);
+
+            var footPlate = Panel("footagePlate", _hud.transform, new Color(0f, 0f, 0f, 0f));
+            if (CoreGameplayArt.Slice(footPlate, "UI/Panels/panel_gold_9slice"))
+            {
+                var plateRect = footPlate.rectTransform;
+                plateRect.anchorMin = plateRect.anchorMax = new Vector2(0.5f, 1f);
+                plateRect.pivot = new Vector2(0.5f, 1f);
+                plateRect.anchoredPosition = new Vector2(-40f, -6f);
+                plateRect.sizeDelta = new Vector2(300f, 42f);
+                footPlate.raycastTarget = false;
+            }
+            else
+                Destroy(footPlate.gameObject);
 
             _footage = MakeText(_hud.transform, "ФУТАЖ  0 / 1", 22, Paper, TextAnchor.MiddleCenter);
             var footRect = _footage.rectTransform;
@@ -1220,10 +1253,11 @@ namespace RealityDirector.UI
             for (int i = 0; i < _slots.Length; i++)
             {
                 var slotImg = Panel("slot" + i, _hud.transform, new Color(0.1f, 0.09f, 0.08f, 0.92f));
+                bool slotArt = CoreGameplayArt.Paint(slotImg, "UI/HUD/footage_slot_empty");
                 var slotRect = slotImg.rectTransform;
                 slotRect.anchorMin = slotRect.anchorMax = new Vector2(0.5f, 1f);
                 slotRect.pivot = new Vector2(0.5f, 1f);
-                slotRect.sizeDelta = new Vector2(52f, 36f);
+                slotRect.sizeDelta = slotArt ? new Vector2(48f, 48f) : new Vector2(52f, 36f);
                 slotRect.anchoredPosition = new Vector2(-90f + i * 58f, -52f);
                 var placeholder = MakeText(slotImg.transform, (i + 1).ToString(), 14, Muted, TextAnchor.MiddleCenter);
                 Stretch(placeholder.rectTransform);
@@ -1240,23 +1274,37 @@ namespace RealityDirector.UI
             _hubRect = leave.transform as RectTransform;
             _endPlate = end.GetComponent<Image>();
             _doneRect = end.transform as RectTransform;
-            var clap = new GameObject("clap", typeof(RectTransform), typeof(Image));
-            clap.transform.SetParent(end.transform, false);
-            var clapRect = clap.GetComponent<RectTransform>();
-            clapRect.anchorMin = new Vector2(0f, 0.5f);
-            clapRect.anchorMax = new Vector2(0f, 0.5f);
-            clapRect.pivot = new Vector2(0f, 0.5f);
-            clapRect.anchoredPosition = new Vector2(8f, 0f);
-            clapRect.sizeDelta = new Vector2(32f, 32f);
-            var clapImg = clap.GetComponent<Image>();
-            clapImg.sprite = IllustratedArt.IconClap;
-            clapImg.preserveAspect = true;
-            clapImg.raycastTarget = false;
-            var endLabel = end.GetComponentInChildren<Text>();
-            endLabel.rectTransform.offsetMin = new Vector2(42f, 0f);
-            endLabel.alignment = TextAnchor.MiddleLeft;
+            if (CoreGameplayArt.Slice(_endPlate, "UI/Buttons/button_done_bg_9slice"))
+                ParkIcon(end.transform, "UI/Icons/icon_check", end.GetComponentInChildren<Text>());
+            else
+            {
+                var clap = new GameObject("clap", typeof(RectTransform), typeof(Image));
+                clap.transform.SetParent(end.transform, false);
+                var clapRect = clap.GetComponent<RectTransform>();
+                clapRect.anchorMin = new Vector2(0f, 0.5f);
+                clapRect.anchorMax = new Vector2(0f, 0.5f);
+                clapRect.pivot = new Vector2(0f, 0.5f);
+                clapRect.anchoredPosition = new Vector2(8f, 0f);
+                clapRect.sizeDelta = new Vector2(32f, 32f);
+                var clapImg = clap.GetComponent<Image>();
+                clapImg.sprite = IllustratedArt.IconClap;
+                clapImg.preserveAspect = true;
+                clapImg.raycastTarget = false;
+                var endLabel = end.GetComponentInChildren<Text>();
+                endLabel.rectTransform.offsetMin = new Vector2(42f, 0f);
+                endLabel.alignment = TextAnchor.MiddleLeft;
+            }
 
-            _captureBanner = Panel("banner", _hud.transform, new Color(0.75f, 0.12f, 0.16f, 0.95f)).gameObject;
+            if (CoreGameplayArt.Slice(leave.GetComponent<Image>(), "UI/Buttons/button_pause_bg_9slice"))
+            {
+                var hubRect = leave.transform as RectTransform;
+                hubRect.sizeDelta = new Vector2(128f, 44f);
+                ParkIcon(leave.transform, "UI/Icons/icon_pause", leave.GetComponentInChildren<Text>());
+            }
+
+            var banner = Panel("banner", _hud.transform, new Color(0.75f, 0.12f, 0.16f, 0.95f));
+            CoreGameplayArt.Slice(banner, "UI/Panels/panel_red_9slice");
+            _captureBanner = banner.gameObject;
             var bannerRect = _captureBanner.GetComponent<RectTransform>();
             bannerRect.anchorMin = bannerRect.anchorMax = new Vector2(0.5f, 0.5f);
             bannerRect.pivot = new Vector2(0.5f, 0.5f);
@@ -1264,9 +1312,38 @@ namespace RealityDirector.UI
             bannerRect.anchoredPosition = new Vector2(80f, -40f);
             _bannerText = MakeText(_captureBanner.transform, "REC", 18, Paper, TextAnchor.MiddleCenter);
             Stretch(_bannerText.rectTransform);
+            var rec = Panel("rec", _captureBanner.transform, Color.white);
+            if (CoreGameplayArt.Paint(rec, "UI/HUD/rec_dot"))
+            {
+                var recRect = rec.rectTransform;
+                recRect.anchorMin = recRect.anchorMax = new Vector2(0f, 0.5f);
+                recRect.pivot = new Vector2(0f, 0.5f);
+                recRect.anchoredPosition = new Vector2(10f, 0f);
+                recRect.sizeDelta = new Vector2(16f, 16f);
+                rec.raycastTarget = false;
+                _bannerText.rectTransform.offsetMin = new Vector2(28f, 0f);
+            }
+            else
+                Destroy(rec.gameObject);
+
             _captureBanner.SetActive(false);
+            var corners = Panel("captureFrame", _hud.transform, Color.white);
+            if (CoreGameplayArt.Paint(corners, "UI/HUD/capture_frame_corners", false))
+            {
+                var cornerRect = corners.rectTransform;
+                cornerRect.anchorMin = cornerRect.anchorMax = new Vector2(0.5f, 0.5f);
+                cornerRect.pivot = new Vector2(0.5f, 0.5f);
+                cornerRect.sizeDelta = new Vector2(520f, 280f);
+                cornerRect.anchoredPosition = new Vector2(40f, 70f);
+                corners.raycastTarget = false;
+                _captureFrame = corners.gameObject;
+                _captureFrame.SetActive(false);
+            }
+            else
+                Destroy(corners.gameObject);
 
             var frame = Panel("frame", _hud.transform, new Color(0.06f, 0.05f, 0.08f, 0.88f));
+            CoreGameplayArt.Slice(frame, "UI/Panels/panel_dark_9slice");
             _framePlate = frame.gameObject;
             var frameRect = frame.rectTransform;
             frameRect.anchorMin = frameRect.anchorMax = new Vector2(0.5f, 0.5f);
@@ -1327,8 +1404,17 @@ namespace RealityDirector.UI
         Card MakeCard(int index, EventDefinition def, Action onClick)
         {
             var frame = Panel("card" + index, _cardBar, def.cardColor);
+            var frameSprite = CoreGameplayArt.Sprite(CoreGameplayArt.Frame(def.category));
+            bool skinned = frameSprite != null;
+            if (skinned)
+            {
+                frame.sprite = frameSprite;
+                frame.type = Image.Type.Simple;
+                frame.color = Color.white;
+            }
+
             var element = frame.gameObject.AddComponent<LayoutElement>();
-            element.preferredWidth = 156f;
+            element.preferredWidth = skinned ? 168f : 156f;
             element.preferredHeight = 226f;
             var group = frame.gameObject.AddComponent<CanvasGroup>();
             var button = frame.gameObject.AddComponent<Button>();
@@ -1342,12 +1428,12 @@ namespace RealityDirector.UI
                 onClick();
             });
 
-            var inner = Panel("inner", frame.transform, new Color(0.95f, 0.91f, 0.84f, 1f));
+            var inner = Panel("inner", frame.transform, skinned ? new Color(0f, 0f, 0f, 0f) : new Color(0.95f, 0.91f, 0.84f, 1f));
             var innerRect = inner.rectTransform;
             innerRect.anchorMin = Vector2.zero;
             innerRect.anchorMax = Vector2.one;
-            innerRect.offsetMin = new Vector2(6f, 6f);
-            innerRect.offsetMax = new Vector2(-6f, -6f);
+            innerRect.offsetMin = skinned ? new Vector2(14f, 18f) : new Vector2(6f, 6f);
+            innerRect.offsetMax = skinned ? new Vector2(-14f, -16f) : new Vector2(-6f, -6f);
             inner.raycastTarget = false;
 
             // Номер — горячая клавиша карты (1–5).
@@ -1362,7 +1448,8 @@ namespace RealityDirector.UI
             var number = MakeText(badge.transform, (index + 1).ToString(), 15, Paper, TextAnchor.MiddleCenter);
             Stretch(number.rectTransform);
 
-            var title = MakeText(inner.transform, def.displayName.ToUpperInvariant(), 16, new Color(0.18f, 0.12f, 0.1f), TextAnchor.MiddleCenter);
+            var title = MakeText(inner.transform, def.displayName.ToUpperInvariant(), 16,
+                skinned ? Paper : new Color(0.18f, 0.12f, 0.1f), TextAnchor.MiddleCenter);
             var titleRect = title.rectTransform;
             titleRect.anchorMin = new Vector2(0f, 1f);
             titleRect.anchorMax = new Vector2(1f, 1f);
@@ -1385,12 +1472,18 @@ namespace RealityDirector.UI
             artRect.sizeDelta = new Vector2(-12f, 96f);
             art.raycastTarget = false;
             art.preserveAspect = true;
-            art.color = Color.white;
-            if (def.cardArt != null)
-                art.sprite = def.cardArt;
+            var artSprite = def.cardArt != null ? def.cardArt : (skinned ? CoreGameplayArt.Sprite(CoreGameplayArt.CardArt(def.category)) : null);
+            if (artSprite != null)
+            {
+                art.sprite = artSprite;
+                art.color = Color.white;
+            }
+            else
+                art.color = skinned ? new Color(1f, 1f, 1f, 0.04f) : new Color(0.9f, 0.86f, 0.78f, 1f);
 
             // Цена в HellToken — плашкой в углу арта; не хватает бюджета — плашка красная.
             var pill = Panel("cost", art.transform, new Color(0.14f, 0.09f, 0.08f, 0.92f));
+            CoreGameplayArt.Paint(pill, "UI/HUD/cost_badge", false);
             var pillRect = pill.rectTransform;
             pillRect.anchorMin = new Vector2(1f, 0f);
             pillRect.anchorMax = new Vector2(1f, 0f);
@@ -1401,7 +1494,8 @@ namespace RealityDirector.UI
             var price = MakeText(pill.transform, HellToken.Format(def.cost), 15, Gold, TextAnchor.MiddleCenter);
             Stretch(price.rectTransform);
 
-            var body = MakeText(inner.transform, def.hint, 13, new Color(0.35f, 0.26f, 0.2f), TextAnchor.MiddleCenter);
+            var body = MakeText(inner.transform, def.hint, 13,
+                skinned ? new Color(0.9f, 0.86f, 0.8f) : new Color(0.35f, 0.26f, 0.2f), TextAnchor.MiddleCenter);
             var bodyRect = body.rectTransform;
             bodyRect.anchorMin = new Vector2(0f, 0f);
             bodyRect.anchorMax = new Vector2(1f, 0f);
@@ -1424,11 +1518,27 @@ namespace RealityDirector.UI
                 Frame = frame,
                 Status = status,
                 Root = frame.rectTransform,
-                Base = def.cardColor,
+                Base = skinned ? Color.white : def.cardColor,
                 Button = button,
                 Group = group,
                 Pill = pill
             };
+            if (skinned && def.diceEffects != null && def.diceEffects.Count > 0)
+            {
+                var die = Panel("die", frame.transform, Color.white);
+                if (CoreGameplayArt.Paint(die, CoreGameplayArt.Die(def.diceEffects[0].die)))
+                {
+                    var dieRect = die.rectTransform;
+                    dieRect.anchorMin = dieRect.anchorMax = new Vector2(1f, 0.58f);
+                    dieRect.pivot = new Vector2(1f, 0.5f);
+                    dieRect.anchoredPosition = new Vector2(-12f, 0f);
+                    dieRect.sizeDelta = new Vector2(54f, 54f);
+                    die.raycastTarget = false;
+                }
+                else
+                    Destroy(die.gameObject);
+            }
+
             var hover = frame.gameObject.AddComponent<CardHover>();
             hover.Enter = () => ShowTip(card);
             hover.Exit = () =>
@@ -1445,6 +1555,22 @@ namespace RealityDirector.UI
         void BuildBudget(Transform parent)
         {
             var plate = Panel("budget", parent, new Color(0.07f, 0.055f, 0.08f, 0.9f));
+            if (CoreGameplayArt.Slice(plate, "UI/Panels/panel_token_9slice"))
+            {
+                var token = Panel("token", plate.transform, Color.white);
+                if (CoreGameplayArt.Paint(token, "UI/Icons/icon_token"))
+                {
+                    var tokenRect = token.rectTransform;
+                    tokenRect.anchorMin = tokenRect.anchorMax = new Vector2(1f, 1f);
+                    tokenRect.pivot = new Vector2(1f, 1f);
+                    tokenRect.anchoredPosition = new Vector2(-10f, -10f);
+                    tokenRect.sizeDelta = new Vector2(28f, 28f);
+                    token.raycastTarget = false;
+                }
+                else
+                    Destroy(token.gameObject);
+            }
+
             plate.raycastTarget = false;
             var element = plate.gameObject.AddComponent<LayoutElement>();
             element.preferredWidth = BudgetWidth + 24f;
@@ -1508,6 +1634,7 @@ namespace RealityDirector.UI
         void BuildTip()
         {
             var plate = Panel("cardTip", _hud.transform, new Color(0.07f, 0.055f, 0.08f, 0.97f));
+            CoreGameplayArt.Slice(plate, "UI/Panels/panel_dark_9slice");
             plate.raycastTarget = false;
             _tip = plate.gameObject;
             _tipRect = plate.rectTransform;
@@ -1671,6 +1798,7 @@ namespace RealityDirector.UI
         void BuildTone()
         {
             var plate = Panel("Tone", transform, Hud);
+            CoreGameplayArt.Slice(plate, "UI/Panels/panel_dark_9slice");
             _toneRoot = plate.gameObject;
             var rect = plate.rectTransform;
             rect.anchorMin = new Vector2(1f, 1f);
@@ -1699,7 +1827,7 @@ namespace RealityDirector.UI
                 iconRect.pivot = new Vector2(0f, 0.5f);
                 iconRect.anchoredPosition = Vector2.zero;
                 iconRect.sizeDelta = new Vector2(22f, 22f);
-                icon.sprite = MoodIcon(mood);
+                icon.sprite = ToneIcon(mood);
                 icon.preserveAspect = true;
                 icon.raycastTarget = false;
 
@@ -1712,6 +1840,7 @@ namespace RealityDirector.UI
                 labelRect.sizeDelta = new Vector2(78f, 0f);
 
                 var track = Panel("track", row.transform, new Color(0f, 0f, 0f, 0.45f));
+                CoreGameplayArt.Paint(track, "UI/HUD/stat_bar_bg", false);
                 var trackRect = track.rectTransform;
                 trackRect.anchorMin = new Vector2(0f, 0.5f);
                 trackRect.anchorMax = new Vector2(0f, 0.5f);
@@ -1721,6 +1850,8 @@ namespace RealityDirector.UI
                 track.raycastTarget = false;
 
                 var fill = Panel("fill", track.transform, MoodStyle.ColorOf(mood));
+                if (CoreGameplayArt.Paint(fill, "UI/HUD/stat_bar_fill_white", false))
+                    fill.color = MoodStyle.ColorOf(mood);
                 var fillRect = fill.rectTransform;
                 fillRect.anchorMin = new Vector2(0f, 0f);
                 fillRect.anchorMax = new Vector2(0f, 1f);
@@ -1797,6 +1928,47 @@ namespace RealityDirector.UI
                 case ShowMood.Trash: return IllustratedArt.IconDevil;
                 default: return IllustratedArt.IconFamily;
             }
+        }
+
+        static Sprite ToneIcon(ShowMood mood)
+        {
+            string path = mood == ShowMood.Drama ? "UI/Icons/icon_drama"
+                : mood == ShowMood.Family ? "UI/Icons/icon_family"
+                : "UI/Icons/icon_fire";
+            return CoreGameplayArt.Sprite(path) ?? MoodIcon(mood);
+        }
+
+        void PaintSlot(int slot, bool full)
+        {
+            if (slot < 0 || slot >= _slots.Length || _slots[slot].Root == null)
+                return;
+            var image = _slots[slot].Root.GetComponent<Image>();
+            if (image == null || image.sprite == null)
+                return;
+            CoreGameplayArt.Paint(image, full ? "UI/HUD/footage_slot_full" : "UI/HUD/footage_slot_empty");
+        }
+
+        void ParkIcon(Transform parent, string path, Text label)
+        {
+            var icon = new GameObject("icon", typeof(RectTransform), typeof(Image));
+            icon.transform.SetParent(parent, false);
+            var image = icon.GetComponent<Image>();
+            if (!CoreGameplayArt.Paint(image, path))
+            {
+                Destroy(icon);
+                return;
+            }
+
+            var rect = image.rectTransform;
+            rect.anchorMin = rect.anchorMax = new Vector2(0f, 0.5f);
+            rect.pivot = new Vector2(0f, 0.5f);
+            rect.anchoredPosition = new Vector2(8f, 0f);
+            rect.sizeDelta = new Vector2(26f, 26f);
+            image.raycastTarget = false;
+            if (label == null)
+                return;
+            label.alignment = TextAnchor.MiddleLeft;
+            label.rectTransform.offsetMin = new Vector2(40f, 0f);
         }
 
         GameObject BuildIntro()
@@ -2410,6 +2582,7 @@ namespace RealityDirector.UI
             if (epoch != _slotEpoch || rt == null)
                 yield break;
 
+            PaintSlot(slot, true);
             rt.SetParent(_slots[slot].Well, false);
             rt.anchorMin = new Vector2(0.5f, 0.5f);
             rt.anchorMax = new Vector2(0.5f, 0.5f);

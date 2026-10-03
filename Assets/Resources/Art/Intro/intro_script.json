@@ -1,0 +1,120 @@
+[
+ {
+  "scene": 1,
+  "bg": "intro_01_hell_corp",
+  "type": "caption",
+  "text": "Где-то в аду…",
+  "sfx": "ambient_city_hell, crowd_murmur"
+ },
+ {
+  "scene": 1,
+  "bg": "intro_01_hell_corp",
+  "type": "caption",
+  "text": "Головной офис самого рейтингового канала преисподней",
+  "small": true
+ },
+ {
+  "scene": 2,
+  "bg": "intro_02_contract",
+  "type": "line",
+  "speaker": "Босс",
+  "offscreen": true,
+  "text": "Ну что, подписывай. Добро пожаловать в семью, наш будущий самый ценный сотрудник."
+ },
+ {
+  "scene": 2,
+  "bg": "intro_02_contract",
+  "type": "line",
+  "speaker": "Босс",
+  "offscreen": true,
+  "text": "Мелкий шрифт можешь не читать. Его всё равно никто не читает."
+ },
+ {
+  "scene": 3,
+  "bg": "intro_02_contract",
+  "type": "input",
+  "var": "nick",
+  "title": "Подпись продюсера",
+  "placeholder": "Введите имя",
+  "button": "Подписать",
+  "fineprint": "Подписывая, вы соглашаетесь передать душу, права на образ и… впрочем, неважно.",
+  "sfx_on_confirm": "pen_scribble"
+ },
+ {
+  "scene": 4,
+  "bg": "intro_04_boss_chair",
+  "type": "line",
+  "speaker": "Босс",
+  "text": "Итак, уважаемый… как там тебя?"
+ },
+ {
+  "scene": 4,
+  "bg": "intro_04_boss_chair",
+  "type": "line",
+  "speaker": "Босс",
+  "stage": "щурится в контракт, недовольно ворчит",
+  "text": "Блять, ни хрена не вижу в этих очках.",
+  "sfx": "grumble"
+ },
+ {
+  "scene": 4,
+  "bg": "intro_04_boss_chair",
+  "type": "line",
+  "speaker": "Босс",
+  "stage": "не глядя швыряет контракт за спину",
+  "text": "А, плевать. Давай сразу к делу.",
+  "sfx": "paper_throw"
+ },
+ {
+  "scene": 5,
+  "bg": "intro_05_monitors",
+  "type": "line",
+  "speaker": "Босс",
+  "text": "Твоя задача — снять нам реалити-шоу. Да такое, чтобы мы запустили его и окупили целый сезон."
+ },
+ {
+  "scene": 5,
+  "bg": "intro_05_monitors",
+  "type": "line",
+  "speaker": "Босс",
+  "text": "Вилла, камеры, актёры — всё уже есть. Не хватает только того, кто выжмет из них драму."
+ },
+ {
+  "scene": 6,
+  "bg": "intro_06_glasses",
+  "type": "line",
+  "speaker": "Босс",
+  "text": "Небось сидишь и думаешь: «А как я это сделаю?»"
+ },
+ {
+  "scene": 6,
+  "bg": "intro_06_glasses",
+  "type": "line",
+  "speaker": "Босс",
+  "text": "Давай подкину тебе мотивации для размышлений."
+ },
+ {
+  "scene": 6,
+  "bg": "intro_06_glasses",
+  "type": "line",
+  "speaker": "Босс",
+  "stage": "медленно приспускает очки",
+  "text": "Не справишься — твоя жопа на кону.",
+  "sfx": "bass_hit"
+ },
+ {
+  "scene": 7,
+  "bg": "intro_07_staff",
+  "type": "line",
+  "speaker": "Босс",
+  "text": "Ну что, вперёд и с песней! Нам нужно заработать, а наш стафф тебе в этом поможет.",
+  "sfx": "crowd_cheer"
+ },
+ {
+  "scene": 7,
+  "bg": "intro_07_staff",
+  "type": "stage_only",
+  "text": "Актрисы машут в камеры",
+  "next": "title_card / gameplay"
+ }
+]
