@@ -8,8 +8,6 @@ namespace RealityDirector.Meta
     {
         [Tooltip("Стабильный id. Не меняйте после того, как контент попал в игру — сейвы ссылаются на него. Пусто — возьмётся из имени ассета.")]
         [SerializeField] string id;
-        [Tooltip("Заметки дизайнера. В игре не показываются.")]
-        [TextArea(2, 5)] public string designerNotes;
 
         public string Id => string.IsNullOrEmpty(id) ? MakeId(name) : id;
 

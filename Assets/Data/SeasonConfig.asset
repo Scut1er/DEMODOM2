@@ -18,7 +18,4 @@ MonoBehaviour:
   - {fileID: 11400000, guid: 99d4cf5020201f04d98dcef38e9edbd1, type: 2}
   startingBudget: 0
   startingCash: 90
-  castMin: 2
   castMax: 5
-  footageLimit: 5
-  finalCutSize: 3

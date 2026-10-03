@@ -24,10 +24,6 @@ namespace RealityDirector.EditorTools
 
             if (c.maps == null || c.maps.Count == 0)
                 EditorGUILayout.HelpBox("Не задано ни одной карты — будет встроенная по умолчанию.", MessageType.Warning);
-            if (c.castMin > c.castMax)
-                EditorGUILayout.HelpBox("castMin больше castMax.", MessageType.Error);
-            if (c.finalCutSize > c.footageLimit)
-                EditorGUILayout.HelpBox("В эфир идёт больше клипов, чем может накопиться (finalCutSize > footageLimit).", MessageType.Warning);
             if (c.castMax > CastRoster.MaxSeats)
                 EditorGUILayout.HelpBox("castMax больше максимума мест в хабе (" + CastRoster.MaxSeats + ").", MessageType.Warning);
         }

@@ -50,7 +50,7 @@ namespace RealityDirector.EditorTools
             var season = AssetDatabase.LoadAssetAtPath<SeasonConfig>(DesignerData.SeasonPath);
             Section("Сезон");
             if (season != null)
-                Row(season, season.episodes + " выпусков  ·  каст " + season.castMin + "–" + season.castMax + "  ·  в эфир " + season.finalCutSize + " из " + season.footageLimit + " клипов");
+                Row(season, season.episodes + " выпусков  ·  каст до " + season.castMax + "  ·  нал на выпуск " + season.startingCash);
             else if (GUILayout.Button("Создать SeasonConfig"))
                 DesignerData.CreateAsset<SeasonConfig>("Assets/Data", "SeasonConfig");
 
@@ -90,6 +90,8 @@ namespace RealityDirector.EditorTools
                  "Условия решают, когда комната может выпасть; эффекты — что случится при входе.");
             var rooms = DesignerData.LoadAll<RoomDefinition>();
             RoomGroup<SituationRoomDefinition>("Съёмки", rooms, "Situations", "Situation_New");
+            if (GUILayout.Button("Открыть мастерскую событий", GUILayout.Height(28)))
+                EventWorkshop.Open();
             RoomGroup<EventRoomDefinition>("События", rooms, "Events", "Event_New");
             RoomGroup<MarketingRoomDefinition>("Маркетинг", rooms, "Marketing", "Marketing_New");
             RoomGroup<MontageRoomDefinition>("Монтаж", rooms, "Montage", "Montage_New");
@@ -120,33 +122,22 @@ namespace RealityDirector.EditorTools
 
         void CardsTab()
         {
-            Hint("Карты продюсера — ассеты в " + DesignerData.CardsRoot + ".\n" +
-                 "Ассет с id встроенной карты меняет её; ассет с новым id — новая карта (в магазине, если есть цена, или в стартовой колоде).\n" +
-                 "Новая карта работает через общие поля: цель, теги, тон, злость, поджог. Особая механика — только у встроенных.");
+            Hint("Карты продюсера — ассеты в " + DesignerData.CardsRoot + ". Удобнее всего править в «Мастерской карт»:\n" +
+                 "карточка с превью и прогнозом реакций, таблица цифр всех карт, обзор баланса и кнопка «Проверить в квартире».\n" +
+                 "Где игрок берёт карту: стартовая колода, магазин хаба (кр, навсегда), магазин выпуска (нал, до эфира), спонсор.");
+            if (GUILayout.Button("Открыть мастерскую карт", GUILayout.Height(30)))
+                CardWorkshop.Open();
             var cards = DesignerData.LoadAll<EventDefinition>();
-            Section("Карты в ассетах");
-            if (cards.Count == 0)
-                EditorGUILayout.LabelField("Пока все карты встроены в код. Нажмите «Выгрузить встроенные», чтобы их править.", EditorStyles.wordWrappedMiniLabel);
+            Section("Карты (" + cards.Count + ")");
             foreach (var card in cards)
-            {
-                string economy = card.starter ? "стартовая" : card.price > 0 ? card.price + " кр" : "не выдаётся";
-                Row(card, card.displayName + "  ·  " + card.id + "  ·  " + economy);
-            }
+                Row(card, card.displayName + "  ·  " + CardInsight.Sources(card));
 
             using (new EditorGUILayout.HorizontalScope())
             {
-                if (GUILayout.Button("Выгрузить встроенные карты"))
-                    ContentMenu.ExportCards();
+                if (GUILayout.Button("Синхронизировать с кодом"))
+                    ContentMenu.SyncCards();
                 if (GUILayout.Button("+ Новая карта"))
-                    DesignerData.CreateAsset<EventDefinition>(DesignerData.CardsRoot, "card_new", c =>
-                    {
-                        c.id = ContentDefinition.MakeId(c.name);
-                        c.displayName = "Новая карта";
-                        c.hint = "сразу на весь дом";
-                        c.targetType = TargetType.Global;
-                        c.cardColor = new Color(0.4f, 0.3f, 0.5f, 1f);
-                        c.price = 100;
-                    });
+                    CardWorkshop.Open(CardActions.Create());
             }
         }
 
@@ -159,7 +150,7 @@ namespace RealityDirector.EditorTools
             if (actors.Count == 0)
                 EditorGUILayout.LabelField("Ассетов нет — в хабе двое встроенных. Нажмите «Создать стартовых», чтобы их править.", EditorStyles.wordWrappedMiniLabel);
             foreach (var actor in actors)
-                Row(actor, actor.displayName + "  ·  " + actor.archetype + (actor.available ? "" : "   (выключен)"));
+                Row(actor, actor.displayName + "  ·  " + string.Join(", ", actor.visibleTraits) + (actor.available ? "" : "   (выключен)"));
 
             using (new EditorGUILayout.HorizontalScope())
             {

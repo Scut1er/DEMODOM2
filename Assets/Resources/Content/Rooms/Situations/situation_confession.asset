@@ -13,7 +13,6 @@ MonoBehaviour:
   m_Name: situation_confession
   m_EditorClassIdentifier: Assembly-CSharp::RealityDirector.Meta.SituationRoomDefinition
   id: situation_confession
-  designerNotes: 
   title: "\u0418\u0421\u041F\u041E\u0412\u0415\u0414\u042C"
   subtitle: "\u041A\u043E\u043C\u043D\u0430\u0442\u0430 \u043F\u0440\u0438\u0437\u043D\u0430\u043D\u0438\u0439"
   description: "\u0413\u0435\u0440\u043E\u0438 \u0433\u043E\u0432\u043E\u0440\u044F\u0442 \u043D\u0430 \u043A\u0430\u043C\u0435\u0440\u0443 \u0442\u043E, \u0447\u0442\u043E \u043D\u0435 \u0441\u043A\u0430\u0436\u0443\u0442 \u0432 \u043B\u0438\u0446\u043E."

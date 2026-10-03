@@ -154,6 +154,20 @@ namespace RealityDirector.EditorTools
                     else if (type == EffectType.AddNarrativeTag)
                         AddOnce(_narrativeTags, key);
                 }
+
+                // Теги, которые ставят события: при входе и по результату выбора.
+                if (asset is EventRoomDefinition e)
+                {
+                    foreach (var t in e.eventTags)
+                        AddOnce(_narrativeTags, t);
+                    foreach (var c in e.choices)
+                    {
+                        foreach (var t in c.resultTags)
+                            AddOnce(_narrativeTags, t);
+                        foreach (var t in c.failTags)
+                            AddOnce(_narrativeTags, t);
+                    }
+                }
             }
         }
 

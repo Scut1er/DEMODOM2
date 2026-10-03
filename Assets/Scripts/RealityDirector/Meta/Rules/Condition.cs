@@ -19,7 +19,8 @@ namespace RealityDirector.Meta
         RoomVisited,      // key — id комнаты (в этом выпуске)
         CrewLevelAtLeast, // key — Cast / Operators / Writers, value — уровень
         ContractActive,   // key — id спонсорского оффера
-        ToneAtLeast       // mood, value — очки тона сезона
+        ToneAtLeast,      // mood, value — очки тона сезона
+        CashAtLeast       // value — нал выпуска
     }
 
     [Serializable]

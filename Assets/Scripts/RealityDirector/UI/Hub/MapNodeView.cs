@@ -68,7 +68,7 @@ namespace RealityDirector.UI.Hub
                 lockLabel.text = lockReason ?? "";
         }
 
-        static Sprite Icon(MapNodeKind kind)
+        public static Sprite Icon(MapNodeKind kind)
         {
             switch (kind)
             {

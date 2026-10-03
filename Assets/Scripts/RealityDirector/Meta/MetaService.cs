@@ -38,7 +38,7 @@ namespace RealityDirector.Meta
             int slots = SlotsNow();
             for (int i = _state.picked.Count - 1; i >= 0; i--)
             {
-                if (!_state.Owns(_state.picked[i]) || _state.IsPlayed(_state.picked[i]))
+                if (!_state.Owns(_state.picked[i]) || _state.IsPlayed(_state.picked[i]) || Find(_state.picked[i]) == null)
                     _state.picked.RemoveAt(i);
             }
 
@@ -51,10 +51,24 @@ namespace RealityDirector.Meta
         {
             TrimPicked();
             int slots = SlotsNow();
+#if UNITY_EDITOR
+            // Мастерская карт → «Проверить в квартире»: эта карта первой в руке.
+            string test = CardLibrary.TakeTestCard();
+            if (!string.IsNullOrEmpty(test) && Find(test) != null)
+            {
+                if (!_state.owned.Contains(test))
+                    _state.owned.Add(test);
+                _state.played.Remove(test);
+                _state.picked.Remove(test);
+                _state.picked.Insert(0, test);
+                while (_state.picked.Count > Mathf.Max(1, slots))
+                    _state.picked.RemoveAt(_state.picked.Count - 1);
+            }
+#endif
             for (int i = 0; i < _state.owned.Count && _state.picked.Count < slots; i++)
             {
                 string id = _state.owned[i];
-                if (!_state.IsPlayed(id) && !_state.picked.Contains(id))
+                if (!_state.IsPlayed(id) && !_state.picked.Contains(id) && Find(id) != null)
                     _state.picked.Add(id);
             }
         }

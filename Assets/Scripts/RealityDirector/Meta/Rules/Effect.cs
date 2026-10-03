@@ -16,17 +16,18 @@ namespace RealityDirector.Meta
         AddNarrativeTag,   // key
         AddTempCard,       // key — id карты продюсера, только на этот выпуск
         RemoveTempCard,    // key
-        NextRoomModifier,  // key, value — модификатор для следующей съёмки
-        BroadcastModifier  // key, value — модификатор эфира (рейтинг, просмотры...)
+        Cash,              // value — +/- нал выпуска
+        AddDeckCard,       // key — id карты, в колоду навсегда
+        RemoveDeckCard     // key — id карты, из колоды навсегда
     }
 
     [Serializable]
     public class Effect
     {
         public EffectType type;
-        [Tooltip("Флаг, тег, id карты или ключ модификатора — зависит от типа.")]
+        [Tooltip("Флаг, сюжетный тег или id карты — зависит от типа.")]
         public string key;
-        [Tooltip("Число: кредиты, очки тона, сила модификатора.")]
+        [Tooltip("Число: кредиты, нал или очки тона.")]
         public int value;
         [Tooltip("Только для Tone.")]
         public ShowMood mood;

@@ -1,4 +1,6 @@
 using System.Collections.Generic;
+using Action = System.Action;
+using Func = System.Func<string, string>;
 using RealityDirector.Core;
 using RealityDirector.Meta;
 using RealityDirector.Persistence;
@@ -30,6 +32,7 @@ namespace RealityDirector.UI.Hub
         bool _runShop;
         CastMember[] _cast;
         GameObject _back;
+        EventRoomView _eventView;
 
         void Awake()
         {
@@ -39,6 +42,7 @@ namespace RealityDirector.UI.Hub
                 season = SeasonConfig.CreateDefault();
             EnsureEventSystem();
             Sfx.Bind(gameObject);
+            _eventView = EventRoomView.Create(map.transform.parent, TitleFont());
 
             menu.NewSeason += () => { Click(); BeginSeason(); };
             menu.Continue += () => { Click(); ContinueSeason(); };
@@ -115,6 +119,15 @@ namespace RealityDirector.UI.Hub
 
         void Start()
         {
+#if UNITY_EDITOR
+            // Мастерская событий → «Проверить»: сразу открыть событие.
+            string testEvent = EventResolver.TakeTestEvent();
+            if (!string.IsNullOrEmpty(testEvent))
+            {
+                OpenTestEvent(testEvent);
+                return;
+            }
+#endif
             if (!GameSession.Active)
             {
                 ShowMenu();
@@ -363,17 +376,123 @@ namespace RealityDirector.UI.Hub
             AfterStep();
         }
 
-        // Событие — пока не реализовано: комната засчитывается сразу.
+        // Событие: текст и 2–3 выбора с последствиями. Выбор сразу закрывает комнату и сохраняется,
+        // поэтому после выхода из игры событие нельзя «переиграть».
         void RunEvent(MapNode node)
         {
             if (!_episode.Map.Choose(node))
                 return;
-            // TODO: экран события по EventRoomDefinition (текст, 2–3 выбора, эффекты) — шаг Event room.
-            Sfx.Play(Cue.Blip, 0.5f);
-            _episode.CompleteRoom();
-            GameSession.Save();
-            AfterStep("Событие", "Пока не реализовано — сцена засчитана. Здесь будет выбор с последствиями.");
+            var def = node.room as EventRoomDefinition;
+            if (def == null || def.choices == null || def.choices.Count == 0)
+            {
+                Sfx.Play(Cue.Blip, 0.5f);
+                _episode.CompleteRoom();
+                GameSession.Save();
+                AfterStep(node.title, "У этого события нет вариантов — сцена засчитана. Добавьте выборы в мастерской событий.");
+                return;
+            }
+
+            var ctx = _episode.Context;
+            EventResolver.Enter(def, ctx);
+            OpenEvent(def, node.id, ctx, index =>
+            {
+                _episode.CompleteRoom();
+                GameSession.Save();
+            }, () =>
+            {
+                _eventView.Hide();
+                AfterStep();
+            });
         }
+
+        void OpenEvent(EventRoomDefinition def, string nodeId, RuleContext ctx, System.Action<int> applied, Action done)
+        {
+            var roles = EventResolver.CastRoles(def, ctx.episode, nodeId);
+            Func nameOf = ActorName;
+            var choices = EventResolver.Choices(def, ctx, roles, nameOf);
+            Sfx.Play(Cue.Bell, 0.35f, 1.2f);
+            _eventView.Show("СОБЫТИЕ" + (string.IsNullOrEmpty(def.subtitle) ? "" : "  ·  " + def.subtitle.ToUpperInvariant()),
+                EventResolver.Fill(def.title, roles, nameOf), EventResolver.Fill(def.body, roles, nameOf),
+                def.art != null ? def.art : MapNodeView.Icon(def.icon), def.color, choices, "Уйти", index =>
+                {
+                    EventOutcome outcome;
+                    bool chancy = false;
+                    if (index < 0 || index >= def.choices.Count)
+                    {
+                        outcome = new EventOutcome { success = true, text = "Вы уходите, ничего не решив.", summary = "" };
+                    }
+                    else
+                    {
+                        var choice = def.choices[index];
+                        chancy = choice.chance < 100;
+                        outcome = EventResolver.Resolve(choice, ctx, roles, nameOf, CardName);
+                    }
+
+                    applied?.Invoke(index);
+                    Sfx.Play(outcome.success ? Cue.Coin : Cue.Miss, 0.5f, outcome.success ? 1.05f : 0.9f);
+                    _eventView.ShowResult(outcome, chancy, () =>
+                    {
+                        Click();
+                        done?.Invoke();
+                    });
+                });
+        }
+
+        string ActorName(string id)
+        {
+            for (int i = 0; i < _cast.Length; i++)
+            {
+                if (_cast[i].id == id)
+                    return _cast[i].name;
+            }
+
+            return id;
+        }
+
+        string CardName(string id)
+        {
+            var def = _meta != null ? _meta.Find(id) : null;
+            return def != null ? def.displayName : id;
+        }
+
+        // Шрифт заголовков хаба (Metal Mania), если он есть на канвасе.
+        Font TitleFont()
+        {
+            foreach (var text in map.transform.parent.GetComponentsInChildren<UnityEngine.UI.Text>(true))
+            {
+                if (text.font != null && text.font.name.Contains("Metal"))
+                    return text.font;
+            }
+
+            return null;
+        }
+
+#if UNITY_EDITOR
+        // Проверка события из редактора: открыть поверх карты; результат не сохраняется в сейв.
+        void OpenTestEvent(string id)
+        {
+            var def = ContentLibrary.Find<RoomDefinition>(id) as EventRoomDefinition;
+            if (def == null)
+            {
+                Debug.LogWarning("Проверка события: не найдено событие «" + id + "».");
+                ShowMenu();
+                return;
+            }
+
+            if (!GameSession.Active && !GameSession.Continue())
+                GameSession.NewSeason(_content.StarterIds(), season);
+            Bind();
+            if (!_episode.Active)
+                _episode.Begin(CastIds());
+            OpenMap();
+            Debug.Log("Проверка события «" + def.title + "»: результат не сохраняется в сейв.");
+            OpenEvent(def, "test_" + id, _episode.Context, null, () =>
+            {
+                _eventView.Hide();
+                RefreshMap();
+            });
+        }
+#endif
 
         // Монтаж — всегда последняя комната. Пока не реализован: выпуск сразу уходит в эфир.
         void RunMontage(MapNode node)
@@ -436,6 +555,8 @@ namespace RealityDirector.UI.Hub
 
         void Show(GameObject screen)
         {
+            if (_eventView != null)
+                _eventView.Hide();
             menu.gameObject.SetActive(screen == menu.gameObject);
             intro.gameObject.SetActive(screen == intro.gameObject);
             hub.gameObject.SetActive(screen == hub.gameObject);

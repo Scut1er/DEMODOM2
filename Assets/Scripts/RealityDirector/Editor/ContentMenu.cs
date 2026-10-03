@@ -86,52 +86,33 @@ namespace RealityDirector.EditorTools
             Debug.Log("Content: стартовый набор готов (" + RoomsRoot + "). Существующие ассеты не перезаписаны.");
         }
 
-        // Встроенные карты (из кода) → ассеты в Resources/Content/Cards, чтобы их можно было править в инспекторе.
-        [MenuItem("RealityDirector/Content/Export Built-in Cards to Assets")]
+        // Встроенные карты (из кода) → ассеты. Совместимое имя для старых кнопок.
         public static void ExportCards()
         {
-            Directory.CreateDirectory(DesignerData.CardsRoot);
-            var content = PitchContent.Create();
-            int created = 0;
-            foreach (var card in content.All)
-            {
-                string path = DesignerData.CardsRoot + "/" + card.id + ".asset";
-                if (AssetDatabase.LoadAssetAtPath<RealityDirector.Events.EventDefinition>(path) == null)
-                {
-                    var copy = Object.Instantiate(card);
-                    copy.name = card.id;
-                    copy.cardArt = null; // встроенные иконки рисуются кодом — в ассет не сохраняются
-                    AssetDatabase.CreateAsset(copy, path);
-                    created++;
-                }
+            SyncCards();
+        }
 
-                Object.DestroyImmediate(card);
-            }
-
-            Object.DestroyImmediate(content.Aggressive);
-            Object.DestroyImmediate(content.Sentimental);
-            Object.DestroyImmediate(content.AggressiveRules);
-            Object.DestroyImmediate(content.SentimentalRules);
-            AssetDatabase.SaveAssets();
-            DesignerData.Invalidate();
-            Debug.Log("Cards: выгружено новых карт — " + created + " (" + DesignerData.CardsRoot + "). Уже существующие не тронуты.");
+        // Синхронизация с кодом: новые встроенные карты → ассеты; полям, которых в ассете ещё нет
+        // (их добавили в EventDefinition после выгрузки), — встроенные значения. Значения дизайнера не трогаем.
+        [MenuItem("RealityDirector/Content/Sync Built-in Cards")]
+        public static void SyncCards()
+        {
+            var report = CardSync.Run(true);
+            Debug.Log("Cards: " + report);
         }
 
         // Двое участников из квартиры → ассеты в Resources/Content/Characters.
         [MenuItem("RealityDirector/Content/Create Default Characters")]
         public static void CreateCharacters()
         {
-            Character("npc_zloi", "Злой", "zloi", 0, "вспыльчивый, лезет в драку", RealityDirector.NPC.TraitId.Aggressive,
-                RealityDirector.NPC.HiddenTrait.Prankster, "агрессивный");
-            Character("npc_dobryak", "Добряк", "dobryak", 1, "мягкий, легко плачет", RealityDirector.NPC.TraitId.Sentimental,
-                RealityDirector.NPC.HiddenTrait.Kleptomaniac, "сентиментальный");
+            Character("npc_zloi", "Злой", "zloi", 0, "агрессивный");
+            Character("npc_dobryak", "Добряк", "dobryak", 1, "сентиментальный");
             AssetDatabase.SaveAssets();
             DesignerData.Invalidate();
             Debug.Log("Characters: участники готовы (" + DesignerData.CharactersRoot + "). Существующие не тронуты.");
         }
 
-        static void Character(string id, string displayName, string prefix, int order, string archetype,
-            RealityDirector.NPC.TraitId trait, RealityDirector.NPC.HiddenTrait hidden, string visible)
+        static void Character(string id, string displayName, string prefix, int order, string visible)
         {
             Directory.CreateDirectory(DesignerData.CharactersRoot);
             string path = DesignerData.CharactersRoot + "/" + id + ".asset";
@@ -143,9 +124,6 @@ namespace RealityDirector.EditorTools
             actor.displayName = displayName;
             actor.artPrefix = prefix;
             actor.order = order;
-            actor.archetype = archetype;
-            actor.mainTrait = trait;
-            actor.hiddenTrait = hidden;
             actor.visibleTraits.Add(visible);
             AssetDatabase.CreateAsset(actor, path);
         }

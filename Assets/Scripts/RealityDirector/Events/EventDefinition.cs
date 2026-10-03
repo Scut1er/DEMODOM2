@@ -12,6 +12,7 @@ namespace RealityDirector.Events
         Global
     }
 
+    // Карта продюсера. Поля по GDD §30 (CardDefinition); типы данных — в CardData.cs.
     [CreateAssetMenu(menuName = "RealityDirector/Event", fileName = "Event")]
     public class EventDefinition : ScriptableObject
     {
@@ -36,6 +37,54 @@ namespace RealityDirector.Events
         public bool starter;
         public bool limitTrait;
         public TraitId targetTrait;
-        [TextArea] public string jamNote;
+
+        [Header("Паспорт карты")]
+        [Tooltip("Выключенной карты нет в игре: ни в колоде, ни в магазинах.")]
+        public CardStatus status;
+        public CardCategory category;
+        public CardTier tier;
+        public CardRarity rarity;
+        [Tooltip("Цена розыгрыша в HellToken, $.")]
+        [Min(0f)] public float hellTokenCost = 1f;
+
+        [Header("Цель")]
+        [Tooltip("Дополнительные условия на цель.")]
+        public List<TargetFilter> targetFilters = new List<TargetFilter>();
+
+        [Header("Текст")]
+        [Tooltip("Полное описание для игрока.")]
+        [TextArea(2, 5)] public string description;
+
+        [Header("Эффекты")]
+        public List<CardEffect> effects = new List<CardEffect>();
+        public List<DiceEffect> diceEffects = new List<DiceEffect>();
+
+        [Header("Окружение")]
+        [Tooltip("Префаб, который карта ставит в мир (environment card).")]
+        public GameObject environmentPrefab;
+        public EnvironmentLifetime environmentLifetime;
+        [Min(0f)] public float environmentSeconds = 30f;
+        public AuraDefinition aura = new AuraDefinition();
+
+        [Header("Footage и спонсор")]
+        public FootageInfluence footage = new FootageInfluence();
+        [Tooltip("Бренд спонсора (для контрактов и HellTube).")]
+        public string sponsorId;
+
+        [Header("Жизненный цикл")]
+        public CardLifetime lifetime;
+        public List<SpecialRule> specialRules = new List<SpecialRule>();
+
+        [Header("Улучшения")]
+        [Tooltip("Карта Tier II — отдельный ассет со своими значениями.")]
+        public EventDefinition upgradeTier2;
+        [Tooltip("Бюджет крафта: 3 × эта карта + кр → Tier II.")]
+        [Min(0)] public int craftBudgetTier2;
+        public EventDefinition upgradeTier3;
+        [Min(0)] public int craftBudgetTier3;
+
+        [Header("Для команды")]
+        [Tooltip("Зачем эта карта в игре, какую ситуацию должна создавать.")]
+        [TextArea(2, 6)] public string designIntent;
     }
 }

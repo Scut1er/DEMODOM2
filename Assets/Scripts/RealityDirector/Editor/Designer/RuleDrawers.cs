@@ -22,8 +22,36 @@ namespace RealityDirector.EditorTools
             "Комната уже пройдена в выпуске",
             "Уровень команды не меньше",
             "Спонсорский контракт активен",
-            "Тон сезона не меньше"
+            "Тон сезона не меньше",
+            "Нал выпуска не меньше"
         };
+
+        // Что видно в списке. «Спонсорский контракт активен» скрыт: контрактов в игре пока нет, условие всегда ложно.
+        static readonly ConditionType[] Shown =
+        {
+            ConditionType.EpisodeAtLeast, ConditionType.EpisodeAtMost, ConditionType.BudgetAtLeast,
+            ConditionType.CastAtLeast, ConditionType.CastAtMost, ConditionType.CastHasActor,
+            ConditionType.EpisodeFlag, ConditionType.SeasonFlag, ConditionType.NarrativeTag,
+            ConditionType.RoomVisited, ConditionType.CrewLevelAtLeast, ConditionType.ToneAtLeast,
+            ConditionType.CashAtLeast
+        };
+
+        static string[] _shownNames;
+
+        static int TypePopup(Rect rect, int current)
+        {
+            if (_shownNames == null)
+            {
+                _shownNames = new string[Shown.Length];
+                for (int i = 0; i < Shown.Length; i++)
+                    _shownNames[i] = TypeNames[(int)Shown[i]];
+            }
+
+            int index = System.Array.IndexOf(Shown, (ConditionType)current);
+            if (index < 0)
+                return EditorGUI.Popup(rect, current, TypeNames); // старый ассет со скрытым типом — показать как есть
+            return (int)Shown[EditorGUI.Popup(rect, index, _shownNames)];
+        }
 
         const float Line = 18f;
         const float Gap = 2f;
@@ -46,7 +74,7 @@ namespace RealityDirector.EditorTools
             var r = new Rect(position.x, position.y + Gap, position.width, Line);
             var typeRect = new Rect(r.x, r.y, r.width - 70f, Line);
             var notRect = new Rect(r.xMax - 66f, r.y, 66f, Line);
-            type.enumValueIndex = EditorGUI.Popup(typeRect, type.enumValueIndex, TypeNames);
+            type.enumValueIndex = TypePopup(typeRect, type.enumValueIndex);
             not.boolValue = EditorGUI.ToggleLeft(notRect, new GUIContent("НЕ", "Инвертировать: выполнено, если проверка НЕ прошла."), not.boolValue);
 
             r.y += Line + Gap;
@@ -58,6 +86,9 @@ namespace RealityDirector.EditorTools
                     break;
                 case ConditionType.BudgetAtLeast:
                     EditorGUI.PropertyField(r, value, new GUIContent("Кредитов"));
+                    break;
+                case ConditionType.CashAtLeast:
+                    EditorGUI.PropertyField(r, value, new GUIContent("Нала"));
                     break;
                 case ConditionType.CastAtLeast:
                 case ConditionType.CastAtMost:
@@ -121,8 +152,9 @@ namespace RealityDirector.EditorTools
             "Добавить сюжетный тег",
             "Дать временную карту (на выпуск)",
             "Забрать временную карту",
-            "Модификатор следующей съёмки",
-            "Модификатор эфира"
+            "Нал +/-",
+            "Карта в колоду навсегда",
+            "Убрать карту из колоды навсегда"
         };
 
         const float Line = 18f;
@@ -168,13 +200,12 @@ namespace RealityDirector.EditorTools
                     break;
                 case EffectType.AddTempCard:
                 case EffectType.RemoveTempCard:
+                case EffectType.AddDeckCard:
+                case EffectType.RemoveDeckCard:
                     DesignerData.PickerField(r, new GUIContent("id карты"), key, DesignerData.CardIds());
                     break;
-                case EffectType.NextRoomModifier:
-                case EffectType.BroadcastModifier:
-                    ConditionDrawer.Split(r, out var left, out var right);
-                    EditorGUI.PropertyField(left, key, new GUIContent("Ключ"));
-                    EditorGUI.PropertyField(right, value, new GUIContent("Сила"));
+                case EffectType.Cash:
+                    EditorGUI.PropertyField(r, value, new GUIContent("Нал (минус — списать)"));
                     break;
             }
 

@@ -25,7 +25,41 @@ MonoBehaviour:
   rageSeconds: 90
   ignite: 0
   price: 0
+  runPrice: 0
+  sponsor: 0
+  sponsorPay: 0
+  sponsorScoreHit: 0
   starter: 1
   limitTrait: 1
   targetTrait: 0
-  jamNote: 
+  status: 2
+  category: 0
+  tier: 0
+  rarity: 0
+  hellTokenCost: 1
+  targetFilters: []
+  description: "\u043A\u043B\u0438\u043A \u043F\u043E \u0417\u043B\u043E\u043C\u0443"
+  effects: []
+  diceEffects: []
+  environmentPrefab: {fileID: 0}
+  environmentLifetime: 0
+  environmentSeconds: 30
+  aura:
+    enabled: 0
+    radius: 3
+    tags: []
+    actorModifiers: []
+    diceModifiers: []
+    behaviourWeights: []
+  footage:
+    tags: []
+    valueBonus: 0
+    commercialValue: 0
+  sponsorId: 
+  lifetime: 0
+  specialRules: 
+  upgradeTier2: {fileID: 0}
+  craftBudgetTier2: 0
+  upgradeTier3: {fileID: 0}
+  craftBudgetTier3: 0
+  designIntent: "\u0417\u043B\u043E\u0439 \u0441\u0440\u044B\u0432\u0430\u0435\u0442\u0441\u044F \u043D\u0430 \u043F\u0440\u043E\u0432\u043E\u043A\u0430\u0446\u0438\u044E \u2014 \u0431\u0430\u0437\u043E\u0432\u044B\u0439 \u0438\u0441\u0442\u043E\u0447\u043D\u0438\u043A \u043A\u043E\u043D\u0444\u043B\u0438\u043A\u0442\u0430."

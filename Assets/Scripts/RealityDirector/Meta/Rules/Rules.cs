@@ -67,6 +67,7 @@ namespace RealityDirector.Meta
                 case ConditionType.CrewLevelAtLeast: return s != null && s.Level(Track(c.key)) >= c.value;
                 case ConditionType.ContractActive: return e != null && e.ContractActive(c.key);
                 case ConditionType.ToneAtLeast: return ctx.tone != null && ctx.tone.Get(c.mood) >= c.value;
+                case ConditionType.CashAtLeast: return e != null && e.cash >= c.value;
                 default: return true;
             }
         }
@@ -87,6 +88,7 @@ namespace RealityDirector.Meta
                 case ConditionType.CastHasActor: return (c.not ? "Без участника " : "Нужен участник ") + c.key;
                 case ConditionType.CrewLevelAtLeast: return "Нужно: " + TrackName(Track(c.key)) + " ур. " + c.value;
                 case ConditionType.ToneAtLeast: return "Нужно: " + MoodStyle.Short(c.mood) + " " + c.value;
+                case ConditionType.CashAtLeast: return "Нужно " + c.value + " нал";
                 default: return "Условие не выполнено";
             }
         }
@@ -126,13 +128,35 @@ namespace RealityDirector.Meta
                         e.tempCards.Add(fx.key);
                     break;
                 case EffectType.RemoveTempCard: e?.tempCards.Remove(fx.key); break;
-                case EffectType.NextRoomModifier: e?.AddModifier(e.nextRoomModifiers, fx.key, fx.value); break;
-                case EffectType.BroadcastModifier: e?.AddModifier(e.broadcastModifiers, fx.key, fx.value); break;
+                case EffectType.Cash:
+                    if (e != null)
+                        e.cash = Mathf.Max(0, e.cash + fx.value);
+                    break;
+                case EffectType.AddDeckCard:
+                    if (s != null && !string.IsNullOrEmpty(fx.key) && !s.owned.Contains(fx.key))
+                        s.owned.Add(fx.key);
+                    if (s != null)
+                        s.played.Remove(fx.key);
+                    break;
+                case EffectType.RemoveDeckCard:
+                    if (s != null)
+                    {
+                        s.owned.Remove(fx.key);
+                        s.picked.Remove(fx.key);
+                    }
+
+                    break;
             }
         }
 
         // Видимая игроку часть эффектов (бюджет, тон). Флаги и теги — скрытые последствия.
         public static string Describe(IList<Effect> list)
+        {
+            return Describe(list, null);
+        }
+
+        // Видимая игроку часть эффектов. cardName — имя карты по id (null — показать id).
+        public static string Describe(IList<Effect> list, Func<string, string> cardName)
         {
             if (list == null)
                 return "";
@@ -140,12 +164,36 @@ namespace RealityDirector.Meta
             for (int i = 0; i < list.Count; i++)
             {
                 var fx = list[i];
-                if (fx == null || fx.value == 0)
+                if (fx == null)
                     continue;
-                if (fx.type == EffectType.Budget)
-                    parts.Add("бюджет " + (fx.value > 0 ? "+" : "") + fx.value + " кр");
-                else if (fx.type == EffectType.Tone && fx.value > 0)
-                    parts.Add(MoodStyle.Paint(MoodStyle.Short(fx.mood) + " +" + fx.value, fx.mood));
+                string card = cardName != null ? cardName(fx.key) : fx.key;
+                switch (fx.type)
+                {
+                    case EffectType.Budget:
+                        if (fx.value != 0)
+                            parts.Add("бюджет " + (fx.value > 0 ? "+" : "") + fx.value + " кр");
+                        break;
+                    case EffectType.Cash:
+                        if (fx.value != 0)
+                            parts.Add((fx.value > 0 ? "+" : "") + fx.value + " нал");
+                        break;
+                    case EffectType.Tone:
+                        if (fx.value > 0)
+                            parts.Add(MoodStyle.Paint(MoodStyle.Short(fx.mood) + " +" + fx.value, fx.mood));
+                        break;
+                    case EffectType.AddTempCard:
+                        parts.Add("карта «" + card + "» до эфира");
+                        break;
+                    case EffectType.RemoveTempCard:
+                        parts.Add("пропала карта «" + card + "»");
+                        break;
+                    case EffectType.AddDeckCard:
+                        parts.Add("в колоду: «" + card + "»");
+                        break;
+                    case EffectType.RemoveDeckCard:
+                        parts.Add("из колоды: «" + card + "»");
+                        break;
+                }
             }
 
             return string.Join("   ·   ", parts);
