@@ -50,6 +50,9 @@ namespace RealityDirector.UI
         bool _gateHub;
         RectTransform _doneRect;
         public RectTransform CardBarRect => _cardBar as RectTransform;
+        public RectTransform BudgetRect => _budgetValue != null ? _budgetValue.transform.parent as RectTransform : null;
+        public RectTransform ToneRect => _toneRoot != null ? _toneRoot.transform as RectTransform : null;
+        public RectTransform FootageRect => _footage != null ? _footage.rectTransform : null;
         RectTransform _aim;
         public RectTransform AimRect => _aim;
         public RectTransform CardRect(string id)

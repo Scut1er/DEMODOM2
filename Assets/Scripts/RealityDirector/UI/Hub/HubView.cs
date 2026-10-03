@@ -298,6 +298,11 @@ namespace RealityDirector.UI.Hub
             return start != null ? start.transform as RectTransform : null;
         }
 
+        public RectTransform StatsFocus()
+        {
+            return stats != null ? stats.transform as RectTransform : null;
+        }
+
         // Обучение: пока босс говорит — ничего. После речи на хабе золотая только кнопка старта.
         public void ApplyTutorial(bool teach, bool talking, bool startReady)
         {

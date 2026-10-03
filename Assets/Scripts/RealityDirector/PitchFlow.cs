@@ -741,7 +741,7 @@ namespace RealityDirector
                 if (_state.played.Contains("fridge_fire"))
                 {
                     _lesson = Lesson.Camera;
-                    BossCoach.Ensure().Order("Жми C. Зажми левую и веди рамку по людям. Три секунды — и отпусти.", _ui.CameraRect);
+                    BossCoach.Ensure().Order("Жми C. Зажми левую и веди рамку по человеку три секунды, потом отпусти. Пустая стена тоже сожрёт слот и срежет тон.", _ui.CameraRect);
                 }
                 else
                 {
@@ -994,7 +994,7 @@ namespace RealityDirector
             if (_lesson == Lesson.Take && def.id == "fridge_fire")
             {
                 _lesson = Lesson.Throw;
-                BossCoach.Ensure().Order("Кинь её на холодильник. Прямо на дверцу.", _ui.AimRect);
+                BossCoach.Ensure().Order("Кинь её на холодильник. Прямо на дверцу. Цена спишется с бюджета, люди побегут. Пока они орут — снимай, эмоция не ждёт.", _ui.AimRect);
             }
         }
 
@@ -1605,13 +1605,13 @@ namespace RealityDirector
             {
                 _lesson = Lesson.Holding;
                 StartCoroutine(FreezeSoon(0.7f, () => BossCoach.Ensure().Freeze(
-                    "Видео улетело в слот. Один ролик — один кусок футажа. Пустой угол сожрал бы его так же.",
+                    "Ролик в слоте. Один слот — один кусок футажа, сколько их дала съёмочная. Пустой угол занимает слот так же и режет драму, трэш и семью. В эфир это попадёт, только если оставишь в монтаже.",
                     () =>
                     {
                         _frozen = false;
                         Time.timeScale = 1f;
                         _lesson = Lesson.TurnIn;
-                        BossCoach.Ensure().Order("СДАНО. Это не эфир. Клипы лягут в библиотеку, и ты вернёшься на карту.", _ui.DoneRect);
+                        BossCoach.Ensure().Order("СДАНО закрывает комнату. Клипы лягут в библиотеку, ты вернёшься на карту. Это ещё не эфир. ХАБ рядом сдаёт снятое и выкидывает с площадки, комнату при этом не закрывает.", _ui.DoneRect);
                     },
                     _ui.SlotRects())));
             }
@@ -1681,7 +1681,7 @@ namespace RealityDirector
                     Time.timeScale = 1f;
                     _reactFocus = null;
                     _lesson = Lesson.Camera;
-                    BossCoach.Ensure().Order("Жми C. Рамка на него. Зажал левую, три секунды, отпустил.", _ui.CameraRect);
+                    BossCoach.Ensure().Order("Жми C. Рамка на него. Зажал левую, три секунды, отпустил. Лицо в кадре — годный ролик. Стена — пустой слот и минус к тону.", _ui.CameraRect);
                 },
                 _ui.AimRect);
         }
@@ -1728,7 +1728,31 @@ namespace RealityDirector
             Canvas.ForceUpdateCanvases();
             if (_lesson != Lesson.Take)
                 yield break;
-            BossCoach.Ensure().Order("Возьми «Поджог». Вот эта карта.", _ui.CardRect("fridge_fire"));
+            BriefShoot();
+        }
+
+        void BriefShoot()
+        {
+            _frozen = true;
+            Time.timeScale = 0f;
+            BossCoach.Ensure().Freeze(
+                BossMood.Stern,
+                "Рука снизу — карты этой съёмки. Цифра на карте — цена в Hell Token. Кубик качает злость и отношения, это не бросок «попал / не попал». Навёл — справа написано, кого проймёт.",
+                () => BossCoach.Ensure().Freeze(
+                    BossMood.Think,
+                    "Полоска слева — бюджет на карты этого выпуска. Кончился — кидать нечем. На следующий выпуск он не переносится.",
+                    () => BossCoach.Ensure().Freeze(
+                        BossMood.Grin,
+                        "Справа драма, трэш и семья. Карты и годные кадры их качают, пустой угол режет. К концу сезона победивший тон выбирает концовку.",
+                        () =>
+                        {
+                            _frozen = false;
+                            Time.timeScale = 1f;
+                            BossCoach.Ensure().Order(BossMood.Mad, "Возьми «Поджог». Вот эта карта.", _ui.CardRect("fridge_fire"));
+                        },
+                        _ui.ToneRect),
+                    _ui.BudgetRect),
+                _ui.CardBarRect);
         }
 
         IEnumerator FreezeSoon(float wait, System.Action show)
