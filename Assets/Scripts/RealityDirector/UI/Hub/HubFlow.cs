@@ -41,6 +41,7 @@ namespace RealityDirector.UI.Hub
         CastMember[] _cast;
         GameObject _back;
         EventRoomView _eventView;
+        AudioSource _bed;
 
         void Awake()
         {
@@ -185,7 +186,10 @@ namespace RealityDirector.UI.Hub
             if (_cut != null)
                 _cut.SetLocked(talking);
             if (_teachWas && !teach)
+            {
                 RefreshHub();
+                SyncBed();
+            }
             _teachWas = teach;
         }
 
@@ -267,6 +271,7 @@ namespace RealityDirector.UI.Hub
             Bind();
             if (GameSession.Embarked && GameSession.InEpisode && !string.IsNullOrEmpty(GameSession.RoomNodeId))
             {
+                StopBed();
                 SceneFlow.ToScene(string.IsNullOrEmpty(GameSession.SceneId) ? SceneFlow.Episode : GameSession.SceneId);
                 return;
             }
@@ -321,10 +326,10 @@ namespace RealityDirector.UI.Hub
             hub.ClearSelection();
             RefreshHub();
             var teach = new List<CoachStep>();
-            BossCoach.Line(teach, "Кастинг. Кого пустишь к камере. И когда я разрешу подсмотреть, что они от тебя прячут.", hub.ZoneFocus(CrewTrack.Cast));
-            BossCoach.Line(teach, "Съёмочная. Сколько роликов влезет в выпуск. Слоты кончились — хоть потолок снимай, в эфир он не просится.", hub.ZoneFocus(CrewTrack.Operators));
-            BossCoach.Line(teach, "Сценарная. Отсюда новые карты. Дорастёт — дам второй рекламный контракт. Проценты к чеку оставь бухгалтерии.", hub.ZoneFocus(CrewTrack.Writers));
-            BossCoach.Line(teach, "Магазин. Тратишь кр. Карта остаётся на весь сезон. Я от себя такой щедрости не ждал.", hub.ShopFocus());
+            BossCoach.Line(teach, BossMood.Think, "Кастинг. Кого пустишь к камере. И когда я разрешу подсмотреть, что они от тебя прячут.", hub.ZoneFocus(CrewTrack.Cast));
+            BossCoach.Line(teach, BossMood.Annoyed, "Съёмочная. Сколько роликов влезет в выпуск. Слоты кончились — хоть потолок снимай, в эфир он не просится.", hub.ZoneFocus(CrewTrack.Operators));
+            BossCoach.Line(teach, BossMood.Smug, "Сценарная. Отсюда новые карты. Дорастёт — дам второй рекламный контракт. Проценты к чеку оставь бухгалтерии.", hub.ZoneFocus(CrewTrack.Writers));
+            BossCoach.Line(teach, BossMood.Shock, "Магазин. Тратишь кр. Карта остаётся на весь сезон. Я от себя такой щедрости не ждал.", hub.ShopFocus());
             if (teach.Count > 0)
                 BossCoach.Guide(0, teach.ToArray(), () => StartCoroutine(ShowDeckLesson()));
         }
@@ -337,9 +342,9 @@ namespace RealityDirector.UI.Hub
             yield return null;
             Canvas.ForceUpdateCanvases();
             var steps = new List<CoachStep>();
-            BossCoach.Line(steps, "Колода. Всё, что уже купил. Сейчас только смотри. Тыкать не надо.", hub.Deck.CardsFocus());
-            BossCoach.Line(steps, "Пояснение. В съёмку отсюда ничего не уезжает. Выбор будет перед дверью на карте.", hub.Deck.ExplainFocus());
-            BossCoach.Line(steps, "Снизу счёт. Сколько карт есть и сколько пустят с собой.", hub.Deck.FooterFocus());
+            BossCoach.Line(steps, BossMood.Stern, "Колода. Всё, что уже купил. Сейчас только смотри. Тыкать не надо.", hub.Deck.CardsFocus());
+            BossCoach.Line(steps, BossMood.Aside, "Пояснение. В съёмку отсюда ничего не уезжает. Выбор будет перед дверью на карте.", hub.Deck.ExplainFocus());
+            BossCoach.Line(steps, BossMood.Stern, "Снизу счёт. Сколько карт есть и сколько пустят с собой.", hub.Deck.FooterFocus());
             BossCoach.Guide(0, steps.ToArray(), CloseDeckThenStart);
         }
 
@@ -348,7 +353,7 @@ namespace RealityDirector.UI.Hub
             if (hub.Deck != null && hub.Deck.IsOpen)
                 hub.Deck.Hide();
             var start = new List<CoachStep>();
-            BossCoach.Line(start, "Старт. Сначала люди. Потом карта выпуска. Не перепутай, второй раз я это рассказывать не буду.", hub.StartFocus());
+            BossCoach.Line(start, BossMood.Mad, "Старт. Сначала люди. Потом карта выпуска. Не перепутай, второй раз я это рассказывать не буду.", hub.StartFocus());
             if (start.Count == 0 && GameSession.State != null)
             {
                 GameSession.State.tutorialBeat = 1;
@@ -412,9 +417,9 @@ namespace RealityDirector.UI.Hub
                     });
                 }, backToHub);
                 var castTeach = new List<CoachStep>();
-                BossCoach.Line(castTeach, "Двое. Минимум. Из одного человека шоу не соберёшь, это уже исповедь.", _screens.Focus);
-                BossCoach.Line(castTeach, "Черта под именем. Вот так они и сломаются, когда ты начнёшь.", _screens.Focus);
-                BossCoach.Line(castTeach, "Скрытое пока закрыто. Кастинг подрастёт — шепну. Раньше не выпрашивай.", _screens.Focus);
+                BossCoach.Line(castTeach, BossMood.Grin, "Двое. Минимум. Из одного человека шоу не соберёшь, это уже исповедь.", _screens.Focus);
+                BossCoach.Line(castTeach, BossMood.Smug, "Черта под именем. Вот так они и сломаются, когда ты начнёшь.", _screens.Focus);
+                BossCoach.Line(castTeach, BossMood.Aside, "Скрытое пока закрыто. Кастинг подрастёт — шепну. Раньше не выпрашивай.", _screens.Focus);
                 if (castTeach.Count > 0)
                     BossCoach.Play(1, 2, castTeach.ToArray());
                 return;
@@ -430,11 +435,11 @@ namespace RealityDirector.UI.Hub
             Show(map.gameObject);
             RefreshMap();
             var mapTeach = new List<CoachStep>();
-            BossCoach.Line(mapTeach, "Сегодня маршрут короткий. Я сам его собрал: съёмка, событие, монтаж.", map.BoardFocus);
-            BossCoach.Line(mapTeach, "Съёмка. Заходи сюда. Здесь заставлю тебя кинуть карту.", map.NodeFocus(RoomType.Situation));
-            BossCoach.Line(mapTeach, "Потом событие. Почитаешь и выберешь. В эфир это само не прыгнет.", map.NodeFocus(RoomType.Event));
-            BossCoach.Line(mapTeach, "И монтаж. Последняя дверь. Мимо неё выпуск не выходит.", map.NodeFocus(RoomType.Montage));
-            BossCoach.Line(mapTeach, "Жми на съёмку, потом входи. Назад я не пускаю.", map.EnterFocus);
+            BossCoach.Line(mapTeach, BossMood.Smug, "Сегодня маршрут короткий. Я сам его собрал: съёмка, событие, монтаж.", map.BoardFocus);
+            BossCoach.Line(mapTeach, BossMood.Yell, "Съёмка. Заходи сюда. Здесь заставлю тебя кинуть карту.", map.NodeFocus(RoomType.Situation));
+            BossCoach.Line(mapTeach, BossMood.Think, "Потом событие. Почитаешь и выберешь. В эфир это само не прыгнет.", map.NodeFocus(RoomType.Event));
+            BossCoach.Line(mapTeach, BossMood.Stern, "И монтаж. Последняя дверь. Мимо неё выпуск не выходит.", map.NodeFocus(RoomType.Montage));
+            BossCoach.Line(mapTeach, BossMood.Mad, "Жми на съёмку, потом входи. Назад я не пускаю.", map.EnterFocus);
             if (mapTeach.Count > 0)
                 BossCoach.Play(2, 3, mapTeach.ToArray());
         }
@@ -503,7 +508,7 @@ namespace RealityDirector.UI.Hub
                 yield break;
             }
 
-            BossCoach.Ensure().Order("Колода перед дверью. Жми «Поджог». Остальные сегодня не трогай.", map.Deck.CardRect("fridge_fire"));
+            BossCoach.Ensure().Order(BossMood.Annoyed, "Колода перед дверью. Жми «Поджог». Остальные сегодня не трогай.", map.Deck.CardRect("fridge_fire"));
         }
 
         void OnDeckPicked(string id)
@@ -514,7 +519,7 @@ namespace RealityDirector.UI.Hub
             {
                 map.Deck.SetOnly("fridge_fire");
                 map.Deck.SetCloseEnabled(false);
-                BossCoach.Ensure().Order("Верни её. «Поджог». Без неё урок пустой.", map.Deck.CardRect("fridge_fire"));
+                BossCoach.Ensure().Order(BossMood.Mad, "Верни её. «Поджог». Без неё урок пустой.", map.Deck.CardRect("fridge_fire"));
                 return;
             }
 
@@ -527,11 +532,12 @@ namespace RealityDirector.UI.Hub
             map.Deck.SetCloseEnabled(false);
             BossCoach.Ensure().Hide();
             BossCoach.Ensure().Freeze(
+                BossMood.Think,
                 "Видишь «В СЕРИИ». Она едет на эту съёмку. Колода на месте, уехала только она.",
                 () =>
                 {
                     map.Deck.SetCloseEnabled(true);
-                    BossCoach.Ensure().Order("Начать съёмку. Отмеченное едет на площадку.", map.Deck.CloseFocus());
+                    BossCoach.Ensure().Order(BossMood.Grin, "Начать съёмку. Отмеченное едет на площадку.", map.Deck.CloseFocus());
                 },
                 map.Deck.CardRect("fridge_fire"));
         }
@@ -576,6 +582,7 @@ namespace RealityDirector.UI.Hub
             if (DeckLesson())
                 BossCoach.Ensure().Hide();
             GameSession.Save();
+            StopBed();
             SceneFlow.ToScene(GameSession.SceneId);
         }
 
@@ -671,7 +678,7 @@ namespace RealityDirector.UI.Hub
                 AfterStep();
             });
             if (GameSession.State != null && GameSession.State.wantsTutorial && GameSession.State.tutorialBeat < 6 && _eventView.Focus != null)
-                BossCoach.Ensure().Order("Выбери одну. Это не клип. Это то, с чем они придут дальше.", _eventView.Focus);
+                BossCoach.Ensure().Order(BossMood.Stern, "Выбери одну. Это не клип. Это то, с чем они придут дальше.", _eventView.Focus);
         }
 
         void OpenEvent(EventRoomDefinition def, string nodeId, RuleContext ctx, System.Action<int> applied, Action done)
@@ -784,11 +791,11 @@ namespace RealityDirector.UI.Hub
             int slots = season != null && season.finalCutSize > 0 ? season.finalCutSize : 3;
             _cut.ShowMontage(Library(_episode.Current), slots);
             var cutTeach = new List<CoachStep>();
-            BossCoach.Line(cutTeach, "Сверху — всё, что наснимал. И удачное, и то, за что мне за тебя стыдно.", _cut.LibraryFocus);
-            BossCoach.Line(cutTeach, "Снизу — что увидит ад. Кадров мало. Порядок уже история, не куча.", _cut.CutFocus);
-            BossCoach.Line(cutTeach, "Соседи про одно и то же — связность. Про разное — нарезка. Зритель тупой. Но не всегда.", _cut.CoherenceFocus);
-            BossCoach.Line(cutTeach, "Строчка сверху — это я ору. Я не подсказка. Я давление.", _cut.BossFocus);
-            BossCoach.Line(cutTeach, "В эфир. Вырезанное для них не случалось. Рекламу, которую выкинул, я тебе не оплачу.", _cut.AirFocus);
+            BossCoach.Line(cutTeach, BossMood.Sigh, "Сверху — всё, что наснимал. И удачное, и то, за что мне за тебя стыдно.", _cut.LibraryFocus);
+            BossCoach.Line(cutTeach, BossMood.Annoyed, "Снизу — что увидит ад. Кадров мало. Порядок уже история, не куча.", _cut.CutFocus);
+            BossCoach.Line(cutTeach, BossMood.Grin, "Соседи про одно и то же — связность. Про разное — нарезка. Зритель тупой. Но не всегда.", _cut.CoherenceFocus);
+            BossCoach.Line(cutTeach, BossMood.Yell, "Строчка сверху — это я ору. Я не подсказка. Я давление.", _cut.BossFocus);
+            BossCoach.Line(cutTeach, BossMood.Mad, "В эфир. Вырезанное для них не случалось. Рекламу, которую выкинул, я тебе не оплачу.", _cut.AirFocus);
             if (cutTeach.Count > 0)
                 BossCoach.Play(4, 5, cutTeach.ToArray());
         }
@@ -842,10 +849,10 @@ namespace RealityDirector.UI.Hub
             string name = string.IsNullOrEmpty(GameSession.SceneTitle) ? "Без названия" : GameSession.SceneTitle;
             _cut.ShowAir(result, cut, "Серия " + scene + ". «" + name + "»", episode.settledPay, coherence, episode.settledLine);
             var airTeach = new List<CoachStep>();
-            BossCoach.Line(airTeach, "Вот что они видят. Не квартиру. Только то, что ты сам оставил в кате.", _cut.WatchFocus);
-            BossCoach.Line(airTeach, "Просмотры, лайки, связность. Черновики я в эту арифметику не кладу.", _cut.NumbersFocus);
-            BossCoach.Line(airTeach, "Комментарии. Им можно быть злыми. Считай это рецензией.", _cut.CommentsFocus);
-            BossCoach.Line(airTeach, "Чек. Реклама в кате платит и злит их. Реклама на полу монтажной — тишина.", _cut.PayFocus);
+            BossCoach.Line(airTeach, BossMood.Aside, "Вот что они видят. Не квартиру. Только то, что ты сам оставил в кате.", _cut.WatchFocus);
+            BossCoach.Line(airTeach, BossMood.Stern, "Просмотры, лайки, связность. Черновики я в эту арифметику не кладу.", _cut.NumbersFocus);
+            BossCoach.Line(airTeach, BossMood.Grin, "Комментарии. Им можно быть злыми. Считай это рецензией.", _cut.CommentsFocus);
+            BossCoach.Line(airTeach, BossMood.Sigh, "Чек. Реклама в кате платит и злит их. Реклама на полу монтажной — тишина.", _cut.PayFocus);
             if (airTeach.Count > 0)
                 BossCoach.Play(5, 6, airTeach.ToArray());
         }
@@ -1026,6 +1033,74 @@ namespace RealityDirector.UI.Hub
             map.gameObject.SetActive(screen == map.gameObject);
             seasonEnd.gameObject.SetActive(screen == seasonEnd.gameObject);
             settings.gameObject.SetActive(screen == settings.gameObject);
+            SyncBed();
+        }
+
+        // Меню — MainMenu.mp3. Обучение до входа в съёмку — Intro.mp3. Дальше тишина.
+        void SyncBed()
+        {
+            var src = Bed();
+            bool menuUp = menu != null && menu.gameObject.activeSelf
+                || settings != null && settings.gameObject.activeSelf && _back == menu.gameObject;
+            var state = GameSession.State;
+            bool introUp = !menuUp && state != null && state.wantsTutorial && state.tutorialBeat < 3;
+            if (menuUp)
+                PlayBed(src, "Music/MainMenu");
+            else if (introUp)
+                PlayBed(src, "Music/Intro");
+            else
+                StopBed();
+        }
+
+        AudioSource Bed()
+        {
+            if (_bed != null)
+                return _bed;
+            var sources = FindObjectsByType<AudioSource>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+            for (int i = 0; i < sources.Length; i++)
+            {
+                if (sources[i].GetComponent<MainMenuView>() != null)
+                    continue;
+                if (sources[i].gameObject.name != "MainMenu")
+                    continue;
+                _bed = sources[i];
+                break;
+            }
+
+            if (_bed == null)
+            {
+                var go = new GameObject("BedMusic");
+                go.transform.SetParent(transform, false);
+                _bed = go.AddComponent<AudioSource>();
+            }
+
+            _bed.playOnAwake = false;
+            _bed.loop = true;
+            _bed.spatialBlend = 0f;
+            return _bed;
+        }
+
+        static void PlayBed(AudioSource src, string path)
+        {
+            if (src == null)
+                return;
+            var clip = Resources.Load<AudioClip>(path);
+            if (clip == null)
+                return;
+            if (clip.loadState == AudioDataLoadState.Unloaded)
+                clip.LoadAudioData();
+            if (src.clip == clip && src.isPlaying)
+                return;
+            src.clip = clip;
+            src.loop = true;
+            src.Play();
+        }
+
+        void StopBed()
+        {
+            var src = Bed();
+            if (src != null && src.isPlaying)
+                src.Stop();
         }
 
         static void Click()

@@ -1,21 +1,40 @@
 using System;
 using System.Collections.Generic;
-using RealityDirector.Core;
 using RealityDirector.Meta;
 using RealityDirector.Util;
 using UnityEngine;
-using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 
 namespace RealityDirector.UI
 {
+    public enum BossMood
+    {
+        Stern,
+        Annoyed,
+        Yell,
+        Smug,
+        Think,
+        Shock,
+        Grin,
+        Mad,
+        Aside,
+        Sigh
+    }
+
     public class CoachStep
     {
         public readonly string line;
+        public readonly BossMood mood;
         public readonly RectTransform[] targets;
 
         public CoachStep(string line, params RectTransform[] targets)
+            : this(BossMood.Stern, line, targets)
         {
+        }
+
+        public CoachStep(BossMood mood, string line, params RectTransform[] targets)
+        {
+            this.mood = mood;
             this.line = line;
             this.targets = targets;
         }
@@ -27,8 +46,7 @@ namespace RealityDirector.UI
         const int DoneBeat = 6;
 
         static BossCoach _instance;
-        static Sprite _portrait;
-        static Sprite _head;
+        static readonly Dictionary<string, Sprite> Cutouts = new Dictionary<string, Sprite>();
 
         Font _font;
         RectTransform _root;
@@ -69,13 +87,18 @@ namespace RealityDirector.UI
 
         public static void Line(List<CoachStep> steps, string line, params RectTransform[] targets)
         {
+            Line(steps, BossMood.Stern, line, targets);
+        }
+
+        public static void Line(List<CoachStep> steps, BossMood mood, string line, params RectTransform[] targets)
+        {
             if (steps == null || targets == null)
                 return;
             for (int i = 0; i < targets.Length; i++)
             {
                 if (targets[i] == null)
                     continue;
-                steps.Add(new CoachStep(line, targets));
+                steps.Add(new CoachStep(mood, line, targets));
                 return;
             }
         }
@@ -118,17 +141,22 @@ namespace RealityDirector.UI
 
         public static Sprite Portrait()
         {
-            return Cutout("Art/Boss/boss_devil", ref _portrait);
+            return Cutout("Art/Boss/boss_devil");
         }
 
         public static Sprite Head()
         {
-            return Cutout("Art/Boss/boss_head", ref _head) ?? Portrait();
+            return Cutout("Art/Boss/boss_head") ?? Portrait();
         }
 
-        static Sprite Cutout(string path, ref Sprite cached)
+        public static Sprite MoodFace(BossMood mood)
         {
-            if (cached != null)
+            return Cutout("Art/Boss/boss_" + mood.ToString().ToLowerInvariant()) ?? Head();
+        }
+
+        static Sprite Cutout(string path)
+        {
+            if (Cutouts.TryGetValue(path, out var cached) && cached != null)
                 return cached;
             var source = Resources.Load<Texture2D>(path);
             if (source == null)
@@ -137,28 +165,42 @@ namespace RealityDirector.UI
             try
             {
                 var pixels = source.GetPixels32();
-                var cut = new Texture2D(source.width, source.height, TextureFormat.RGBA32, false);
+                bool transparent = false;
                 for (int i = 0; i < pixels.Length; i++)
                 {
-                    var p = pixels[i];
-                    if (p.r > 240 && p.g > 240 && p.b > 240)
-                        p.a = 0;
-                    pixels[i] = p;
+                    if (pixels[i].a < 250)
+                    {
+                        transparent = true;
+                        break;
+                    }
                 }
 
-                cut.SetPixels32(pixels);
-                cut.Apply();
-                cut.hideFlags = HideFlags.HideAndDontSave;
-                tex = cut;
+                if (!transparent)
+                {
+                    var cut = new Texture2D(source.width, source.height, TextureFormat.RGBA32, false);
+                    for (int i = 0; i < pixels.Length; i++)
+                    {
+                        var p = pixels[i];
+                        if (p.r > 240 && p.g > 240 && p.b > 240)
+                            p.a = 0;
+                        pixels[i] = p;
+                    }
+
+                    cut.SetPixels32(pixels);
+                    cut.Apply();
+                    cut.hideFlags = HideFlags.HideAndDontSave;
+                    tex = cut;
+                }
             }
             catch (UnityException)
             {
                 tex = source;
             }
 
-            cached = Sprite.Create(tex, new Rect(0f, 0f, tex.width, tex.height), new Vector2(0.5f, 0.5f), 100f);
-            cached.hideFlags = HideFlags.HideAndDontSave;
-            return cached;
+            var sprite = Sprite.Create(tex, new Rect(0f, 0f, tex.width, tex.height), new Vector2(0.5f, 0.5f), 100f);
+            sprite.hideFlags = HideFlags.HideAndDontSave;
+            Cutouts[path] = sprite;
+            return sprite;
         }
 
         void OnDestroy()
@@ -185,12 +227,22 @@ namespace RealityDirector.UI
 
         public void Order(string line, params RectTransform[] holes)
         {
-            Say(line, true, null, holes);
+            Say(BossMood.Stern, line, true, null, holes);
+        }
+
+        public void Order(BossMood mood, string line, params RectTransform[] holes)
+        {
+            Say(mood, line, true, null, holes);
         }
 
         public void Freeze(string line, Action next, params RectTransform[] holes)
         {
-            Say(line, false, next, holes);
+            Say(BossMood.Stern, line, false, next, holes);
+        }
+
+        public void Freeze(BossMood mood, string line, Action next, params RectTransform[] holes)
+        {
+            Say(mood, line, false, next, holes);
         }
 
         public void Hide()
@@ -203,11 +255,11 @@ namespace RealityDirector.UI
             _page = null;
         }
 
-        void Say(string line, bool wait, Action next, RectTransform[] holes)
+        void Say(BossMood mood, string line, bool wait, Action next, RectTransform[] holes)
         {
             Hide();
             _wait = wait;
-            _steps = new[] { new CoachStep(line, holes) };
+            _steps = new[] { new CoachStep(mood, line, holes) };
             _done = next;
             _index = 0;
             Canvas.ForceUpdateCanvases();
@@ -333,10 +385,9 @@ namespace RealityDirector.UI
             face.anchorMin = face.anchorMax = new Vector2(0f, 0.5f);
             face.pivot = new Vector2(0f, 0.5f);
             face.anchoredPosition = new Vector2(28f, 0f);
-            bool shoot = SceneManager.GetActiveScene().name == SceneFlow.Episode;
-            face.sizeDelta = shoot ? new Vector2(200f, 200f) : new Vector2(180f, 220f);
+            face.sizeDelta = new Vector2(200f, 230f);
             var img = portrait.GetComponent<Image>();
-            img.sprite = shoot ? Head() : Portrait();
+            img.sprite = MoodFace(_steps[_index].mood);
             img.preserveAspect = true;
             img.raycastTarget = false;
 

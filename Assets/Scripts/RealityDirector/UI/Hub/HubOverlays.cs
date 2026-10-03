@@ -55,6 +55,34 @@ namespace RealityDirector.UI.Hub
         public void AskName(string current, Action<string, bool> done)
         {
             Open();
+            var art = Resources.Load<Sprite>("Art/Contract/contract_desk");
+            if (art == null)
+            {
+                AskNamePlain(current, done);
+                return;
+            }
+
+            var bg = _page.GetComponent<Image>();
+            bg.sprite = art;
+            bg.color = Color.white;
+            bg.preserveAspect = false;
+            var ink = new Color(0.32f, 0.07f, 0.09f, 1f);
+            var field = NameField(_page.transform, new Vector2(836f, 958f), new Vector2(470f, 42f), ink, current);
+            field.characterLimit = 18;
+            bool teach = true;
+            Text check = null;
+            check = DeskButton(_page.transform, "☑  обучение", new Vector2(36f, 1012f), new Vector2(240f, 44f),
+                new Color(0.12f, 0.05f, 0.06f, 0.82f), new Color(0.96f, 0.9f, 0.78f, 1f), () =>
+                {
+                    teach = !teach;
+                    check.text = (teach ? "☑  " : "☐  ") + "обучение";
+                });
+            DeskButton(_page.transform, "ПОДПИСАТЬ", new Vector2(1560f, 1012f), new Vector2(320f, 44f),
+                new Color(0.55f, 0.12f, 0.1f, 0.94f), new Color(0.98f, 0.92f, 0.78f, 1f), () => Sign(field, teach, done));
+        }
+
+        void AskNamePlain(string current, Action<string, bool> done)
+        {
             Title("ТРУДОВОЙ ДОГОВОР");
             Body("Должность — продюсер. Проект — ONLY WHAT MATTERS. Срок — один сезон. Рейтинг на тебе.\nБосс: подпись, потом сезон. Галочка — я проведу по площадке. Один раз.");
             var faceGo = new GameObject("boss", typeof(RectTransform), typeof(Image));
@@ -65,29 +93,8 @@ namespace RealityDirector.UI.Hub
             faceImg.sprite = BossCoach.Portrait();
             faceImg.preserveAspect = true;
             faceImg.raycastTarget = false;
-            var fieldGo = new GameObject("name", typeof(RectTransform), typeof(Image), typeof(InputField));
-            fieldGo.transform.SetParent(_page.transform, false);
-            var rect = fieldGo.GetComponent<RectTransform>();
-            Pin(rect, 80f, 300f, 900f, 56f);
-            fieldGo.GetComponent<Image>().color = new Color(0.14f, 0.11f, 0.16f, 1f);
-            var text = Label(fieldGo.transform, "", 22, Color.white);
-            Stretch(text.rectTransform);
-            text.rectTransform.offsetMin = new Vector2(16f, 0f);
-            text.rectTransform.offsetMax = new Vector2(-16f, 0f);
-            text.alignment = TextAnchor.MiddleLeft;
-            text.supportRichText = false;
-            UiTypography.Apply(text, TextRole.Input);
-            var hint = Label(fieldGo.transform, "Имя продюсера", 22, new Color(1f, 1f, 1f, 0.35f));
-            Stretch(hint.rectTransform);
-            hint.rectTransform.offsetMin = new Vector2(16f, 0f);
-            hint.rectTransform.offsetMax = new Vector2(-16f, 0f);
-            hint.alignment = TextAnchor.MiddleLeft;
-            UiTypography.Apply(hint, TextRole.Input);
-            hint.fontStyle = FontStyle.Italic;
-            var field = fieldGo.GetComponent<InputField>();
-            field.textComponent = text;
-            field.placeholder = hint;
-            field.text = string.IsNullOrEmpty(current) ? "" : current;
+            var field = NameField(_page.transform, new Vector2(80f, 300f), new Vector2(900f, 56f), Color.white, current);
+            field.GetComponent<Image>().color = new Color(0.14f, 0.11f, 0.16f, 1f);
             bool teach = true;
             Text check = null;
             check = Button(_page.transform, "☑  Пройти обучение", new Vector2(80f, 380f), () =>
@@ -95,12 +102,66 @@ namespace RealityDirector.UI.Hub
                 teach = !teach;
                 check.text = (teach ? "☑  " : "☐  ") + "Пройти обучение";
             });
-            Button(_page.transform, "ПОДПИСАТЬ", new Vector2(80f, 460f), () =>
-            {
-                string name = string.IsNullOrWhiteSpace(field.text) ? "Продюсер" : field.text.Trim();
-                Hide();
-                done?.Invoke(name, teach);
-            });
+            Button(_page.transform, "ПОДПИСАТЬ", new Vector2(80f, 460f), () => Sign(field, teach, done));
+        }
+
+        InputField NameField(Transform parent, Vector2 topLeft, Vector2 size, Color ink, string current)
+        {
+            var fieldGo = new GameObject("name", typeof(RectTransform), typeof(Image), typeof(InputField));
+            fieldGo.transform.SetParent(parent, false);
+            Pin(fieldGo.GetComponent<RectTransform>(), topLeft.x, topLeft.y, size.x, size.y);
+            var plate = fieldGo.GetComponent<Image>();
+            plate.color = new Color(1f, 1f, 1f, 0.01f);
+            var text = Label(fieldGo.transform, "", 28, ink);
+            Stretch(text.rectTransform);
+            text.rectTransform.offsetMin = new Vector2(6f, 0f);
+            text.rectTransform.offsetMax = new Vector2(-6f, 0f);
+            text.alignment = TextAnchor.MiddleLeft;
+            text.supportRichText = false;
+            UiTypography.Apply(text, TextRole.Input);
+            text.fontStyle = FontStyle.Italic;
+            text.fontSize = 30;
+            var hint = Label(fieldGo.transform, "ник", 24, new Color(ink.r, ink.g, ink.b, 0.35f));
+            Stretch(hint.rectTransform);
+            hint.rectTransform.offsetMin = new Vector2(6f, 0f);
+            hint.rectTransform.offsetMax = new Vector2(-6f, 0f);
+            hint.alignment = TextAnchor.MiddleLeft;
+            UiTypography.Apply(hint, TextRole.Input);
+            hint.fontStyle = FontStyle.Italic;
+            hint.color = new Color(ink.r, ink.g, ink.b, 0.35f);
+            var field = fieldGo.GetComponent<InputField>();
+            field.textComponent = text;
+            field.placeholder = hint;
+            field.caretColor = ink;
+            field.selectionColor = new Color(ink.r, ink.g, ink.b, 0.25f);
+            field.lineType = InputField.LineType.SingleLine;
+            field.text = string.IsNullOrEmpty(current) ? "" : current;
+            field.ActivateInputField();
+            return field;
+        }
+
+        void Sign(InputField field, bool teach, Action<string, bool> done)
+        {
+            string name = field == null || string.IsNullOrWhiteSpace(field.text) ? "Продюсер" : field.text.Trim();
+            Hide();
+            done?.Invoke(name, teach);
+        }
+
+        Text DeskButton(Transform parent, string text, Vector2 topLeft, Vector2 size, Color fill, Color ink, Action click)
+        {
+            var go = new GameObject("btn", typeof(RectTransform), typeof(Image), typeof(Button));
+            go.transform.SetParent(parent, false);
+            Pin(go.GetComponent<RectTransform>(), topLeft.x, topLeft.y, size.x, size.y);
+            go.GetComponent<Image>().color = fill;
+            var label = Label(go.transform, text, 20, ink);
+            UiTypography.Apply(label, TextRole.Button);
+            Stretch(label.rectTransform);
+            label.alignment = TextAnchor.MiddleCenter;
+            var outline = label.gameObject.AddComponent<Outline>();
+            outline.effectColor = new Color(0f, 0f, 0f, 0.75f);
+            outline.effectDistance = new Vector2(1.2f, -1.2f);
+            go.GetComponent<Button>().onClick.AddListener(() => click());
+            return label;
         }
 
         public void Slate(int number, string producer, Action done)

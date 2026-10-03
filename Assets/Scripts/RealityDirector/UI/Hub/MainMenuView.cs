@@ -26,6 +26,7 @@ namespace RealityDirector.UI.Hub
                 settings.onClick.AddListener(() => Settings?.Invoke());
             if (quit != null)
                 quit.onClick.AddListener(() => Quit?.Invoke());
+            MenuCameraChrome.Mount(this);
             Show(false);
         }
 
@@ -35,7 +36,7 @@ namespace RealityDirector.UI.Hub
                 return;
             continueSeason.interactable = canContinue;
             var colors = continueSeason.colors;
-            colors.disabledColor = new Color(1f, 1f, 1f, 0.28f);
+            colors.disabledColor = new Color(0.32f, 0.26f, 0.26f, 0.6f);
             continueSeason.colors = colors;
         }
     }
