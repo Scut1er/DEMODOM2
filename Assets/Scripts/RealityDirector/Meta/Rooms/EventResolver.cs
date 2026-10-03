@@ -218,6 +218,10 @@ namespace RealityDirector.Meta
                     icon = "icon_rating_tint";
                     text = "Влияет на эфир";
                     break;
+                case EffectType.SponsorReputation:
+                    icon = "icon_contract_tint";
+                    text = e.value >= 0 ? "Репутация у спонсоров растёт" : "Риск для репутации у спонсоров";
+                    break;
                 default:
                     icon = "icon_diary";
                     text = "Последствия позже в сезоне";
