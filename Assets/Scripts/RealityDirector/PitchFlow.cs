@@ -56,6 +56,7 @@ namespace RealityDirector
         NPCController _zloi;
         NPCController _dobryak;
         readonly List<NPCController> _cast = new List<NPCController>();
+        NPCController _reactFocus;
         EventDefinition _armed;
         bool _inputLock;
         float _rumble;
@@ -1116,16 +1117,7 @@ namespace RealityDirector
             if (_lesson == Lesson.Throw && played.id == "fridge_fire")
             {
                 _lesson = Lesson.Holding;
-                StartCoroutine(FreezeSoon(1.15f, () => BossCoach.Ensure().Freeze(
-                    "Вот так. Карта не ставит оценку. Она портит им день. Смотри, кто уже идёт к огню.",
-                    () =>
-                    {
-                        _frozen = false;
-                        Time.timeScale = 1f;
-                        _lesson = Lesson.Camera;
-                        BossCoach.Ensure().Order("Жми C. Зажми левую и веди рамку по людям. Три секунды — и отпусти.", _ui.CameraRect);
-                    },
-                    _ui.AimRect)));
+                StartCoroutine(WaitForReaction());
             }
         }
 
@@ -1584,7 +1576,7 @@ namespace RealityDirector
             {
                 _lesson = Lesson.Holding;
                 StartCoroutine(FreezeSoon(0.7f, () => BossCoach.Ensure().Freeze(
-                    "Ролик в слоте. Один клип — один кусок футажа. Пустой угол сожрал бы его так же.",
+                    "Видео улетело в слот. Один ролик — один кусок футажа. Пустой угол сожрал бы его так же.",
                     () =>
                     {
                         _frozen = false;
@@ -1624,6 +1616,81 @@ namespace RealityDirector
         bool ShootLesson()
         {
             return _state != null && _state.wantsTutorial && _state.tutorialBeat >= 2 && _state.tutorialBeat < 4;
+        }
+
+        IEnumerator WaitForReaction()
+        {
+            float deadline = Time.time + 12f;
+            float seen = -1f;
+            NPCController who = null;
+            while (Time.time < deadline)
+            {
+                if (_lesson != Lesson.Holding)
+                    yield break;
+                who = Reacting();
+                if (who != null)
+                {
+                    if (seen < 0f)
+                        seen = Time.time;
+                    if (Time.time - seen >= 0.5f)
+                        break;
+                }
+                yield return null;
+            }
+
+            if (_lesson != Lesson.Holding)
+                yield break;
+            _reactFocus = who != null ? who : NearestToFridge();
+            TrackAim();
+            _frozen = true;
+            Time.timeScale = 0f;
+            BossCoach.Ensure().Freeze(
+                "Вот. Подошёл и поехал. Эмоцию фиксируй, пока он не выдохся.",
+                () =>
+                {
+                    _frozen = false;
+                    Time.timeScale = 1f;
+                    _reactFocus = null;
+                    _lesson = Lesson.Camera;
+                    BossCoach.Ensure().Order("Жми C. Рамка на него. Зажал левую, три секунды, отпустил.", _ui.CameraRect);
+                },
+                _ui.AimRect);
+        }
+
+        NPCController Reacting()
+        {
+            for (int i = 0; i < _cast.Count; i++)
+            {
+                var npc = _cast[i];
+                if (npc == null)
+                    continue;
+                var action = npc.Action;
+                if (action == NpcActionId.Panic || action == NpcActionId.SeekFight || action == NpcActionId.Fight)
+                    return npc;
+            }
+
+            return null;
+        }
+
+        NPCController NearestToFridge()
+        {
+            NPCController best = null;
+            float bestDist = float.MaxValue;
+            Vector2 at = _fridge != null ? (Vector2)_fridge.transform.position : Vector2.zero;
+            for (int i = 0; i < _cast.Count; i++)
+            {
+                var npc = _cast[i];
+                if (npc == null)
+                    continue;
+                float dist = Vector2.Distance(npc.transform.position, at);
+                if (dist < bestDist)
+                {
+                    bestDist = dist;
+                    best = npc;
+                }
+            }
+
+            return best;
         }
 
         IEnumerator OpenLesson()
@@ -1769,9 +1836,12 @@ namespace RealityDirector
 
         void TrackAim()
         {
-            if ((_lesson != Lesson.Throw && _lesson != Lesson.Holding) || _ui == null || _ui.AimRect == null || _fridge == null || Camera.main == null)
+            Transform focus = _reactFocus != null ? _reactFocus.transform : null;
+            if (focus == null && (_lesson == Lesson.Throw || _lesson == Lesson.Holding))
+                focus = _fridge != null ? _fridge.transform : null;
+            if (focus == null || _ui == null || _ui.AimRect == null || Camera.main == null)
                 return;
-            Vector2 screen = Camera.main.WorldToScreenPoint(_fridge.transform.position);
+            Vector2 screen = Camera.main.WorldToScreenPoint(focus.position);
             var canvas = _ui.AimRect.parent as RectTransform;
             if (canvas == null || !RectTransformUtility.ScreenPointToLocalPointInRectangle(canvas, screen, null, out var local))
                 return;

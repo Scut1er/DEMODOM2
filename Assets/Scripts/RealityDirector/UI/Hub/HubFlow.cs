@@ -90,6 +90,8 @@ namespace RealityDirector.UI.Hub
                 if (ok)
                     GameSession.Save();
                 map.Deck.Show(_runShop ? _meta.BuildRunShop() : _meta.BuildPrep());
+                if (ok)
+                    OnDeckPicked(id);
             };
             map.Deck.Close += () =>
             {
@@ -297,10 +299,38 @@ namespace RealityDirector.UI.Hub
             BossCoach.Line(teach, "Съёмочная. Сколько роликов влезет в выпуск. Слоты кончились — хоть потолок снимай, в эфир он не просится.", hub.ZoneFocus(CrewTrack.Operators));
             BossCoach.Line(teach, "Сценарная. Отсюда новые карты. Дорастёт — дам второй рекламный контракт. Проценты к чеку оставь бухгалтерии.", hub.ZoneFocus(CrewTrack.Writers));
             BossCoach.Line(teach, "Магазин. Тратишь кр. Карта остаётся на весь сезон. Я от себя такой щедрости не ждал.", hub.ShopFocus());
-            BossCoach.Line(teach, "Колода. Не всё, что у тебя есть. То, что сегодня потащишь на площадку.", hub.DeckFocus());
-            BossCoach.Line(teach, "Старт. Сначала люди. Потом карта выпуска. Не перепутай, второй раз я это рассказывать не буду.", hub.StartFocus());
             if (teach.Count > 0)
-                BossCoach.Play(0, 1, teach.ToArray());
+                BossCoach.Guide(0, teach.ToArray(), () => StartCoroutine(ShowDeckLesson()));
+        }
+
+        IEnumerator ShowDeckLesson()
+        {
+            if (GameSession.State == null || !GameSession.State.wantsTutorial || GameSession.State.tutorialBeat != 0)
+                yield break;
+            hub.Deck.Open(DeckPanelView.DeckTab, _meta.BuildPrep(), false, true);
+            yield return null;
+            Canvas.ForceUpdateCanvases();
+            var steps = new List<CoachStep>();
+            BossCoach.Line(steps, "Колода. Всё, что уже купил. Сейчас только смотри. Тыкать не надо.", hub.Deck.CardsFocus());
+            BossCoach.Line(steps, "Пояснение. В съёмку отсюда ничего не уезжает. Выбор будет перед дверью на карте.", hub.Deck.ExplainFocus());
+            BossCoach.Line(steps, "Снизу счёт. Сколько карт есть и сколько пустят с собой.", hub.Deck.FooterFocus());
+            BossCoach.Guide(0, steps.ToArray(), CloseDeckThenStart);
+        }
+
+        void CloseDeckThenStart()
+        {
+            if (hub.Deck != null && hub.Deck.IsOpen)
+                hub.Deck.Hide();
+            var start = new List<CoachStep>();
+            BossCoach.Line(start, "Старт. Сначала люди. Потом карта выпуска. Не перепутай, второй раз я это рассказывать не буду.", hub.StartFocus());
+            if (start.Count == 0 && GameSession.State != null)
+            {
+                GameSession.State.tutorialBeat = 1;
+                GameSession.Save();
+                return;
+            }
+
+            BossCoach.Play(0, 1, start.ToArray());
         }
 
         void RefreshHub()
@@ -422,11 +452,74 @@ namespace RealityDirector.UI.Hub
             _meta.TrimPicked();
             _meta.ClearReject();
             map.Deck.Open(DeckPanelView.DeckTab, _meta.BuildPrep());
+            if (!DeckLesson())
+                return;
+            map.Deck.SetCancelEnabled(false);
+            map.Deck.SetCloseEnabled(false);
+            map.Deck.SetOnly("fridge_fire");
+            StartCoroutine(PromptDeckCard());
+        }
+
+        bool DeckLesson()
+        {
+            var state = GameSession.State;
+            return state != null && state.wantsTutorial && state.tutorialBeat >= 2 && state.tutorialBeat < 4;
+        }
+
+        IEnumerator PromptDeckCard()
+        {
+            yield return null;
+            Canvas.ForceUpdateCanvases();
+            if (!DeckLesson())
+                yield break;
+            if (GameSession.State.picked.Contains("fridge_fire"))
+            {
+                ExplainPick();
+                yield break;
+            }
+
+            BossCoach.Ensure().Order("Колода перед дверью. Жми «Поджог». Остальные сегодня не трогай.", map.Deck.CardRect("fridge_fire"));
+        }
+
+        void OnDeckPicked(string id)
+        {
+            if (!DeckLesson() || _runShop || id != "fridge_fire")
+                return;
+            if (!GameSession.State.picked.Contains(id))
+            {
+                map.Deck.SetOnly("fridge_fire");
+                map.Deck.SetCloseEnabled(false);
+                BossCoach.Ensure().Order("Верни её. «Поджог». Без неё урок пустой.", map.Deck.CardRect("fridge_fire"));
+                return;
+            }
+
+            ExplainPick();
+        }
+
+        void ExplainPick()
+        {
+            map.Deck.SetCardsEnabled(false);
+            map.Deck.SetCloseEnabled(false);
+            BossCoach.Ensure().Hide();
+            BossCoach.Ensure().Freeze(
+                "Видишь «В СЕРИИ». Она едет на эту съёмку. Колода на месте, уехала только она.",
+                () =>
+                {
+                    map.Deck.SetCloseEnabled(true);
+                    BossCoach.Ensure().Order("Начать съёмку. Отмеченное едет на площадку.", map.Deck.CloseFocus());
+                },
+                map.Deck.CardRect("fridge_fire"));
         }
 
         void BeginFilming(MapNode node)
         {
             if (node == null || !_episode.Map.CanEnter(node) || !_meta.CanStart())
+            {
+                Sfx.Play(Cue.Miss, 0.4f);
+                return;
+            }
+
+            if (DeckLesson() && !GameSession.State.picked.Contains("fridge_fire"))
             {
                 Sfx.Play(Cue.Miss, 0.4f);
                 return;
@@ -455,6 +548,8 @@ namespace RealityDirector.UI.Hub
             GameSession.RoomNodeId = node.id;
             if (situation != null && _episode.Current != null)
                 _episode.Current.roleBrief = situation.roleBrief;
+            if (DeckLesson())
+                BossCoach.Ensure().Hide();
             GameSession.Save();
             SceneFlow.ToScene(GameSession.SceneId);
         }

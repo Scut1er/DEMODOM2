@@ -26,14 +26,23 @@ namespace RealityDirector.UI.Hub
 
         Action _onClick;
 
+        public string CardId { get; private set; }
+
         void Awake()
         {
             if (button != null)
                 button.onClick.AddListener(() => _onClick?.Invoke());
         }
 
+        public void SetInteractable(bool on)
+        {
+            if (button != null)
+                button.interactable = on;
+        }
+
         public void Bind(PrepCard card, bool shop, Action onClick)
         {
+            CardId = card.id;
             _onClick = onClick;
             // Рамка по тону карты (красная — трэш, зелёная — семья, синяя — драма). Нет арта — цветная плашка.
             var frameArt = card.moods != null && card.moods.Length > 0 ? GameArt.CardFrame(card.moods[0]) : null;
