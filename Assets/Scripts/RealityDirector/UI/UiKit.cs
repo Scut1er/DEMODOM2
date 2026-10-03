@@ -435,7 +435,9 @@ namespace RealityDirector.UI
         {
             if (target == null)
                 return null;
-            var b = target.GetComponent<Breathe>() ?? target.gameObject.AddComponent<Breathe>();
+            var b = target.GetComponent<Breathe>();
+            if (b == null)
+                b = target.gameObject.AddComponent<Breathe>();
             b.amount = amount;
             b.speed = speed;
             return b;

@@ -43,7 +43,9 @@ namespace RealityDirector.UI.Hub
 
         void Layout()
         {
-            _group = GetComponent<CanvasGroup>() ?? gameObject.AddComponent<CanvasGroup>();
+            _group = GetComponent<CanvasGroup>();
+            if (_group == null)
+                _group = gameObject.AddComponent<CanvasGroup>();
             if (window != null)
                 window.gameObject.SetActive(false);
             if (title != null)

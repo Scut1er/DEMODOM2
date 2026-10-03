@@ -8,7 +8,7 @@ using UnityEngine;
 
 namespace RealityDirector.NPC
 {
-    public class NPCController : MonoBehaviour
+    public partial class NPCController : MonoBehaviour
     {
         public string Id;
         public string DisplayName;
@@ -27,10 +27,10 @@ namespace RealityDirector.NPC
 
         public bool HasRage => Time.time < _rageUntil;
         public bool IsFighting => _action == NpcActionId.Fight;
-        public bool IsCrying => _action == NpcActionId.Panic && Trait != null && Trait.traitId == TraitId.Sentimental;
+        public bool IsCrying => (_action == NpcActionId.Panic && Trait != null && Trait.traitId == TraitId.Sentimental) || StageCrying;
         public bool IsPanicker => Trait != null && Trait.traitId == TraitId.Panicker;
         public bool IsApproaching => _hasPending && _noticed;
-        public bool CanChat => !IsFighting && !_hasPending && _action != NpcActionId.Panic && _action != NpcActionId.SeekFight;
+        public bool CanChat => !IsFighting && !_hasPending && _action != NpcActionId.Panic && _action != NpcActionId.SeekFight && !StageBusy;
         public NpcActionId Action => _action;
         public string Emote => _emote;
         public bool Thought => _thought;
@@ -139,6 +139,7 @@ namespace RealityDirector.NPC
             _tripping = false;
             _trapArmed = false;
             _lap = 0;
+            ResetStage();
             _nextThink = Time.time + UnityEngine.Random.Range(0.4f, 1.4f);
             RelationToRival = -Hostility;
             transform.position = Home;
@@ -413,6 +414,7 @@ namespace RealityDirector.NPC
             Stress = Mathf.Clamp(Stress + Gain(stress, stressGain), 0, 100);
             Sadness = Mathf.Clamp(Sadness + Gain(sadness, sadnessGain), 0, 100);
             Attraction = Mathf.Clamp(Attraction + Gain(rule.attraction, attractionGain), 0, 100);
+            AmplifyBump(rule);
             if (rule.action == NpcActionId.Panic)
                 SelfControl = Mathf.Clamp(SelfControl - 6, 0, 100);
             else if (rule.action == NpcActionId.SeekFight)
@@ -518,6 +520,13 @@ namespace RealityDirector.NPC
 
             TickTrap();
             TickHeat();
+            // Карта ведёт участника (идёт к реквизиту, поёт, пьёт, поскользнулся) — обычный распорядок ждёт.
+            if (TickStage())
+            {
+                PulseRing();
+                return;
+            }
+
             if (_seekingComfort && Rival != null && (Rival.HasRage || Rival.IsFighting || Rival.Action == NpcActionId.SeekFight))
                 AbortComfort();
 
@@ -1109,6 +1118,7 @@ namespace RealityDirector.NPC
             next = ClampEast(current, next);
             next = Separate(current, next);
             next = ClampEast(current, next);
+            next = ClampLock(current, next);
             Face(next.x - current.x);
             transform.position = next;
             if (_visual != null && _action != NpcActionId.Fight)
