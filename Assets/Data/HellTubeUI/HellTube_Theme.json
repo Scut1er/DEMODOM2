@@ -1,0 +1,31 @@
+{
+  "colors": {
+    "bg": "#0B0710",
+    "panel": "#160C13",
+    "panel2": "#201018",
+    "text": "#F5F0ED",
+    "muted": "#B5A8AD",
+    "red": "#FF304D",
+    "red2": "#8E152A",
+    "gold": "#F4C44E",
+    "orange": "#FF6B2C",
+    "pink": "#FF4FB0",
+    "magenta": "#C452FF",
+    "green": "#45E5A4",
+    "cyan": "#53DFFF",
+    "purple": "#8E63FF"
+  },
+  "fonts": {
+    "ui": "existing project TMP UI font",
+    "brand": "existing HELLTUBE logo/font if available"
+  },
+  "categoryAccent": {
+    "Conflict": "#FF304D",
+    "Confession": "#F4C44E",
+    "Comedy": "#C452FF",
+    "Romance": "#FF4FB0",
+    "Family": "#45E5A4",
+    "Drama": "#8E63FF"
+  },
+  "panelOpacity": 0.94
+}

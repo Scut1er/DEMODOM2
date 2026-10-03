@@ -19,7 +19,7 @@ MonoBehaviour:
   targetType: 2
   requiredObjectId: 
   cardColor: {r: 0.2, g: 0.42, b: 0.28, a: 1}
-  cardArt: {fileID: 0}
+  cardArt: {fileID: 21300000, guid: 939cac4e41e95e449a124b95e63a5ab7, type: 3}
   tags:
   - Warmth
   moods: 02000000i

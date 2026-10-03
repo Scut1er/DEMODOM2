@@ -19,7 +19,7 @@ MonoBehaviour:
   goal: 
   icon: 13
   color: {r: 0.28, g: 0.32, b: 0.48, a: 1}
-  art: {fileID: 0}
+  art: {fileID: 21300000, guid: 8a7f4c3c387ef0247b241dacf1bb945e, type: 3}
   weight: 7
   conditions: []
   uniquePerEpisode: 0
@@ -36,6 +36,7 @@ MonoBehaviour:
   choices:
   - label: "\u0421\u0440\u043E\u0447\u043D\u043E \u0447\u0438\u043D\u0438\u0442\u044C"
     description: 
+    accent: 0
     conditions: []
     hideIfUnavailable: 0
     costMoney: 0
@@ -62,6 +63,7 @@ MonoBehaviour:
     designNote: "\u0423\u0441\u043F\u0435\u0445: Budget -25; FootageSlots unchanged\n\u041F\u0440\u043E\u0432\u0430\u043B: Budget -25; next Situation footageSlots -1"
   - label: "\u0421\u043D\u0438\u043C\u0430\u0442\u044C \u043E\u0441\u0442\u0430\u0432\u0448\u0438\u043C\u0438\u0441\u044F"
     description: 
+    accent: 0
     conditions: []
     hideIfUnavailable: 0
     costMoney: 0
@@ -80,6 +82,7 @@ MonoBehaviour:
     designNote: "\u0423\u0441\u043F\u0435\u0445: next Situation footageSlots -1; TechnicalQuality +0"
   - label: "\u0410\u0440\u0435\u043D\u0434\u043E\u0432\u0430\u0442\u044C \u043F\u0440\u0435\u043C\u0438\u0443\u043C-\u043A\u0430\u043C\u0435\u0440\u0443"
     description: 
+    accent: 0
     conditions: []
     hideIfUnavailable: 0
     costMoney: 0

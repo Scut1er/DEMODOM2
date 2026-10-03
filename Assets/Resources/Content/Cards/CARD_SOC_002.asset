@@ -19,7 +19,7 @@ MonoBehaviour:
   targetType: 1
   requiredObjectId: 
   cardColor: {r: 0.55, g: 0.25, b: 0.42, a: 1}
-  cardArt: {fileID: 0}
+  cardArt: {fileID: 21300000, guid: da611d94955364a4287601500b5f90fb, type: 3}
   tags:
   - Flirt
   - Awkward

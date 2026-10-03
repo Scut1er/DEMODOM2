@@ -1,0 +1,60 @@
+{
+  "sourceFrameResolution": [
+    1188,
+    2048
+  ],
+  "rule": "Frame PNG stays full-size as the top overlay. All text remains dynamic TMP.",
+  "regions": {
+    "title": {
+      "x": 170,
+      "y": 330,
+      "w": 848,
+      "h": 150
+    },
+    "art": {
+      "x": 155,
+      "y": 500,
+      "w": 878,
+      "h": 620
+    },
+    "description": {
+      "x": 170,
+      "y": 1165,
+      "w": 848,
+      "h": 340
+    },
+    "tags": {
+      "x": 170,
+      "y": 1530,
+      "w": 848,
+      "h": 140
+    },
+    "costBadge": {
+      "x": 90,
+      "y": 235,
+      "w": 250,
+      "h": 105
+    },
+    "diceBadge": {
+      "x": 850,
+      "y": 235,
+      "w": 250,
+      "h": 105
+    },
+    "categoryIcon": {
+      "x": 520,
+      "y": 238,
+      "w": 148,
+      "h": 100
+    },
+    "tierMarker": {
+      "x": 500,
+      "y": 1740,
+      "w": 188,
+      "h": 100
+    }
+  },
+  "recommendedCardAspect": "1188:2048",
+  "artSourceAspect": "16:9",
+  "artFit": "Crop/Fit inside masked art rect; do not stretch."
+}

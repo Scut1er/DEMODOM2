@@ -1,5 +1,4 @@
 using System.Collections.Generic;
-using RealityDirector.Core;
 using UnityEngine;
 
 namespace RealityDirector.Util
@@ -39,18 +38,6 @@ namespace RealityDirector.Util
             return sprite;
         }
 
-        // ---------- карты ----------
-
-        public static Sprite CardFrame(ShowMood mood)
-        {
-            switch (mood)
-            {
-                case ShowMood.Drama: return Load("Cards/card_drama");
-                case ShowMood.Family: return Load("Cards/card_family");
-                default: return Load("Cards/card_trash");
-            }
-        }
-
         // ---------- участники ----------
 
         public const string DefaultBody = "body";
@@ -67,6 +54,7 @@ namespace RealityDirector.Util
                 case "npc_dobryak": return "dobryak";
                 case "npc_kira": return "kira";
                 case "npc_max": return "max";
+                case "npc_lyusya": return "lyusya";
                 default: return null;
             }
         }

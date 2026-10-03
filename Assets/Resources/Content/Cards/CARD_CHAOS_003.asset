@@ -19,7 +19,7 @@ MonoBehaviour:
   targetType: 2
   requiredObjectId: 
   cardColor: {r: 0.78, g: 0.52, b: 0.12, a: 1}
-  cardArt: {fileID: 0}
+  cardArt: {fileID: 21300000, guid: 223fb0c1041abea43bc609cac05a224c, type: 3}
   tags:
   - Chaos
   - Panic

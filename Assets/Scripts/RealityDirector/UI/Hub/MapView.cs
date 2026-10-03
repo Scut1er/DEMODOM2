@@ -66,10 +66,11 @@ namespace RealityDirector.UI.Hub
             Dress();
         }
 
-        // Карта — план съёмки на фоне штаб-квартиры канала: панели в рамках, путь золотом, доступное — огнём.
+        // Карта — доска продюсера в студии (пак EpisodeMap): панели в рамках, путь золотом, доступное — огнём.
         void Dress()
         {
-            UiKit.Backdrop((RectTransform)transform, "Art/Intro/bg/scene_1", new Rect(0f, 0.3f, 1f, 0.7f), 0.72f);
+            if (UiKit.Backdrop((RectTransform)transform, "Art/UI/EpisodeMap/map_background", new Rect(0f, 0f, 1f, 1f), 0.3f) == null)
+                UiKit.Backdrop((RectTransform)transform, "Art/Intro/bg/scene_1", new Rect(0f, 0.3f, 1f, 0.7f), 0.72f);
             var self = GetComponent<Image>();
             if (self != null)
                 self.color = UiKit.Ink;
@@ -78,8 +79,9 @@ namespace RealityDirector.UI.Hub
                 var plate = board.GetComponent<Image>();
                 UiKit.DressSolid(plate, UiKit.Frame.Dialog, 8f);
                 var solid = plate != null ? plate.transform.Find("Solid")?.GetComponent<Image>() : null;
+                // Доска с фона просвечивает: узлы лежат на ней, линии маршрута читаются.
                 if (solid != null)
-                    solid.color = new Color(0.06f, 0.03f, 0.05f, 0.82f);
+                    solid.color = new Color(0.06f, 0.03f, 0.05f, 0.42f);
             }
 
             UiKit.DressSolid(transform.Find("TitlePanel")?.GetComponent<Image>(), UiKit.Frame.Dialog);

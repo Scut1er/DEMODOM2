@@ -109,6 +109,7 @@ namespace RealityDirector.EditorTools
             Character("npc_dobryak", "Добряк", "dobryak", 1, RealityDirector.NPC.TraitId.Panicker, RealityDirector.NPC.HiddenTrait.Kleptomaniac, "паникер");
             Character("npc_kira", "Кира", "kira", 2, RealityDirector.NPC.TraitId.Jealous, RealityDirector.NPC.HiddenTrait.None, "ревнивая", "body3");
             Character("npc_max", "Макс", "max", 3, RealityDirector.NPC.TraitId.Vain, RealityDirector.NPC.HiddenTrait.Singer, "тщеславный", "body2");
+            Character("npc_lyusya", "Люся", "lyusya", 4, RealityDirector.NPC.TraitId.Shy, RealityDirector.NPC.HiddenTrait.None, "застенчивая");
             AssetDatabase.SaveAssets();
             DesignerData.Invalidate();
             Debug.Log("Characters: участники готовы (" + DesignerData.CharactersRoot + "). Существующие не тронуты.");

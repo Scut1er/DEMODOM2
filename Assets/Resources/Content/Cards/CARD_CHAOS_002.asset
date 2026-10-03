@@ -19,7 +19,7 @@ MonoBehaviour:
   targetType: 1
   requiredObjectId: 
   cardColor: {r: 0.78, g: 0.52, b: 0.12, a: 1}
-  cardArt: {fileID: 0}
+  cardArt: {fileID: 21300000, guid: 4c0d2c15689027347aa6a35ce9949fa7, type: 3}
   tags:
   - Chain
   - Conflict

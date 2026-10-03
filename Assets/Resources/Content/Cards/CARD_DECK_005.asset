@@ -19,7 +19,7 @@ MonoBehaviour:
   targetType: 5
   requiredObjectId: 
   cardColor: {r: 0.22, g: 0.3, b: 0.48, a: 1}
-  cardArt: {fileID: 0}
+  cardArt: {fileID: 21300000, guid: 5a1579bc80466ea48a05bb869b0e6c62, type: 3}
   tags:
   - Deck
   - Retain

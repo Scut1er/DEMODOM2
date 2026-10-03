@@ -17,6 +17,8 @@ namespace RealityDirector.Meta
         public Sprite art;
         public ShowMood[] moods;
         public string category;
+        // Сама карта — лицо карты (CardFace) рисуется по её данным, как в руке на съёмке.
+        public Events.EventDefinition def;
     }
 
     public class CrewButton

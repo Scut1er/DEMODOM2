@@ -19,7 +19,7 @@ MonoBehaviour:
   targetType: 0
   requiredObjectId: bath_door
   cardColor: {r: 0.45, g: 0.3, b: 0.16, a: 1}
-  cardArt: {fileID: 0}
+  cardArt: {fileID: 21300000, guid: dc3e09423dbf7d241b7f28cc7a1319b6, type: 3}
   tags: []
   moods: 02000000i
   rageSeconds: 0

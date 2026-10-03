@@ -1,0 +1,56 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2b3a7c1c40a70134999e75925329d8f3, type: 3}
+  m_Name: CardVisuals
+  m_EditorClassIdentifier: Assembly-CSharp::RealityDirector.UI.CardVisualConfig
+  categories:
+  - category: Provocation
+    frame: {fileID: 21300000, guid: 04b1374baf499d149bf72e949f396fee, type: 3}
+    icon: {fileID: 21300000, guid: dbd04d0fcf3daea479ec10ba35bbc67d, type: 3}
+    accent: {r: 1, g: 0.32, b: 0.3, a: 1}
+  - category: Comedy
+    frame: {fileID: 21300000, guid: 04b1374baf499d149bf72e949f396fee, type: 3}
+    icon: {fileID: 21300000, guid: ec91bb6bba3d65a4c99f377f7e0cb69a, type: 3}
+    accent: {r: 1, g: 0.5, b: 0.25, a: 1}
+  - category: Social
+    frame: {fileID: 21300000, guid: 6d1059bc8a3202e4286a1e283a3c38ac, type: 3}
+    icon: {fileID: 21300000, guid: 456b057ca9f5ba546bee95a69aaed8d9, type: 3}
+    accent: {r: 0.42, g: 0.92, b: 0.55, a: 1}
+  - category: Control
+    frame: {fileID: 21300000, guid: 6d1059bc8a3202e4286a1e283a3c38ac, type: 3}
+    icon: {fileID: 21300000, guid: c22b68be2f0291545bb60d5e6561a9bb, type: 3}
+    accent: {r: 0.42, g: 0.92, b: 0.75, a: 1}
+  - category: DeckManagement
+    frame: {fileID: 21300000, guid: 8c3d81c90ffa23e479f3f034fda19512, type: 3}
+    icon: {fileID: 21300000, guid: 1989fb15a9e5427469eefc8eea61bf06, type: 3}
+    accent: {r: 0.5, g: 0.68, b: 1, a: 1}
+  - category: Reveal
+    frame: {fileID: 21300000, guid: 8c3d81c90ffa23e479f3f034fda19512, type: 3}
+    icon: {fileID: 21300000, guid: 820b1648a82cd5e4d97b47a05d88e3a0, type: 3}
+    accent: {r: 0.72, g: 0.55, b: 1, a: 1}
+  - category: Confession
+    frame: {fileID: 21300000, guid: 8c3d81c90ffa23e479f3f034fda19512, type: 3}
+    icon: {fileID: 21300000, guid: 820b1648a82cd5e4d97b47a05d88e3a0, type: 3}
+    accent: {r: 0.72, g: 0.55, b: 1, a: 1}
+  - category: Environment
+    frame: {fileID: 21300000, guid: 8c3d81c90ffa23e479f3f034fda19512, type: 3}
+    icon: {fileID: 21300000, guid: 8f3eb5d19a77c9040801b5db0ba849d9, type: 3}
+    accent: {r: 0.45, g: 0.8, b: 1, a: 1}
+  - category: Sponsor
+    frame: {fileID: 21300000, guid: 8c3d81c90ffa23e479f3f034fda19512, type: 3}
+    icon: {fileID: 21300000, guid: 303e80439fab24c449dba42d9dc15dbf, type: 3}
+    accent: {r: 0.98, g: 0.78, b: 0.36, a: 1}
+  fallback:
+    category: '*'
+    frame: {fileID: 21300000, guid: 8c3d81c90ffa23e479f3f034fda19512, type: 3}
+    icon: {fileID: 21300000, guid: 239c0d04ab6508e47ae00c2075088565, type: 3}
+    accent: {r: 0.8, g: 0.75, b: 0.7, a: 1}

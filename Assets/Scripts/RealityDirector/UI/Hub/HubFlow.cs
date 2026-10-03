@@ -693,7 +693,7 @@ namespace RealityDirector.UI.Hub
             bool echo = sub.Length == 0 || sub.Equals("событие", System.StringComparison.OrdinalIgnoreCase);
             _eventView.Show("СОБЫТИЕ" + (echo ? "" : "  ·  " + sub.ToUpperInvariant()),
                 EventResolver.Fill(def.title, roles, nameOf), EventResolver.Fill(def.body, roles, nameOf),
-                def.art != null ? def.art : MapNodeView.Icon(def.icon), def.color, choices, "Уйти", index =>
+                def.art != null ? def.art : MapNodeView.Art(def.icon), def.color, choices, EventResolver.Stakes(def), "Уйти", index =>
                 {
                     EventOutcome outcome;
                     // Результат всегда со штампом: «получилось» или «не получилось» и что изменилось.

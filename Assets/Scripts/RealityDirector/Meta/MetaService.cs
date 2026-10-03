@@ -599,7 +599,8 @@ namespace RealityDirector.Meta
                     color = def.cardColor,
                     art = def.cardArt,
                     category = def.category,
-                    moods = moods
+                    moods = moods,
+                    def = def
                 });
             }
 
@@ -681,7 +682,8 @@ namespace RealityDirector.Meta
                 color = def.cardColor,
                 art = def.cardArt,
                 category = def.category,
-                moods = moods
+                moods = moods,
+                def = def
             };
         }
 

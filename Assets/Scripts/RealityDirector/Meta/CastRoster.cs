@@ -192,7 +192,7 @@ namespace RealityDirector.Meta
                     id = "npc_lyusya",
                     name = "Люся",
                     traits = new[] { "застенчивая" },
-                    portrait = IllustratedArt.PersonKind,
+                    portrait = GameArt.Head("npc_lyusya", Face.Neutral) ?? IllustratedArt.PersonKind,
                     secretHidden = "",
                     secretKnown = "",
                     trait = NPC.TraitId.Shy

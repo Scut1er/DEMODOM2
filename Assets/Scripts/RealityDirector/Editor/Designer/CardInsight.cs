@@ -3,6 +3,7 @@ using RealityDirector.Core;
 using RealityDirector.Events;
 using RealityDirector.Meta;
 using RealityDirector.NPC;
+using RealityDirector.UI;
 using RealityDirector.Util;
 using UnityEditor;
 using UnityEngine;
@@ -288,49 +289,106 @@ namespace RealityDirector.EditorTools
             return i >= 0 ? DesignerData.ObjectNames[i] : id;
         }
 
-        // Карта как в игре: рамка по первому тону, арт, название, подсказка, значки тона и цены.
+        // Карта как в игре: та же раскладка и те же источники, что у CardFace (рамка по категории, арт по карте).
         public static void DrawCard(Rect r, EventDefinition c)
         {
-            var mood = c.moods != null && c.moods.Count > 0 ? c.moods[0] : ShowMood.Trash;
-            var frame = GameArt.CardFrame(mood);
-            if (frame != null)
-            {
-                DrawSprite(r, frame);
-                var inner = new Rect(r.x + r.width * 0.12f, r.y + r.height * 0.1f, r.width * 0.76f, r.height * 0.8f);
-                EditorGUI.DrawRect(inner, new Color(0.12f, 0.1f, 0.13f, 0.92f));
-            }
+            var style = CardVisuals.StyleOf(c.category);
+            Color accent = style != null ? style.accent : Color.white;
+            EditorGUI.DrawRect(CardFace.Within(r, CardFace.BackBox), new Color(0.075f, 0.04f, 0.06f, 1f));
+
+            var artRect = CardFace.Within(r, CardFace.ArtBox);
+            var art = CardVisuals.Art(c);
+            if (art != null)
+                DrawSpriteCover(artRect, art);
             else
             {
-                EditorGUI.DrawRect(r, c.cardColor);
+                EditorGUI.DrawRect(artRect, new Color(accent.r * 0.45f, accent.g * 0.45f, accent.b * 0.45f, 1f));
+                if (style != null && style.icon != null)
+                    DrawSprite(new Rect(artRect.x + artRect.width * 0.3f, artRect.y + artRect.height * 0.14f, artRect.width * 0.4f, artRect.height * 0.72f), style.icon);
             }
 
-            var title = new GUIStyle(EditorStyles.boldLabel) { alignment = TextAnchor.MiddleCenter, wordWrap = true, fontSize = 13 };
+            var plate = CardVisuals.Element("DescriptionBackplate");
+            if (plate != null)
+                DrawSprite(CardFace.Within(r, CardFace.TextPlateBox), plate, false);
+            if (style != null && style.frame != null)
+                DrawSprite(r, style.frame, false);
+
+            float k = r.width / 176f;
+            var title = new GUIStyle(EditorStyles.boldLabel) { alignment = TextAnchor.MiddleCenter, wordWrap = true, fontSize = Mathf.RoundToInt(13 * k) };
             title.normal.textColor = Color.white;
-            var small = new GUIStyle(EditorStyles.miniLabel) { alignment = TextAnchor.MiddleCenter, wordWrap = true };
-            small.normal.textColor = new Color(0.9f, 0.86f, 0.8f);
+            var body = new GUIStyle(EditorStyles.label) { alignment = TextAnchor.MiddleCenter, wordWrap = true, fontSize = Mathf.RoundToInt(10 * k) };
+            body.normal.textColor = new Color(0.95f, 0.9f, 0.84f);
+            var small = new GUIStyle(EditorStyles.miniLabel) { alignment = TextAnchor.MiddleCenter, wordWrap = true, fontSize = Mathf.RoundToInt(9 * k) };
+            small.normal.textColor = new Color(0.75f, 0.66f, 0.66f);
+            var badge = new GUIStyle(EditorStyles.boldLabel) { alignment = TextAnchor.MiddleCenter, fontSize = Mathf.RoundToInt(12 * k) };
+            badge.normal.textColor = new Color(0.95f, 0.76f, 0.36f);
 
-            GUI.Label(new Rect(r.x + 10, r.y + r.height * 0.12f, r.width - 20, 34), string.IsNullOrEmpty(c.displayName) ? "(без названия)" : c.displayName, title);
-            var artRect = new Rect(r.center.x - r.width * 0.25f, r.y + r.height * 0.3f, r.width * 0.5f, r.width * 0.5f);
-            EditorGUI.DrawRect(artRect, c.cardColor);
-            if (c.cardArt != null)
-                DrawSprite(artRect, c.cardArt);
-            else
-                GUI.Label(artRect, "встроенная\nиконка", small);
-            GUI.Label(new Rect(r.x + 12, artRect.yMax + 4, r.width - 24, 34), c.hint, small);
-
-            float y = r.yMax - r.height * 0.17f;
-            float x = r.x + r.width * 0.2f;
-            for (int i = 0; c.moods != null && i < c.moods.Count && i < MoodLimit; i++)
+            var category = new GUIStyle(EditorStyles.miniBoldLabel) { alignment = TextAnchor.MiddleCenter, fontSize = Mathf.RoundToInt(10 * k) };
+            category.normal.textColor = Color.Lerp(accent, Color.white, 0.25f);
+            GUI.Label(CardFace.Within(r, CardFace.CategoryBox), RealityDirector.Cards.CardBrief.CategoryName(c.category), category);
+            GUI.Label(CardFace.Within(r, CardFace.TitleBox), string.IsNullOrEmpty(c.displayName) ? "(без названия)" : c.displayName.ToUpperInvariant(), title);
+            var cost = CardFace.Within(r, CardFace.CostBox);
+            var costBadge = CardVisuals.Element("CostBadge");
+            if (costBadge != null)
+                DrawSprite(cost, costBadge, false);
+            GUI.Label(cost, HellToken.Format(c.cost), badge);
+            if (c.diceEffects != null && c.diceEffects.Count > 0 && c.diceEffects[0] != null)
             {
-                var dot = new Rect(x + i * 22f, y, 16f, 16f);
-                EditorGUI.DrawRect(dot, MoodStyle.ColorOf(c.moods[i]));
-                GUI.Label(dot, MoodStyle.Short(c.moods[i]).Substring(0, 1), small);
+                var dice = CardFace.Within(r, CardFace.DiceBox);
+                var diceBadge = CardVisuals.Element("DiceBadge");
+                if (diceBadge != null)
+                    DrawSprite(dice, diceBadge, false);
+                var dieStyle = new GUIStyle(badge);
+                dieStyle.normal.textColor = new Color(0.78f, 0.86f, 1f);
+                GUI.Label(dice, Dice.Notation(c.diceEffects[0]), dieStyle);
             }
 
-            var badge = new GUIStyle(EditorStyles.miniBoldLabel) { alignment = TextAnchor.MiddleRight };
-            badge.normal.textColor = c.sponsor ? new Color(1f, 0.75f, 0.3f) : Color.white;
-            string price = c.sponsor ? "+" + c.sponsorPay + " кр" : c.runPrice > 0 ? c.runPrice + " нал" : c.price > 0 ? c.price + " кр" : c.starter ? "старт" : "";
-            GUI.Label(new Rect(r.x, y - 1, r.width * 0.8f, 18f), price, badge);
+            GUI.Label(CardFace.Within(r, CardFace.TextBox), CardVisuals.Text(c), body);
+            GUI.Label(CardFace.Within(r, CardFace.HintBox), c.hint, small);
+
+            if (art == null)
+            {
+                var warn = new GUIStyle(EditorStyles.miniBoldLabel) { alignment = TextAnchor.LowerCenter, wordWrap = true };
+                warn.normal.textColor = new Color(1f, 0.6f, 0.4f);
+                GUI.Label(artRect, "нет арта: поле «Арт» или " + CardVisuals.ArtFolder + c.id + ".png", warn);
+            }
+        }
+
+        // Арт заполняет окно без растяжения: лишнее по краям срезается (как в игре).
+        public static void DrawSpriteCover(Rect r, Sprite sprite)
+        {
+            var tex = sprite.texture;
+            var t = sprite.textureRect;
+            float aspect = t.width / t.height;
+            float target = r.width / r.height;
+            var uv = new Rect(t.x / tex.width, t.y / tex.height, t.width / tex.width, t.height / tex.height);
+            if (aspect > target)
+            {
+                float w = uv.width * target / aspect;
+                uv.x += (uv.width - w) * 0.5f;
+                uv.width = w;
+            }
+            else
+            {
+                float h = uv.height * aspect / target;
+                uv.y += (uv.height - h) * 0.5f;
+                uv.height = h;
+            }
+
+            GUI.DrawTextureWithTexCoords(r, tex, uv, true);
+        }
+
+        public static void DrawSprite(Rect r, Sprite sprite, bool keepAspect)
+        {
+            if (keepAspect)
+            {
+                DrawSprite(r, sprite);
+                return;
+            }
+
+            var tex = sprite.texture;
+            var t = sprite.textureRect;
+            GUI.DrawTextureWithTexCoords(r, tex, new Rect(t.x / tex.width, t.y / tex.height, t.width / tex.width, t.height / tex.height), true);
         }
 
         public static void DrawSprite(Rect r, Sprite sprite)

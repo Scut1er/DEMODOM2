@@ -1,0 +1,662 @@
+[
+  {
+    "id": "CARD_DECK_001",
+    "title": "Перепланировка",
+    "category": "Deck Management",
+    "tags": "Deck, Search, Control",
+    "hellTokenCost": 1.0,
+    "description": "Верни 1 другую карту из руки в Библиотеку, затем выбери любую карту из Библиотеки и возьми её в руку.",
+    "frame": "Frame_Blue_Artist.png",
+    "art": "Resources/Art/UI/Cards/Art/CARD_DECK_001.png",
+    "symbol": "replan",
+    "artSize": [
+      1024,
+      576
+    ]
+  },
+  {
+    "id": "CARD_DECK_002",
+    "title": "Второй дубль",
+    "category": "Deck Management",
+    "tags": "Deck, Recover",
+    "hellTokenCost": 1.25,
+    "description": "Верни 1 карту из «Использовано» обратно в Библиотеку.",
+    "frame": "Frame_Blue_Artist.png",
+    "art": "Resources/Art/UI/Cards/Art/CARD_DECK_002.png",
+    "symbol": "retake",
+    "artSize": [
+      1024,
+      576
+    ]
+  },
+  {
+    "id": "CARD_DECK_003",
+    "title": "Срочный сценарий",
+    "category": "Deck Management",
+    "tags": "Deck, Search",
+    "hellTokenCost": 1.5,
+    "description": "Посмотри 3 случайные карты из Библиотеки. Одну возьми в руку, остальные верни.",
+    "frame": "Frame_Blue_Artist.png",
+    "art": "Resources/Art/UI/Cards/Art/CARD_DECK_003.png",
+    "symbol": "script3",
+    "artSize": [
+      1024,
+      576
+    ]
+  },
+  {
+    "id": "CARD_DECK_004",
+    "title": "Выкинуть из сценария",
+    "category": "Deck Management",
+    "tags": "Deck, Cycle",
+    "hellTokenCost": 1.0,
+    "description": "Отправь 1 другую карту из руки в Использовано и добери 2 случайные карты из Библиотеки.",
+    "frame": "Frame_Blue_Artist.png",
+    "art": "Resources/Art/UI/Cards/Art/CARD_DECK_004.png",
+    "symbol": "discard2",
+    "artSize": [
+      1024,
+      576
+    ]
+  },
+  {
+    "id": "CARD_DECK_005",
+    "title": "Держим в запасе",
+    "category": "Deck Management",
+    "tags": "Deck, Retain, Protect",
+    "hellTokenCost": 0.75,
+    "description": "Выбранная карта получает Retain и не теряется при следующем эффекте сброса руки.",
+    "frame": "Frame_Blue_Artist.png",
+    "art": "Resources/Art/UI/Cards/Art/CARD_DECK_005.png",
+    "symbol": "reserve",
+    "artSize": [
+      1024,
+      576
+    ]
+  },
+  {
+    "id": "CARD_PROV_001",
+    "title": "Провокационный вопрос",
+    "category": "Provocation",
+    "tags": "Public, Provocation, Conflict",
+    "hellTokenCost": 1.5,
+    "description": "Задай неудобный вопрос выбранному актёру. Повышает Anger и Stress.",
+    "frame": "Frame_Red_Artist.png",
+    "art": "Resources/Art/UI/Cards/Art/CARD_PROV_001.png",
+    "symbol": "question",
+    "artSize": [
+      1024,
+      576
+    ]
+  },
+  {
+    "id": "CARD_PROV_002",
+    "title": "Задеть за живое",
+    "category": "Provocation",
+    "tags": "Pressure, Emotional",
+    "hellTokenCost": 1.25,
+    "description": "Усиль самую высокую негативную эмоцию цели.",
+    "frame": "Frame_Red_Artist.png",
+    "art": "Resources/Art/UI/Cards/Art/CARD_PROV_002.png",
+    "symbol": "wound",
+    "artSize": [
+      1024,
+      576
+    ]
+  },
+  {
+    "id": "CARD_PROV_003",
+    "title": "Сказать это при всех",
+    "category": "Provocation",
+    "tags": "Public, Humiliation",
+    "hellTokenCost": 1.75,
+    "description": "Публично унизь выбранного актёра.",
+    "frame": "Frame_Red_Artist.png",
+    "art": "Resources/Art/UI/Cards/Art/CARD_PROV_003.png",
+    "symbol": "public",
+    "artSize": [
+      1024,
+      576
+    ]
+  },
+  {
+    "id": "CARD_PROV_004",
+    "title": "Столкнуть лбами",
+    "category": "Provocation",
+    "tags": "Conflict, Social, Rivalry",
+    "hellTokenCost": 2.0,
+    "description": "Подтолкни двух участников к спору и усили их Hostility.",
+    "frame": "Frame_Red_Artist.png",
+    "art": "Resources/Art/UI/Cards/Art/CARD_PROV_004.png",
+    "symbol": "heads",
+    "artSize": [
+      1024,
+      576
+    ]
+  },
+  {
+    "id": "CARD_SOC_001",
+    "title": "Оставить наедине",
+    "category": "Social",
+    "tags": "Private, Romance, SocialSetup",
+    "hellTokenCost": 0.75,
+    "description": "Оставь двух участников наедине на короткое время.",
+    "frame": "Frame_Green_Artist.png",
+    "art": "Resources/Art/UI/Cards/Art/CARD_SOC_001.png",
+    "symbol": "alone",
+    "artSize": [
+      1024,
+      576
+    ]
+  },
+  {
+    "id": "CARD_SOC_002",
+    "title": "Неловкий комплимент",
+    "category": "Social",
+    "tags": "Flirt, Awkward",
+    "hellTokenCost": 1.0,
+    "description": "Подтолкни персонажа к неловкому комплименту.",
+    "frame": "Frame_Green_Artist.png",
+    "art": "Resources/Art/UI/Cards/Art/CARD_SOC_002.png",
+    "symbol": "compliment",
+    "artSize": [
+      1024,
+      576
+    ]
+  },
+  {
+    "id": "CARD_SOC_003",
+    "title": "Мирись давай",
+    "category": "Social",
+    "tags": "Reconcile, Control",
+    "hellTokenCost": 1.25,
+    "description": "Попробуй примирить двух участников.",
+    "frame": "Frame_Green_Artist.png",
+    "art": "Resources/Art/UI/Cards/Art/CARD_SOC_003.png",
+    "symbol": "reconcile",
+    "artSize": [
+      1024,
+      576
+    ]
+  },
+  {
+    "id": "CARD_REVEAL_001",
+    "title": "Показать переписку",
+    "category": "Reveal / Secret",
+    "tags": "Secret, Reveal, Betrayal, Public",
+    "hellTokenCost": 2.25,
+    "description": "Покажи личную переписку участника при камерах.",
+    "frame": "Frame_Blue_Artist.png",
+    "art": "Resources/Art/UI/Cards/Art/CARD_REVEAL_001.png",
+    "symbol": "phone",
+    "artSize": [
+      1024,
+      576
+    ]
+  },
+  {
+    "id": "CARD_REVEAL_002",
+    "title": "Слух из надёжного источника",
+    "category": "Reveal / Secret",
+    "tags": "Rumour, Suspicious, Secret",
+    "hellTokenCost": 1.0,
+    "description": "Подкинь слух без доказательств. Цель становится подозрительной.",
+    "frame": "Frame_Blue_Artist.png",
+    "art": "Resources/Art/UI/Cards/Art/CARD_REVEAL_002.png",
+    "symbol": "rumor",
+    "artSize": [
+      1024,
+      576
+    ]
+  },
+  {
+    "id": "CARD_REVEAL_003",
+    "title": "Вопрос в исповедальной",
+    "category": "Reveal / Secret",
+    "tags": "Private, Confession, Secret",
+    "hellTokenCost": 1.25,
+    "description": "Задай прямой вопрос в приватной обстановке и подтолкни актёра к признанию.",
+    "frame": "Frame_Blue_Artist.png",
+    "art": "Resources/Art/UI/Cards/Art/CARD_REVEAL_003.png",
+    "symbol": "confess",
+    "artSize": [
+      1024,
+      576
+    ]
+  },
+  {
+    "id": "CARD_ENV_001",
+    "title": "Ящик адского алкоголя",
+    "category": "Environment",
+    "tags": "Alcohol, Party, Disinhibition",
+    "hellTokenCost": 2.5,
+    "description": "Поставь ящик алкоголя. Актёры рядом хуже контролируют эмоции.",
+    "frame": "Frame_Blue_Artist.png",
+    "art": "Resources/Art/UI/Cards/Art/CARD_ENV_001.png",
+    "symbol": "alcohol",
+    "artSize": [
+      1024,
+      576
+    ]
+  },
+  {
+    "id": "CARD_ENV_002",
+    "title": "Романтический диван",
+    "category": "Environment",
+    "tags": "Romance, Comfort, Social",
+    "hellTokenCost": 1.75,
+    "description": "Поставь диван, который повышает шанс приватных и романтических взаимодействий.",
+    "frame": "Frame_Blue_Artist.png",
+    "art": "Resources/Art/UI/Cards/Art/CARD_ENV_002.png",
+    "symbol": "sofa",
+    "artSize": [
+      1024,
+      576
+    ]
+  },
+  {
+    "id": "CARD_ENV_003",
+    "title": "Открытый микрофон",
+    "category": "Environment",
+    "tags": "Public, Confession, Argument",
+    "hellTokenCost": 1.5,
+    "description": "Поставь микрофон: разговоры рядом чаще превращаются в признания или споры.",
+    "frame": "Frame_Blue_Artist.png",
+    "art": "Resources/Art/UI/Cards/Art/CARD_ENV_003.png",
+    "symbol": "mic",
+    "artSize": [
+      1024,
+      576
+    ]
+  },
+  {
+    "id": "CARD_ENV_004",
+    "title": "Коробка с подарком",
+    "category": "Environment",
+    "tags": "Gift, Jealousy, Theft",
+    "hellTokenCost": 1.25,
+    "description": "Поставь подарок, который NPC могут подарить, украсть или разбить.",
+    "frame": "Frame_Blue_Artist.png",
+    "art": "Resources/Art/UI/Cards/Art/CARD_ENV_004.png",
+    "symbol": "gift",
+    "artSize": [
+      1024,
+      576
+    ]
+  },
+  {
+    "id": "CARD_ENV_005",
+    "title": "Караоке-машина",
+    "category": "Environment",
+    "tags": "Party, Comedy, Public, Attention",
+    "hellTokenCost": 2.0,
+    "description": "Поставь караоке. NPC могут выйти петь и привлечь внимание комнаты.",
+    "frame": "Frame_Blue_Artist.png",
+    "art": "Resources/Art/UI/Cards/Art/CARD_ENV_005.png",
+    "symbol": "karaoke",
+    "artSize": [
+      1024,
+      576
+    ]
+  },
+  {
+    "id": "CARD_CHAOS_001",
+    "title": "Красная кнопка «НЕ НАЖИМАТЬ»",
+    "category": "Chaos / Comedy",
+    "tags": "Chaos, Curiosity, Risk",
+    "hellTokenCost": 2.25,
+    "description": "Поставь подозрительную кнопку. Curious/Chaotic NPC могут нажать её сами.",
+    "frame": "Frame_Red_Artist.png",
+    "art": "Resources/Art/UI/Cards/Art/CARD_CHAOS_001.png",
+    "symbol": "button",
+    "artSize": [
+      1024,
+      576
+    ]
+  },
+  {
+    "id": "CARD_CHAOS_002",
+    "title": "Подлить масла в огонь",
+    "category": "Chaos / Comedy",
+    "tags": "Chain, Conflict, Amplify",
+    "hellTokenCost": 1.25,
+    "description": "Следующий негативный World Event цели становится сильнее.",
+    "frame": "Frame_Red_Artist.png",
+    "art": "Resources/Art/UI/Cards/Art/CARD_CHAOS_002.png",
+    "symbol": "fire",
+    "artSize": [
+      1024,
+      576
+    ]
+  },
+  {
+    "id": "CARD_CTRL_001",
+    "title": "Убрать камеры на минутку",
+    "category": "Control",
+    "tags": "Private, Safe, Confession",
+    "hellTokenCost": 1.25,
+    "description": "Сделай зону временно «непубличной»: стеснительные актёры расслабляются, признания вероятнее.",
+    "frame": "Frame_Green_Artist.png",
+    "art": "Resources/Art/UI/Cards/Art/CARD_CTRL_001.png",
+    "symbol": "camera_off",
+    "artSize": [
+      1024,
+      576
+    ]
+  },
+  {
+    "id": "CARD_CTRL_002",
+    "title": "Сменить тему",
+    "category": "Control",
+    "tags": "Calm, Interrupt",
+    "hellTokenCost": 0.75,
+    "description": "Прерви слабую социальную цепочку и снизь одну негативную эмоцию.",
+    "frame": "Frame_Green_Artist.png",
+    "art": "Resources/Art/UI/Cards/Art/CARD_CTRL_002.png",
+    "symbol": "topic",
+    "artSize": [
+      1024,
+      576
+    ]
+  },
+  {
+    "id": "CARD_SP_001",
+    "title": "Постер «Leviathan»",
+    "category": "Sponsor",
+    "tags": "Sponsor, Environment, InfernoShipyards",
+    "hellTokenCost": 0.5,
+    "description": "Размести рекламный постер Leviathan. Кадры, где он читаемо виден, получают sponsor tag.",
+    "frame": "Frame_Blue_Artist.png",
+    "art": "Resources/Art/UI/Cards/Art/CARD_SP_001.png",
+    "symbol": "ship",
+    "artSize": [
+      1024,
+      576
+    ]
+  },
+  {
+    "id": "CARD_SP_002",
+    "title": "Hell Cola — Холодильник",
+    "category": "Sponsor",
+    "tags": "Sponsor, Environment, ProductPlacement",
+    "hellTokenCost": 0.75,
+    "description": "Поставь брендированный холодильник. NPC могут брать напитки, а кадры с продуктом засчитываются спонсору.",
+    "frame": "Frame_Blue_Artist.png",
+    "art": "Resources/Art/UI/Cards/Art/CARD_SP_002.png",
+    "symbol": "fridge",
+    "artSize": [
+      1024,
+      576
+    ]
+  },
+  {
+    "id": "CARD_SP_003",
+    "title": "Скажите название бренда",
+    "category": "Sponsor",
+    "tags": "Sponsor, Public, Comedy",
+    "hellTokenCost": 1.0,
+    "description": "Попроси актёра попытаться органично упомянуть бренд в разговоре.",
+    "frame": "Frame_Blue_Artist.png",
+    "art": "Resources/Art/UI/Cards/Art/CARD_SP_003.png",
+    "symbol": "mention",
+    "artSize": [
+      1024,
+      576
+    ]
+  },
+  {
+    "id": "CARD_ENV_006",
+    "title": "Разлить масло",
+    "category": "Environment",
+    "tags": "Slippery, Risk, Comedy, Chaos",
+    "hellTokenCost": 1.25,
+    "description": "Создай скользкую лужу. Актёры, проходящие через неё, могут поскользнуться.",
+    "frame": "Frame_Blue_Artist.png",
+    "art": "Resources/Art/UI/Cards/Art/CARD_ENV_006.png",
+    "symbol": "oil",
+    "artSize": [
+      1024,
+      576
+    ]
+  },
+  {
+    "id": "CARD_ENV_007",
+    "title": "Запереть дверь",
+    "category": "Environment",
+    "tags": "Pressure, Private, Control",
+    "hellTokenCost": 1.5,
+    "description": "Временно запри выбранную комнату. Актёры внутри не могут выйти.",
+    "frame": "Frame_Blue_Artist.png",
+    "art": "Resources/Art/UI/Cards/Art/CARD_ENV_007.png",
+    "symbol": "locked",
+    "artSize": [
+      1024,
+      576
+    ]
+  },
+  {
+    "id": "CARD_ENV_008",
+    "title": "Романтический плейлист",
+    "category": "Environment",
+    "tags": "Romance, Music, Social",
+    "hellTokenCost": 1.25,
+    "description": "Включи романтическую музыку в выбранной зоне.",
+    "frame": "Frame_Blue_Artist.png",
+    "art": "Resources/Art/UI/Cards/Art/CARD_ENV_008.png",
+    "symbol": "playlist",
+    "artSize": [
+      1024,
+      576
+    ]
+  },
+  {
+    "id": "CARD_ENV_009",
+    "title": "Тревожный свет",
+    "category": "Environment",
+    "tags": "Stress, Pressure, Visual",
+    "hellTokenCost": 1.5,
+    "description": "Поставь мерцающий тревожный свет, повышающий напряжение в зоне.",
+    "frame": "Frame_Blue_Artist.png",
+    "art": "Resources/Art/UI/Cards/Art/CARD_ENV_009.png",
+    "symbol": "alarm_light",
+    "artSize": [
+      1024,
+      576
+    ]
+  },
+  {
+    "id": "CARD_PROV_005",
+    "title": "Показать рейтинг в реальном времени",
+    "category": "Provocation",
+    "tags": "Public, Popularity, Ego",
+    "hellTokenCost": 1.5,
+    "description": "Покажи актёру его текущий рейтинг у зрителей.",
+    "frame": "Frame_Red_Artist.png",
+    "art": "Resources/Art/UI/Cards/Art/CARD_PROV_005.png",
+    "symbol": "rating",
+    "artSize": [
+      1024,
+      576
+    ]
+  },
+  {
+    "id": "CARD_SOC_004",
+    "title": "Вызвать бывшего",
+    "category": "Social",
+    "tags": "Surprise, Romance, Betrayal, Reunion",
+    "hellTokenCost": 2.75,
+    "description": "Пригласи бывшего партнёра выбранного актёра на съёмку.",
+    "frame": "Frame_Green_Artist.png",
+    "art": "Resources/Art/UI/Cards/Art/CARD_SOC_004.png",
+    "symbol": "ex",
+    "artSize": [
+      1024,
+      576
+    ]
+  },
+  {
+    "id": "CARD_REVEAL_004",
+    "title": "Подставной вопрос зрителя",
+    "category": "Reveal / Secret",
+    "tags": "Public, Audience, Secret, Provocation",
+    "hellTokenCost": 1.5,
+    "description": "Передай актёру неудобный «вопрос зрителя», который может задеть скрытую тему.",
+    "frame": "Frame_Blue_Artist.png",
+    "art": "Resources/Art/UI/Cards/Art/CARD_REVEAL_004.png",
+    "symbol": "audience",
+    "artSize": [
+      1024,
+      576
+    ]
+  },
+  {
+    "id": "CARD_DECK_006",
+    "title": "Копия сценария",
+    "category": "Deck Management",
+    "tags": "Deck, Copy, Combo",
+    "hellTokenCost": 2.0,
+    "description": "Следующая выбранная Action-карта срабатывает второй раз на ту же цель без дополнительной стоимости.",
+    "frame": "Frame_Blue_Artist.png",
+    "art": "Resources/Art/UI/Cards/Art/CARD_DECK_006.png",
+    "symbol": "duplicate",
+    "artSize": [
+      1024,
+      576
+    ]
+  },
+  {
+    "id": "CARD_DECK_007",
+    "title": "Сэкономить токены",
+    "category": "Deck Management",
+    "tags": "Deck, Cost, Economy",
+    "hellTokenCost": 0.5,
+    "description": "Следующая сыгранная карта стоит на $1.00 дешевле, но не ниже $0.00.",
+    "frame": "Frame_Blue_Artist.png",
+    "art": "Resources/Art/UI/Cards/Art/CARD_DECK_007.png",
+    "symbol": "discount",
+    "artSize": [
+      1024,
+      576
+    ]
+  },
+  {
+    "id": "CARD_CTRL_003",
+    "title": "Нужный момент",
+    "category": "Control",
+    "tags": "Footage, Timing, Production",
+    "hellTokenCost": 1.0,
+    "description": "Следующий записанный футаж получает бонус к техническому качеству, если запись начата в течение 10 секунд.",
+    "frame": "Frame_Green_Artist.png",
+    "art": "Resources/Art/UI/Cards/Art/CARD_CTRL_003.png",
+    "symbol": "moment",
+    "artSize": [
+      1024,
+      576
+    ]
+  },
+  {
+    "id": "CARD_ENV_010",
+    "title": "Скрытая камера",
+    "category": "Environment",
+    "tags": "Private, Secret, Authentic, Camera",
+    "hellTokenCost": 2.25,
+    "description": "Установи скрытую камеру-декорацию. NPC в зоне ведут себя так, словно Public pressure ниже.",
+    "frame": "Frame_Blue_Artist.png",
+    "art": "Resources/Art/UI/Cards/Art/CARD_ENV_010.png",
+    "symbol": "hidden_cam",
+    "artSize": [
+      1024,
+      576
+    ]
+  },
+  {
+    "id": "CARD_ENV_011",
+    "title": "Софит",
+    "category": "Environment",
+    "tags": "Production, Visual, Public",
+    "hellTokenCost": 1.0,
+    "description": "Поставь яркий софит, повышающий качество кадров в зоне, но усиливающий давление на стеснительных актёров.",
+    "frame": "Frame_Blue_Artist.png",
+    "art": "Resources/Art/UI/Cards/Art/CARD_ENV_011.png",
+    "symbol": "spotlight",
+    "artSize": [
+      1024,
+      576
+    ]
+  },
+  {
+    "id": "CARD_CHAOS_003",
+    "title": "Пожарная сирена",
+    "category": "Chaos / Comedy",
+    "tags": "Chaos, Panic, Movement, Public",
+    "hellTokenCost": 2.5,
+    "description": "Включи пожарную сирену. Все актёры получают стресс и пытаются сменить позицию.",
+    "frame": "Frame_Red_Artist.png",
+    "art": "Resources/Art/UI/Cards/Art/CARD_CHAOS_003.png",
+    "symbol": "siren",
+    "artSize": [
+      1024,
+      576
+    ]
+  },
+  {
+    "id": "CARD_CTRL_004",
+    "title": "Тихо, мотор",
+    "category": "Control",
+    "tags": "Calm, Production, Setup",
+    "hellTokenCost": 0.75,
+    "description": "На короткое время снизь общий шум и вероятность случайных вмешательств в выбранной комнате.",
+    "frame": "Frame_Green_Artist.png",
+    "art": "Resources/Art/UI/Cards/Art/CARD_CTRL_004.png",
+    "symbol": "quiet",
+    "artSize": [
+      1024,
+      576
+    ]
+  },
+  {
+    "id": "CARD_SOC_005",
+    "title": "Подсадить третьего",
+    "category": "Social",
+    "tags": "Witness, Triangle, SocialSetup",
+    "hellTokenCost": 1.25,
+    "description": "Подведи к разговору пары подходящего третьего участника.",
+    "frame": "Frame_Green_Artist.png",
+    "art": "Resources/Art/UI/Cards/Art/CARD_SOC_005.png",
+    "symbol": "third",
+    "artSize": [
+      1024,
+      576
+    ]
+  },
+  {
+    "id": "CARD_REVEAL_005",
+    "title": "Оставить телефон без присмотра",
+    "category": "Reveal / Secret",
+    "tags": "Secret, Temptation, Theft, Curiosity",
+    "hellTokenCost": 1.25,
+    "description": "Оставь чужой телефон на видном месте. Curious/Jealous NPC могут проверить его.",
+    "frame": "Frame_Blue_Artist.png",
+    "art": "Resources/Art/UI/Cards/Art/CARD_REVEAL_005.png",
+    "symbol": "phone_table",
+    "artSize": [
+      1024,
+      576
+    ]
+  },
+  {
+    "id": "CARD_PROV_006",
+    "title": "Не тот стул",
+    "category": "Provocation",
+    "tags": "Petty, Comedy, Humiliation",
+    "hellTokenCost": 0.75,
+    "description": "Подстрой мелкую бытовую подставу, чтобы выбранный актёр оказался в неловком положении.",
+    "frame": "Frame_Red_Artist.png",
+    "art": "Resources/Art/UI/Cards/Art/CARD_PROV_006.png",
+    "symbol": "chair",
+    "artSize": [
+      1024,
+      576
+    ]
+  }
+]

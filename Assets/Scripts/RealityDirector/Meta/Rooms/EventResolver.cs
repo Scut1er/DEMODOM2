@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Text;
+using RealityDirector.Core;
 using UnityEngine;
 
 namespace RealityDirector.Meta
@@ -19,6 +20,15 @@ namespace RealityDirector.Meta
         public string preview;
         public string failPreview;
         public int chance = 100;
+        // Цвет карточки: Risky / Safe / Neutral (Auto уже разрешён).
+        public ChoiceAccent accent = ChoiceAccent.Safe;
+    }
+
+    // Строка «Возможный эффект» на экране события: значок (имя иконки пака EventScreen) и слова.
+    public class EventStake
+    {
+        public string icon;
+        public string text;
     }
 
     public class EventOutcome
@@ -111,11 +121,111 @@ namespace RealityDirector.Meta
                     reason = reason,
                     preview = Rules.Preview(c.effects, cardName),
                     failPreview = c.chance < 100 ? Rules.Preview(c.failEffects, cardName) : "",
-                    chance = Mathf.Clamp(c.chance, 1, 100)
+                    chance = Mathf.Clamp(c.chance, 1, 100),
+                    accent = Accent(c)
                 });
             }
 
             return list;
+        }
+
+        public static ChoiceAccent Accent(EventChoice c)
+        {
+            if (c.accent != ChoiceAccent.Auto)
+                return c.accent;
+            if (c.chance < 70 || Fuels(c.effects))
+                return ChoiceAccent.Risky;
+            if (c.chance < 100 || c.costMoney > 0 || c.costCash > 0)
+                return ChoiceAccent.Neutral;
+            return ChoiceAccent.Safe;
+        }
+
+        // Подливает масла: злость/вражда/стресс к следующей съёмке или трэш в тон шоу.
+        static bool Fuels(List<Effect> effects)
+        {
+            if (effects == null)
+                return false;
+            foreach (var e in effects)
+            {
+                if (e == null || e.value <= 0)
+                    continue;
+                if (e.type == EffectType.Tone && e.mood == ShowMood.Trash)
+                    return true;
+                if (e.type == EffectType.NextRoomModifier && (e.key == "anger" || e.key == "hostility" || e.key == "stress"))
+                    return true;
+            }
+
+            return false;
+        }
+
+        // Ставки события целиком: что вообще может измениться (по эффектам всех вариантов, успех и провал).
+        public static List<EventStake> Stakes(EventRoomDefinition def)
+        {
+            var list = new List<EventStake>();
+            if (def == null || def.choices == null)
+                return list;
+            var seen = new HashSet<string>();
+            foreach (var c in def.choices)
+            {
+                if (c == null)
+                    continue;
+                foreach (var e in c.effects)
+                    Stake(list, seen, e);
+                foreach (var e in c.failEffects)
+                    Stake(list, seen, e);
+            }
+
+            return list;
+        }
+
+        static void Stake(List<EventStake> list, HashSet<string> seen, Effect e)
+        {
+            if (e == null)
+                return;
+            string icon;
+            string text;
+            switch (e.type)
+            {
+                case EffectType.Tone:
+                    if (e.value <= 0)
+                        return;
+                    icon = e.mood == ShowMood.Drama ? "icon_drama_tint" : e.mood == ShowMood.Trash ? "icon_rating_tint" : "icon_quality_tint";
+                    text = "Больше " + (e.mood == ShowMood.Drama ? "драмы" : e.mood == ShowMood.Trash ? "трэша" : "семейности") + " в выпуске";
+                    break;
+                case EffectType.Budget:
+                    icon = "icon_budget_tint";
+                    text = e.value >= 0 ? "Деньги в бюджет сезона" : "Траты из бюджета сезона";
+                    break;
+                case EffectType.Cash:
+                    icon = "icon_budget_tint";
+                    text = e.value >= 0 ? "Нал на этот выпуск" : "Траты нала выпуска";
+                    break;
+                case EffectType.AddTempCard:
+                case EffectType.AddDeckCard:
+                    icon = "icon_footage_tint";
+                    text = "Новая карта в руку";
+                    break;
+                case EffectType.RemoveTempCard:
+                case EffectType.RemoveDeckCard:
+                    icon = "icon_contract_tint";
+                    text = "Можно потерять карту";
+                    break;
+                case EffectType.NextRoomModifier:
+                    icon = "icon_stress_tint";
+                    text = "Напряжение на следующей съёмке";
+                    break;
+                case EffectType.BroadcastModifier:
+                    icon = "icon_rating_tint";
+                    text = "Влияет на эфир";
+                    break;
+                default:
+                    icon = "icon_diary";
+                    text = "Последствия позже в сезоне";
+                    break;
+            }
+
+            if (seen.Add(text))
+                list.Add(new EventStake { icon = icon, text = text });
         }
 
         // Причина, по которой вариант закрыт. null — доступен.

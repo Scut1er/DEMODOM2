@@ -1,0 +1,74 @@
+{
+  "referenceResolution": [
+    1280,
+    720
+  ],
+  "canvasScaler": {
+    "mode": "ScaleWithScreenSize",
+    "referenceResolution": [
+      1920,
+      1080
+    ],
+    "match": 0.5
+  },
+  "regions": {
+    "TopBar": {
+      "x": 0,
+      "y": 0,
+      "w": 1280,
+      "h": 45
+    },
+    "VideoPanel": {
+      "x": 22,
+      "y": 50,
+      "w": 620,
+      "h": 238
+    },
+    "EpisodeTitle": {
+      "x": 32,
+      "y": 290,
+      "w": 590,
+      "h": 54
+    },
+    "CommentsPanel": {
+      "x": 28,
+      "y": 355,
+      "w": 805,
+      "h": 310
+    },
+    "ResultsPanel": {
+      "x": 990,
+      "y": 50,
+      "w": 265,
+      "h": 305
+    },
+    "FinalCutPanel": {
+      "x": 990,
+      "y": 355,
+      "w": 265,
+      "h": 270
+    },
+    "PrimaryButton": {
+      "x": 1005,
+      "y": 625,
+      "w": 250,
+      "h": 65
+    }
+  },
+  "sortingOrder": [
+    "Background",
+    "Content",
+    "Panels",
+    "Interactive",
+    "Tooltip",
+    "Modal"
+  ],
+  "rules": {
+    "noBakedGameplayText": true,
+    "commentsScrollable": true,
+    "finalCutCount": "runtime",
+    "metrics": "runtime",
+    "useTMP": "all dynamic text",
+    "footageThumbnails": "use real captured footage preview when available"
+  }
+}

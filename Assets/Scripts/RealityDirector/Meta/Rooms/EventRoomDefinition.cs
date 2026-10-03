@@ -14,6 +14,15 @@ namespace RealityDirector.Meta
         public string actorId;
     }
 
+    // Цвет карточки варианта на экране события: красный — риск и хаос, зелёный — надёжно, золотой — сделка/смешанное.
+    public enum ChoiceAccent
+    {
+        [InspectorName("Авто (по шансу и цене)")] Auto,
+        [InspectorName("Красный — риск, хаос")] Risky,
+        [InspectorName("Зелёный — надёжно")] Safe,
+        [InspectorName("Золотой — сделка, смешанное")] Neutral
+    }
+
     // Вариант выбора (GDD §32, EventChoice).
     [Serializable]
     public class EventChoice
@@ -22,6 +31,8 @@ namespace RealityDirector.Meta
         public string label = "Вариант";
         [Tooltip("Пояснение под кнопкой (можно {роли}).")]
         [TextArea(1, 3)] public string description;
+        [Tooltip("Цвет карточки варианта. Авто: шанс ниже 70% или вариант подливает масла (злость/вражда/стресс к следующей съёмке, трэш) — красный, есть цена или шанс ниже 100% — золотой, иначе зелёный.")]
+        public ChoiceAccent accent;
 
         [Tooltip("Когда вариант доступен. Невыполненное условие закрывает кнопку и показывает причину.")]
         public List<Condition> conditions = new List<Condition>();

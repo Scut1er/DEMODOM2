@@ -63,6 +63,9 @@ namespace RealityDirector.UI.Hub
 
         Image _header;
         Image _medallion;
+        RectTransform _window;
+        Image _illustration;
+        AspectRatioFitter _illustrationFit;
 
         // Карточка комнаты: тёмная с золотой кромкой, цветная шапка по типу, иконка на светящемся медальоне.
         void Dress()
@@ -78,6 +81,20 @@ namespace RealityDirector.UI.Hub
                 hr.offsetMin = new Vector2(5f, -54f);
                 hr.offsetMax = new Vector2(-5f, -5f);
             }
+
+            // Иллюстрация комнаты на всё тело карточки под шапкой (обрезка без растяжения).
+            _window = UiKit.Rect("Illustration", transform);
+            _window.anchorMin = Vector2.zero;
+            _window.anchorMax = Vector2.one;
+            _window.offsetMin = new Vector2(6f, 6f);
+            _window.offsetMax = new Vector2(-6f, -54f);
+            _window.gameObject.AddComponent<RectMask2D>();
+            _illustration = UiKit.Img("Art", _window, null, Color.white);
+            _illustration.rectTransform.anchorMin = _illustration.rectTransform.anchorMax = new Vector2(0.5f, 0.5f);
+            _illustrationFit = _illustration.gameObject.AddComponent<AspectRatioFitter>();
+            _illustrationFit.aspectMode = AspectRatioFitter.AspectMode.EnvelopeParent;
+            if (frame != null)
+                _window.SetSiblingIndex(frame.transform.GetSiblingIndex() + 1);
 
             if (art != null)
             {
@@ -162,8 +179,24 @@ namespace RealityDirector.UI.Hub
                 _medallion.color = new Color(tint.r, tint.g, tint.b, 0.55f);
             if (_openImage != null)
                 _openImage.color = UiKit.Ember;
+            // Арт комнаты (поле «Иллюстрация») или иллюстрация её типа; нет и её — значок на медальоне.
+            var picture = node.art != null ? node.art : Art(node.kind);
+            if (_illustration != null)
+            {
+                _illustration.sprite = picture;
+                _illustration.enabled = picture != null;
+                if (picture != null)
+                    _illustrationFit.aspectRatio = picture.rect.width / Mathf.Max(1f, picture.rect.height);
+                _illustration.color = state == MapNodeState.Locked ? new Color(0.45f, 0.45f, 0.48f, 1f) : Color.white;
+            }
+
+            if (_medallion != null)
+                _medallion.gameObject.SetActive(picture == null);
             if (art != null)
-                art.sprite = node.art != null ? node.art : Icon(node.kind);
+            {
+                art.sprite = Icon(node.kind);
+                art.enabled = picture == null;
+            }
 
             // Состояние читается с первого взгляда: можно идти — ярко и «дышит», впереди — приглушено,
             // путь закрыт — почти не видно, снято — с галочкой. Затемнение — непрозрачной накладкой,
@@ -205,6 +238,33 @@ namespace RealityDirector.UI.Hub
             if (string.IsNullOrEmpty(s))
                 return s;
             return s.Substring(0, 1).ToUpperInvariant() + s.Substring(1).ToLowerInvariant();
+        }
+
+        // Иллюстрации типов комнат (пак EpisodeMap и Icons_1): Art/UI/EpisodeMap/Nodes/<имя>.png.
+        public static Sprite Art(MapNodeKind kind)
+        {
+            return UiKit.Load("Art/UI/EpisodeMap/Nodes/" + ArtName(kind));
+        }
+
+        static string ArtName(MapNodeKind kind)
+        {
+            switch (kind)
+            {
+                case MapNodeKind.Start: return "finale";
+                case MapNodeKind.Scene: return "scene";
+                case MapNodeKind.Confession: return "confession";
+                case MapNodeKind.Conflict: return "conflict";
+                case MapNodeKind.Date: return "date";
+                case MapNodeKind.Challenge: return "challenge";
+                case MapNodeKind.Secret: return "secret";
+                case MapNodeKind.Sponsor: return "ad";
+                case MapNodeKind.Edit: return "montage";
+                case MapNodeKind.Elimination: return "elimination";
+                case MapNodeKind.Party: return "opening";
+                case MapNodeKind.Climax: return "montage";
+                case MapNodeKind.Shop: return "marketing";
+                default: return "provocation";
+            }
         }
 
         public static Sprite Icon(MapNodeKind kind)

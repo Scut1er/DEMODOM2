@@ -413,6 +413,7 @@ namespace RealityDirector.EditorTools
                 Row("Спонсоры", all.Count(c => c.sponsor), Avg(all.Where(c => c.sponsor).Select(c => c.sponsorPay), "кр платят"));
                 Row("Негде взять", all.Count(c => !CardInsight.Obtainable(c)), "не попадут к игроку");
                 Row("NOT RUNTIME SUPPORTED", all.Count(c => !RealityDirector.Cards.CardRuntime.Playable(c)), "квартира исполнит не всё — в старт и магазин хаба не попадут");
+                Row("Без арта", all.Count(c => RealityDirector.UI.CardVisuals.Art(c) == null), "на карте — иконка категории (поле «Арт» или Art/UI/Cards/Art/<id>.png)");
 
                 Header("Тон (по первым двум меткам)");
                 foreach (ShowMood mood in System.Enum.GetValues(typeof(ShowMood)))

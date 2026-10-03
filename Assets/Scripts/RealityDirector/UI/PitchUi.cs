@@ -124,6 +124,9 @@ namespace RealityDirector.UI
         Text _footage;
         // Бюджет HellToken рядом с рукой и подсказка карты под курсором.
         const float HandHeight = 252f;
+        // Карта в руке: ширина и сколько она поднимается под курсором (в покое низ карты за краем экрана).
+        const float HandCardWidth = 176f;
+        const float HandCardLift = 62f;
         const float BudgetWidth = 172f;
         static readonly Color Gold = new Color(0.95f, 0.82f, 0.28f, 1f);
         Text _budgetValue;
@@ -188,13 +191,12 @@ namespace RealityDirector.UI
             public int Slot;
             public EventDefinition Def;
             public Image Frame;
-            public Text Status;
+            public CardFace Face;
             public RectTransform Root;
             public Color Base;
             public bool Used;
             public Button Button;
             public CanvasGroup Group;
-            public Image Pill;
         }
 
         // Наведение мыши на карту: показать подсказку и цену в бюджете.
@@ -571,12 +573,8 @@ namespace RealityDirector.UI
         // Не хватает бюджета — цена на карте красная.
         static void PaintPrice(Card card, bool poor)
         {
-            if (card.Pill == null)
-                return;
-            if (card.Pill.sprite != null)
-                card.Pill.color = poor ? new Color(1f, 0.35f, 0.32f, 1f) : Color.white;
-            else
-                card.Pill.color = poor ? new Color(0.62f, 0.12f, 0.1f, 0.95f) : new Color(0.14f, 0.09f, 0.08f, 0.92f);
+            if (card.Face != null && card.Def != null)
+                card.Face.SetCost(HellToken.Format(card.Def.cost), poor);
         }
 
         // Урок: жива только та кнопка, которую босс только что потребовал.
@@ -637,12 +635,8 @@ namespace RealityDirector.UI
             for (int i = 0; i < _cards.Count; i++)
             {
                 bool on = def != null && _cards[i].Def == def;
-                var color = _cards[i].Base;
-                if (on)
-                    color = new Color(0.95f, 0.78f, 0.32f, 1f);
-                else if (_cards[i].Used)
-                    color *= 0.72f;
-                _cards[i].Frame.color = color;
+                if (_cards[i].Face != null)
+                    _cards[i].Face.SetSelected(on);
                 _cards[i].Root.localScale = on ? new Vector3(1.06f, 1.06f, 1f) : Vector3.one;
             }
         }
@@ -653,21 +647,9 @@ namespace RealityDirector.UI
             for (int i = 0; i < _cards.Count; i++)
             {
                 var card = _cards[i];
-                if (card.Def == null || card.Def.id != id || card.Root == null || card.Root.Find("kept") != null)
+                if (card.Def == null || card.Def.id != id || card.Face == null)
                     continue;
-                var ribbon = Panel("kept", card.Root, new Color(0.2f, 0.55f, 0.35f, 0.95f));
-                ribbon.raycastTarget = false;
-                var rect = ribbon.rectTransform;
-                rect.anchorMin = rect.anchorMax = new Vector2(0.5f, 1f);
-                rect.pivot = new Vector2(0.5f, 0.5f);
-                rect.anchoredPosition = new Vector2(0f, -4f);
-                rect.sizeDelta = new Vector2(118f, 22f);
-                var text = MakeText(ribbon.transform, "В ЗАПАСЕ", 13, Paper, TextAnchor.MiddleCenter);
-                text.fontStyle = FontStyle.Bold;
-                var tr = text.rectTransform;
-                tr.anchorMin = Vector2.zero;
-                tr.anchorMax = Vector2.one;
-                tr.offsetMin = tr.offsetMax = Vector2.zero;
+                card.Face.SetBanner("В ЗАПАСЕ", new Color(0.55f, 0.95f, 0.65f, 1f));
             }
         }
 
@@ -722,8 +704,8 @@ namespace RealityDirector.UI
             for (int i = 0; i < _cards.Count; i++)
             {
                 _cards[i].Used = false;
-                _cards[i].Status.gameObject.SetActive(false);
-                _cards[i].Frame.color = _cards[i].Base;
+                if (_cards[i].Face != null)
+                    _cards[i].Face.SetSelected(false);
                 _cards[i].Root.localScale = Vector3.one;
             }
         }
@@ -1488,27 +1470,35 @@ namespace RealityDirector.UI
             toastRect.sizeDelta = new Vector2(900f, 32f);
             toastRect.anchoredPosition = new Vector2(0f, HandHeight + 48f);
             _toast.gameObject.SetActive(false);
+            // Подсказка и тост — под картами: поднятая под курсором карта перекрывает их, а не наоборот.
+            _hint.transform.SetSiblingIndex(deck.GetSiblingIndex());
+            _toast.transform.SetSiblingIndex(deck.GetSiblingIndex());
             SetCaptureCapacity(1);
         }
 
+        // Карта в руке — то же лицо карты (CardFace), что в колоде и магазине хаба. В покое низ карты уходит
+        // за край экрана, под курсором карта поднимается целиком; подсказка встаёт над ней.
         Card MakeCard(int index, EventDefinition def, Action onClick)
         {
-            var frame = Panel("card" + index, _cardBar, def.cardColor);
-            var frameSprite = CoreGameplayArt.Sprite(CoreGameplayArt.Frame(def.category));
-            bool skinned = frameSprite != null;
-            if (skinned)
-            {
-                frame.sprite = frameSprite;
-                frame.type = Image.Type.Simple;
-                frame.color = Color.white;
-            }
-
+            var frame = Panel("card" + index, _cardBar, new Color(0f, 0f, 0f, 0f));
+            frame.raycastTarget = false;
             var element = frame.gameObject.AddComponent<LayoutElement>();
-            element.preferredWidth = skinned ? 168f : 156f;
-            element.preferredHeight = 226f;
+            element.preferredWidth = HandCardWidth;
+            element.preferredHeight = HandHeight - 16f;
             var group = frame.gameObject.AddComponent<CanvasGroup>();
+
+            var face = CardFace.Create(frame.transform, "face", HandCardWidth);
+            var faceRect = face.Rect;
+            faceRect.anchorMin = faceRect.anchorMax = new Vector2(0.5f, 1f);
+            faceRect.pivot = new Vector2(0.5f, 1f);
+            faceRect.anchoredPosition = Vector2.zero;
+            face.Show(def);
+            face.SetHotkey(index + 1);
+            face.SetMoods(def.moods);
+
             var button = frame.gameObject.AddComponent<Button>();
-            button.targetGraphic = frame;
+            button.targetGraphic = face.Back;
+            button.transition = Selectable.Transition.None;
             var nav = button.navigation;
             nav.mode = Navigation.Mode.None;
             button.navigation = nav;
@@ -1518,121 +1508,28 @@ namespace RealityDirector.UI
                 onClick();
             });
 
-            var inner = Panel("inner", frame.transform, skinned ? new Color(0f, 0f, 0f, 0f) : new Color(0.95f, 0.91f, 0.84f, 1f));
-            var innerRect = inner.rectTransform;
-            innerRect.anchorMin = Vector2.zero;
-            innerRect.anchorMax = Vector2.one;
-            innerRect.offsetMin = skinned ? new Vector2(14f, 18f) : new Vector2(6f, 6f);
-            innerRect.offsetMax = skinned ? new Vector2(-14f, -16f) : new Vector2(-6f, -6f);
-            inner.raycastTarget = false;
-
-            // Номер — горячая клавиша карты (1–5).
-            var badge = Panel("badge", frame.transform, new Color(0.14f, 0.09f, 0.08f, 1f));
-            var badgeRect = badge.rectTransform;
-            badgeRect.anchorMin = new Vector2(0f, 1f);
-            badgeRect.anchorMax = new Vector2(0f, 1f);
-            badgeRect.pivot = new Vector2(0f, 1f);
-            badgeRect.anchoredPosition = new Vector2(8f, -8f);
-            badgeRect.sizeDelta = new Vector2(24f, 24f);
-            badge.raycastTarget = false;
-            var number = MakeText(badge.transform, (index + 1).ToString(), 15, Paper, TextAnchor.MiddleCenter);
-            Stretch(number.rectTransform);
-
-            var title = MakeText(inner.transform, def.displayName.ToUpperInvariant(), 16,
-                skinned ? Paper : new Color(0.18f, 0.12f, 0.1f), TextAnchor.MiddleCenter);
-            var titleRect = title.rectTransform;
-            titleRect.anchorMin = new Vector2(0f, 1f);
-            titleRect.anchorMax = new Vector2(1f, 1f);
-            titleRect.pivot = new Vector2(0.5f, 1f);
-            titleRect.anchoredPosition = new Vector2(0f, -26f);
-            titleRect.sizeDelta = new Vector2(-6f, 34f);
-            // Длинные названия из таблицы карт: шрифт уменьшается, чтобы влезть в две строки.
-            title.resizeTextForBestFit = true;
-            title.resizeTextMinSize = 10;
-            title.resizeTextMaxSize = 16;
-            title.verticalOverflow = VerticalWrapMode.Truncate;
-            StampMoods(frame.transform, def);
-
-            var art = Panel("art", inner.transform, new Color(0.9f, 0.86f, 0.78f, 1f));
-            var artRect = art.rectTransform;
-            artRect.anchorMin = new Vector2(0f, 1f);
-            artRect.anchorMax = new Vector2(1f, 1f);
-            artRect.pivot = new Vector2(0.5f, 1f);
-            artRect.anchoredPosition = new Vector2(0f, -62f);
-            artRect.sizeDelta = new Vector2(-12f, 96f);
-            art.raycastTarget = false;
-            art.preserveAspect = true;
-            var artSprite = def.cardArt != null ? def.cardArt : (skinned ? CoreGameplayArt.Sprite(CoreGameplayArt.CardArt(def.category)) : null);
-            if (artSprite != null)
-            {
-                art.sprite = artSprite;
-                art.color = Color.white;
-            }
-            else
-                art.color = skinned ? new Color(1f, 1f, 1f, 0.04f) : new Color(0.9f, 0.86f, 0.78f, 1f);
-
-            // Цена в HellToken — плашкой в углу арта; не хватает бюджета — плашка красная.
-            var pill = Panel("cost", art.transform, new Color(0.14f, 0.09f, 0.08f, 0.92f));
-            CoreGameplayArt.Paint(pill, "UI/HUD/cost_badge", false);
-            var pillRect = pill.rectTransform;
-            pillRect.anchorMin = new Vector2(1f, 0f);
-            pillRect.anchorMax = new Vector2(1f, 0f);
-            pillRect.pivot = new Vector2(1f, 0f);
-            pillRect.anchoredPosition = new Vector2(-3f, 3f);
-            pillRect.sizeDelta = new Vector2(56f, 22f);
-            pill.raycastTarget = false;
-            var price = MakeText(pill.transform, HellToken.Format(def.cost), 15, Gold, TextAnchor.MiddleCenter);
-            Stretch(price.rectTransform);
-
-            var body = MakeText(inner.transform, def.hint, 13,
-                skinned ? new Color(0.9f, 0.86f, 0.8f) : new Color(0.35f, 0.26f, 0.2f), TextAnchor.MiddleCenter);
-            var bodyRect = body.rectTransform;
-            bodyRect.anchorMin = new Vector2(0f, 0f);
-            bodyRect.anchorMax = new Vector2(1f, 0f);
-            bodyRect.pivot = new Vector2(0.5f, 0f);
-            bodyRect.anchoredPosition = new Vector2(0f, 4f);
-            bodyRect.sizeDelta = new Vector2(-10f, 44f);
-
-            var status = MakeText(frame.transform, "сыграно", 15, new Color(0.55f, 0.32f, 0.08f), TextAnchor.MiddleCenter);
-            var statusRect = status.rectTransform;
-            statusRect.anchorMin = new Vector2(0f, 0f);
-            statusRect.anchorMax = new Vector2(1f, 0f);
-            statusRect.pivot = new Vector2(0.5f, 0f);
-            statusRect.anchoredPosition = new Vector2(0f, 12f);
-            statusRect.sizeDelta = new Vector2(-14f, 22f);
-            status.gameObject.SetActive(false);
-
             var card = new Card
             {
                 Def = def,
                 Frame = frame,
-                Status = status,
+                Face = face,
                 Root = frame.rectTransform,
-                Base = skinned ? Color.white : def.cardColor,
+                Base = Color.white,
                 Button = button,
-                Group = group,
-                Pill = pill
+                Group = group
             };
-            if (skinned && def.diceEffects != null && def.diceEffects.Count > 0)
-            {
-                var die = Panel("die", frame.transform, Color.white);
-                if (CoreGameplayArt.Paint(die, CoreGameplayArt.Die(def.diceEffects[0].die)))
-                {
-                    var dieRect = die.rectTransform;
-                    dieRect.anchorMin = dieRect.anchorMax = new Vector2(1f, 0.58f);
-                    dieRect.pivot = new Vector2(1f, 0.5f);
-                    dieRect.anchoredPosition = new Vector2(-12f, 0f);
-                    dieRect.sizeDelta = new Vector2(54f, 54f);
-                    die.raycastTarget = false;
-                }
-                else
-                    Destroy(die.gameObject);
-            }
 
             var hover = frame.gameObject.AddComponent<CardHover>();
-            hover.Enter = () => ShowTip(card);
+            hover.Enter = () =>
+            {
+                face.SetHover(true);
+                face.Raise(HandCardLift);
+                ShowTip(card);
+            };
             hover.Exit = () =>
             {
+                face.SetHover(false);
+                face.Raise(0f);
                 if (_hoverCard == card)
                     HideTip();
             };
@@ -1767,7 +1664,7 @@ namespace RealityDirector.UI
             if (_hoverCard == null || _hoverCard.Root == null || _tip == null || !_tip.activeSelf)
                 return;
             var corners = new Vector3[4];
-            _hoverCard.Root.GetWorldCorners(corners);
+            (_hoverCard.Face != null ? _hoverCard.Face.Rect : _hoverCard.Root).GetWorldCorners(corners);
             var parent = (RectTransform)_tipRect.parent;
             Vector2 top = parent.InverseTransformPoint((corners[1] + corners[2]) * 0.5f);
             float half = _tipRect.rect.width * 0.5f;
@@ -1838,27 +1735,6 @@ namespace RealityDirector.UI
             rect.pivot = new Vector2(0f, 1f);
             rect.anchoredPosition = new Vector2(x, y);
             rect.sizeDelta = new Vector2(width, height);
-        }
-
-        void StampMoods(Transform frame, EventDefinition def)
-        {
-            if (def.moods == null)
-                return;
-
-            int count = def.moods.Count > 2 ? 2 : def.moods.Count;
-            for (int i = 0; i < count; i++)
-            {
-                var stamp = Panel("mood", frame, Color.white);
-                var rect = stamp.rectTransform;
-                rect.anchorMin = new Vector2(1f, 1f);
-                rect.anchorMax = new Vector2(1f, 1f);
-                rect.pivot = new Vector2(1f, 1f);
-                rect.sizeDelta = new Vector2(22f, 22f);
-                rect.anchoredPosition = new Vector2(-8f - (count - 1 - i) * 25f, -8f);
-                stamp.sprite = MoodIcon(def.moods[i]);
-                stamp.preserveAspect = true;
-                stamp.raycastTarget = false;
-            }
         }
 
         public void RefreshTone(SeasonTone tone)

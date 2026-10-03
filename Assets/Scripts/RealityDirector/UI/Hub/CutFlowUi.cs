@@ -169,8 +169,19 @@ namespace RealityDirector.UI.Hub
             Stretch(page);
             // Монтажная — та же диспетчерская канала, что и хаб, только темнее: смотрим на кадры.
             UiKit.Backdrop(page, "Art/Intro/bg/scene_5", new Rect(0f, 0.3f, 1f, 0.7f), 0.86f);
+            // Хлопушка (арт Icons_1) у заголовка — монтажная узнаётся с одного взгляда.
+            var slate = UiKit.Img("slate", page, UiKit.Load("Art/UI/Illustrations/clapperboard"), Color.white);
+            slate.preserveAspect = true;
+            float titleX = 36f;
+            if (slate.sprite != null)
+            {
+                Pin(slate.rectTransform, 30f, 10f, 64f, 64f);
+                titleX = 104f;
+            }
+            else
+                Destroy(slate.gameObject);
             var head = TextOn(page, "МОНТАЖ", 28, new Color(0.96f, 0.78f, 0.22f, 1f), TextAnchor.UpperLeft);
-            Pin(head.rectTransform, 36f, 18f, 600f, 60f);
+            Pin(head.rectTransform, titleX, 18f, 600f, 60f);
             if (UiKit.Display != null)
                 head.font = UiKit.Display;
             head.fontSize = 48;
@@ -353,157 +364,467 @@ namespace RealityDirector.UI.Hub
             return null;
         }
 
+        // HellTube (пак HellTube): слева — плеер с тремя кадрами эфира, название выпуска и комментарии,
+        // справа — итоги эфира и финальный монтаж по порядку. Всё — из результата эфира и ката, ничего сверх эфира.
+        const string Tube = "Art/UI/HellTube/";
+        static readonly Color TubeRed = new Color(1f, 0.19f, 0.3f, 1f);
+        static readonly Color TubeMuted = new Color(0.71f, 0.66f, 0.68f, 1f);
+
         void BuildAir(RectTransform page, FeedbackResult result, List<FootageClip> cut, string title, int pay, int coherence, string payLine)
         {
-            var bar = Panel(page, new Color(0.09f, 0.07f, 0.1f, 1f));
+            UiKit.Backdrop(page, "Art/Intro/bg/scene_5", new Rect(0f, 0.3f, 1f, 0.7f), 0.9f);
+            var report = cut != null && cut.Count > 0 ? CutAnalysis.Analyze(cut) : null;
+
+            // ---------- верхняя полоса ----------
+            var bar = Panel(page, new Color(0.06f, 0.03f, 0.05f, 0.96f));
             bar.anchorMin = new Vector2(0f, 1f);
             bar.anchorMax = new Vector2(1f, 1f);
             bar.pivot = new Vector2(0.5f, 1f);
-            bar.sizeDelta = new Vector2(0f, 52f);
+            bar.sizeDelta = new Vector2(0f, 64f);
             bar.anchoredPosition = Vector2.zero;
-            var logo = TextOn(bar, "HELLTUBE", 22, new Color(0.96f, 0.78f, 0.22f, 1f), TextAnchor.MiddleLeft);
-            Pin(logo.rectTransform, 28f, 4f, 220f, 44f);
+            var flame = Icon(bar, "icon_flame_tint", TubeRed);
+            Pin(flame.rectTransform, 26f, 14f, 34f, 36f);
+            var logo = TextOn(bar, "HELLTUBE", 22, TubeRed, TextAnchor.MiddleLeft);
+            Pin(logo.rectTransform, 66f, 8f, 230f, 48f);
             if (UiKit.Display != null)
             {
                 logo.font = UiKit.Display;
-                logo.fontSize = 32;
+                logo.fontSize = 34;
             }
 
             UiKit.Shadow(logo);
-            var tag = TextOn(bar, "смотри, пока горишь", 14, new Color(0.7f, 0.64f, 0.6f, 1f), TextAnchor.MiddleLeft);
-            Pin(tag.rectTransform, 250f, 10f, 320f, 32f);
+            var tag = TextOn(bar, "смотри, пока горишь", 14, TubeMuted, TextAnchor.MiddleLeft);
+            Pin(tag.rectTransform, 300f, 16f, 260f, 32f);
+            // Поиск — декорация канала (как у настоящего видеохостинга), не поле ввода.
+            var search = Tile(bar, "Panels/panel_search_9slice", false);
+            Pin(search, 640f, 9f, 640f, 46f);
+            Thin(search, 1.6f);
+            var lens = Icon(search, "icon_search", TubeMuted);
+            Pin(lens.rectTransform, 22f, 12f, 22f, 22f);
+            var hint = TextOn(search, "Поиск по грехам", 15, new Color(0.55f, 0.5f, 0.55f, 1f), TextAnchor.MiddleLeft);
+            Pin(hint.rectTransform, 56f, 7f, 400f, 32f);
+            var channel = TextOn(bar, "канал  <b><color=#FF304D>ONLY WHAT MATTERS</color></b>", 18, TubeMuted, TextAnchor.MiddleRight);
+            channel.supportRichText = true;
+            channel.rectTransform.anchorMin = channel.rectTransform.anchorMax = new Vector2(1f, 1f);
+            channel.rectTransform.pivot = new Vector2(1f, 1f);
+            channel.rectTransform.anchoredPosition = new Vector2(-30f, -12f);
+            channel.rectTransform.sizeDelta = new Vector2(520f, 40f);
+            var line = Img(page, "Decor/divider_neon_red", Color.white);
+            Pin(line.rectTransform, 0f, 62f, 1920f, 6f);
 
-            float top = 70f;
+            // ---------- плеер: кадры эфира по порядку ----------
+            var video = Tile(page, "Panels/panel_video_frame_9slice", true);
+            Pin(video, 36f, 82f, 1210f, 340f);
+            _watch = video;
             int shown = 0;
+            float total = 0f;
             if (cut != null)
             {
                 for (int i = 0; i < cut.Count && shown < 3; i++)
+                    total += cut[i].duration;
+                for (int i = 0; i < cut.Count && shown < 3; i++)
                 {
-                    if (cut[i].photo == null)
-                        continue;
-                    var frame = Panel(page, Color.black);
-                    Pin(frame, 36f + shown * 430f, top, 410f, 220f);
-                    var raw = new GameObject("photo", typeof(RectTransform), typeof(RawImage));
-                    raw.transform.SetParent(frame, false);
-                    var rawRect = raw.GetComponent<RectTransform>();
-                    Stretch(rawRect);
-                    rawRect.offsetMin = new Vector2(6f, 6f);
-                    rawRect.offsetMax = new Vector2(-6f, -6f);
-                    raw.GetComponent<RawImage>().texture = cut[i].photo;
-                    raw.GetComponent<RawImage>().raycastTarget = false;
+                    var clip = cut[i];
+                    var thumb = Thumb(video, clip, report != null && i < report.clips.Count ? report.clips[i] : null, shown + 1);
+                    Pin(thumb, 22f + shown * 393f, 18f, 381f, 246f);
                     shown++;
                 }
             }
 
-            if (shown > 0)
-                top += 236f;
-            var heading = TextOn(page, string.IsNullOrEmpty(title) ? "Серия" : title, 26, Color.white, TextAnchor.UpperLeft);
-            Pin(heading.rectTransform, 36f, top, 1100f, 40f);
-            top += 40f;
-            int views = Mathf.RoundToInt(8000f + result.score * 8000f);
-            int likes = Mathf.RoundToInt(result.score * 10f);
-            var meta = TextOn(page, Group(views) + " просмотров   ·   нравится " + likes + "%   ·   связность " + coherence + "%", 16, new Color(0.7f, 0.64f, 0.6f, 1f), TextAnchor.UpperLeft);
-            Pin(meta.rectTransform, 36f, top, 1100f, 28f);
-            _numbers = meta.rectTransform;
-            _watch = shown > 0 ? Marker(page, 36f, 70f, Mathf.Max(410f, shown * 430f - 20f), 220f) : heading.rectTransform;
-            top += 36f;
-
-            int comments = result.reviews != null ? result.reviews.Count : 0;
-            float commentTop = top;
-            var head = TextOn(page, "КОММЕНТАРИИ   ·   " + comments, 16, new Color(0.7f, 0.64f, 0.6f, 1f), TextAnchor.UpperLeft);
-            Pin(head.rectTransform, 36f, top, 600f, 24f);
-            top += 28f;
-            for (int i = 0; i < comments; i++)
+            if (shown == 0)
             {
-                var review = result.reviews[i];
-                var row = Panel(page, new Color(0.12f, 0.1f, 0.14f, 1f));
-                UiKit.Dress(row.GetComponent<Image>(), review.offer ? UiKit.Frame.GoldTile : UiKit.Frame.Dark);
-                Pin(row, 36f, top, 1180f, review.offer ? 78f : 64f);
-                string author = review.author ?? "";
-                // Аватар с буквой и оценка зрителя сердцем: доволен — зелёное, так себе — золото, зол — красное.
-                Color mood = review.score >= 7 ? UiKit.Good : review.score >= 4 ? UiKit.Gold : UiKit.Ember;
-                var avatar = Panel(row, mood);
-                var avatarImage = avatar.GetComponent<Image>();
-                avatarImage.sprite = UiKit.Circle();
-                Pin(avatar, 16f, 12f, 40f, 40f);
-                var letter = TextOn(avatar, author.Length > 0 ? author.Substring(0, 1).ToUpperInvariant() : "?", 20, UiKit.Ink, TextAnchor.MiddleCenter);
-                letter.fontStyle = FontStyle.Bold;
-                Stretch(letter.rectTransform);
-                var who = TextOn(row, (review.offer ? "★  " : "") + author, 16, Color.white, TextAnchor.UpperLeft);
-                who.fontStyle = FontStyle.Bold;
-                Pin(who.rectTransform, 70f, 8f, 700f, 24f);
-                var body = TextOn(row, review.body ?? "", 16, new Color(0.9f, 0.86f, 0.8f, 1f), TextAnchor.UpperLeft);
-                Pin(body.rectTransform, 70f, 32f, review.offer ? 840f : 1000f, 40f);
-                if (!review.offer)
-                {
-                    var heart = Panel(row, mood);
-                    var heartImage = heart.GetComponent<Image>();
-                    heartImage.sprite = UiKit.Icon("icon_heart");
-                    heartImage.preserveAspect = true;
-                    heart.anchorMin = heart.anchorMax = new Vector2(1f, 0.5f);
-                    heart.pivot = new Vector2(1f, 0.5f);
-                    heart.anchoredPosition = new Vector2(-64f, 0f);
-                    heart.sizeDelta = new Vector2(24f, 24f);
-                    var score = TextOn(row, review.score + "/10", 16, mood, TextAnchor.MiddleRight);
-                    score.fontStyle = FontStyle.Bold;
-                    score.rectTransform.anchorMin = score.rectTransform.anchorMax = new Vector2(1f, 0.5f);
-                    score.rectTransform.pivot = new Vector2(1f, 0.5f);
-                    score.rectTransform.anchoredPosition = new Vector2(-14f, 0f);
-                    score.rectTransform.sizeDelta = new Vector2(48f, 24f);
-                }
-                if (review.offer)
-                {
-                    _taskRow = row;
-                    var take = ButtonAt(row, "☆ взять", Vector2.zero, ToggleTask);
-                    var takeRect = take.GetComponent<RectTransform>();
-                    takeRect.anchorMin = takeRect.anchorMax = new Vector2(1f, 0.5f);
-                    takeRect.pivot = new Vector2(1f, 0.5f);
-                    takeRect.anchoredPosition = new Vector2(-12f, 0f);
-                    takeRect.sizeDelta = new Vector2(168f, 44f);
-                    _takePlate = take.GetComponent<Image>();
-                    _takeLabel = take.GetComponentInChildren<Text>();
-                    _wish = review.wish;
-                    _wishLabel = result.wish;
-                }
-
-                top += review.offer ? 88f : 72f;
+                var empty = TextOn(video, "В эфир ничего не вошло — зритель смотрел заставку.", 22, TubeMuted, TextAnchor.MiddleCenter);
+                Pin(empty.rectTransform, 22f, 18f, 1166f, 246f);
             }
 
-            _comments = comments > 0 ? Marker(page, 36f, commentTop, 1180f, top - commentTop) : null;
-            var side = Panel(page, new Color(0.1f, 0.08f, 0.12f, 1f));
-            UiKit.DressSolid(side.GetComponent<Image>(), UiKit.Frame.Gold, 10f);
+            // Кнопка «смотреть» открывает просмотр первого кадра (VHS); полоса — длина эфира.
+            var play = new GameObject("play", typeof(RectTransform), typeof(Image), typeof(Button));
+            play.transform.SetParent(video, false);
+            var playImage = play.GetComponent<Image>();
+            playImage.sprite = UiKit.Load(Tube + "Icons/icon_play");
+            playImage.preserveAspect = true;
+            Pin(play.GetComponent<RectTransform>(), 26f, 280f, 34f, 34f);
+            var first = cut != null && cut.Count > 0 ? cut[0] : null;
+            play.GetComponent<Button>().onClick.AddListener(() => OpenWatch(first));
+            var track = Img(video, "Progress/progress_thin_bg_9slice", Color.white);
+            track.type = Image.Type.Sliced;
+            Pin(track.rectTransform, 76f, 290f, 900f, 14f);
+            var played = Img(track.rectTransform, "Progress/progress_thin_fill_white_9slice", TubeRed);
+            played.type = Image.Type.Sliced;
+            played.rectTransform.anchorMin = Vector2.zero;
+            played.rectTransform.anchorMax = new Vector2(0.06f, 1f);
+            played.rectTransform.offsetMin = played.rectTransform.offsetMax = Vector2.zero;
+            var time = TextOn(video, "0:00 / " + Clock(total), 16, TubeMuted, TextAnchor.MiddleLeft);
+            Pin(time.rectTransform, 992f, 280f, 160f, 34f);
+
+            // ---------- название и цифры ----------
+            int views = Mathf.RoundToInt(8000f + result.score * 8000f);
+            int likes = Mathf.RoundToInt(result.score * 10f);
+            var heading = TextOn(page, string.IsNullOrEmpty(title) ? "Серия" : title, 30, Color.white, TextAnchor.UpperLeft);
+            heading.fontStyle = FontStyle.Bold;
+            Pin(heading.rectTransform, 40f, 436f, 1200f, 44f);
+            var meta = TextOn(page, Group(views) + " просмотров   ·   нравится " + likes + "%   ·   связность " + coherence + "%   ·   рейтинг " + Comma(result.score) + " / 10",
+                17, TubeMuted, TextAnchor.UpperLeft);
+            Pin(meta.rectTransform, 40f, 482f, 1200f, 28f);
+            _numbers = meta.rectTransform;
+
+            // ---------- комментарии ----------
+            int comments = result.reviews != null ? result.reviews.Count : 0;
+            var bubble = Icon(page, "icon_comment", TubeRed);
+            Pin(bubble.rectTransform, 40f, 520f, 26f, 26f);
+            var head = TextOn(page, "КОММЕНТАРИИ   ·   " + comments, 18, Color.white, TextAnchor.MiddleLeft);
+            head.fontStyle = FontStyle.Bold;
+            Pin(head.rectTransform, 76f, 518f, 600f, 30f);
+            var box = Tile(page, "Panels/panel_comments_9slice", true);
+            Pin(box, 36f, 556f, 1210f, 494f);
+            _comments = box;
+            var list = Scroll(box);
+            for (int i = 0; i < comments; i++)
+                Comment(list, result.reviews[i], result.wish);
+
+            // ---------- итоги эфира ----------
+            var side = Tile(page, "Panels/panel_results_9slice", true);
+            Pin(side, 1290f, 82f, 594f, 470f);
             _pay = side;
-            side.anchorMin = new Vector2(1f, 1f);
-            side.anchorMax = new Vector2(1f, 1f);
-            side.pivot = new Vector2(1f, 1f);
-            side.anchoredPosition = new Vector2(-28f, -70f);
-            side.sizeDelta = new Vector2(420f, 760f);
-            var sideTitle = TextOn(side, "ИТОГИ ЭФИРА", 20, new Color(0.95f, 0.45f, 0.38f, 1f), TextAnchor.UpperLeft);
-            Pin(sideTitle.rectTransform, 20f, 16f, 380f, 32f);
-            _viewsStat = Stat(side, 64f, "Просмотры", Group(views));
-            _ratingStat = Stat(side, 112f, "Рейтинг", Comma(result.score) + " / 10");
-            // Рейтинг полоской под цифрой, цвет — насколько эфир удался.
-            var ratingBack = Panel(side, new Color(1f, 1f, 1f, 0.1f));
-            Pin(ratingBack, 20f, 146f, 380f, 8f);
-            var ratingFill = Panel(ratingBack, result.score >= 7f ? UiKit.Good : result.score >= 4f ? UiKit.Gold : UiKit.Ember);
-            ratingFill.anchorMin = Vector2.zero;
-            ratingFill.anchorMax = new Vector2(Mathf.Clamp01(result.score / 10f), 1f);
-            ratingFill.offsetMin = Vector2.zero;
-            ratingFill.offsetMax = Vector2.zero;
-            _linkStat = Stat(side, 160f, "Связность монтажа", coherence + "%");
-            _incomeStat = Stat(side, 208f, "Доход", "+" + pay + " кр");
-            var note = TextOn(side, payLine ?? "", 16, new Color(0.96f, 0.78f, 0.22f, 1f), TextAnchor.UpperLeft);
-            Pin(note.rectTransform, 20f, 260f, 380f, 80f);
-            var list = TextOn(side, CutLines(cut), 16, new Color(0.9f, 0.86f, 0.8f, 1f), TextAnchor.UpperLeft);
-            Pin(list.rectTransform, 20f, 350f, 380f, 250f);
-            var next = ButtonAt(side, "ДАЛЬШЕ (Space)", new Vector2(20f, 680f), () => Next?.Invoke());
+            var eye = Icon(side, "icon_eye_tint", TubeRed);
+            Pin(eye.rectTransform, 28f, 26f, 34f, 34f);
+            var sideTitle = TextOn(side, "ИТОГИ ЭФИРА", 24, TubeRed, TextAnchor.MiddleLeft);
+            sideTitle.fontStyle = FontStyle.Bold;
+            Pin(sideTitle.rectTransform, 72f, 22f, 480f, 42f);
+            _viewsStat = Stat(side, 84f, "icon_eye_tint", "Просмотры", Group(views), -1f);
+            _ratingStat = Stat(side, 146f, "icon_star_tint", "Рейтинг", Comma(result.score) + " / 10", result.score / 10f);
+            _linkStat = Stat(side, 208f, "icon_link_tint", "Связность монтажа", coherence + "%", coherence / 100f);
+            _incomeStat = Stat(side, 270f, "icon_coins_tint", "Доход", "+" + pay + " кр", -1f);
+            var note = TextOn(side, payLine ?? "", 16, UiKit.Gold, TextAnchor.UpperLeft);
+            note.supportRichText = true;
+            Pin(note.rectTransform, 30f, 340f, 534f, 110f);
+
+            // ---------- финальный монтаж ----------
+            var final = Tile(page, "Panels/panel_final_cut_9slice", true);
+            Pin(final, 1290f, 566f, 594f, 384f);
+            var clapper = Icon(final, "icon_clapper_tint", TubeRed);
+            Pin(clapper.rectTransform, 28f, 22f, 32f, 32f);
+            var finalTitle = TextOn(final, "ФИНАЛЬНЫЙ МОНТАЖ", 22, TubeRed, TextAnchor.MiddleLeft);
+            finalTitle.fontStyle = FontStyle.Bold;
+            Pin(finalTitle.rectTransform, 72f, 18f, 480f, 40f);
+            if (cut == null || cut.Count == 0)
+            {
+                var none = TextOn(final, "В эфир ничего не вошло.", 18, TubeMuted, TextAnchor.UpperLeft);
+                Pin(none.rectTransform, 30f, 80f, 534f, 40f);
+            }
+
+            for (int i = 0; cut != null && i < cut.Count && i < 3; i++)
+            {
+                var facts = report != null && i < report.clips.Count ? report.clips[i] : null;
+                var link = report != null && i < report.links.Count ? report.links[i] : null;
+                CutRow(final, 72f + i * 100f, i + 1, cut[i], facts, link);
+            }
+
+            var next = new GameObject("next", typeof(RectTransform), typeof(Image), typeof(Button));
+            next.transform.SetParent(page, false);
             var nextRect = next.GetComponent<RectTransform>();
-            nextRect.anchorMin = nextRect.anchorMax = new Vector2(0f, 1f);
-            nextRect.pivot = new Vector2(0f, 1f);
-            nextRect.anchoredPosition = new Vector2(20f, -680f);
-            nextRect.sizeDelta = new Vector2(380f, 64f);
-            UiKit.Primary(next.GetComponent<Button>(), 20);
+            Pin(nextRect, 1290f, 962f, 594f, 80f);
+            var nextImage = next.GetComponent<Image>();
+            nextImage.sprite = UiKit.Load(Tube + "Buttons/button_primary_9slice");
+            nextImage.type = nextImage.sprite != null ? Image.Type.Sliced : Image.Type.Simple;
+            if (nextImage.sprite == null)
+                nextImage.color = UiKit.Blood;
+            var nextLabel = TextOn(next.transform, "ДАЛЬШЕ  <size=18>(Space)</size>", 26, Color.white, TextAnchor.MiddleCenter);
+            nextLabel.supportRichText = true;
+            nextLabel.fontStyle = FontStyle.Bold;
+            Stretch(nextLabel.rectTransform);
+            next.GetComponent<Button>().onClick.AddListener(() => Next?.Invoke());
             UiKit.Pulse(next.GetComponent<Button>());
+        }
+
+        // Кадр эфира в плеере: снимок под рамкой тона, внизу — номер и роль кадра в истории.
+        RectTransform Thumb(RectTransform parent, FootageClip clip, ClipFacts facts, int number)
+        {
+            var root = new GameObject("clip" + number, typeof(RectTransform)).GetComponent<RectTransform>();
+            root.SetParent(parent, false);
+            var window = new GameObject("photo", typeof(RectTransform), typeof(RectMask2D)).GetComponent<RectTransform>();
+            window.SetParent(root, false);
+            Stretch(window);
+            window.offsetMin = new Vector2(6f, 6f);
+            window.offsetMax = new Vector2(-6f, -6f);
+            var dark = Panel(window, new Color(0.05f, 0.03f, 0.05f, 1f));
+            Stretch(dark);
+            if (clip.photo != null)
+            {
+                var raw = new GameObject("img", typeof(RectTransform), typeof(RawImage), typeof(AspectRatioFitter));
+                raw.transform.SetParent(window, false);
+                var rawImage = raw.GetComponent<RawImage>();
+                rawImage.texture = clip.photo;
+                rawImage.raycastTarget = false;
+                var rect = raw.GetComponent<RectTransform>();
+                rect.anchorMin = rect.anchorMax = new Vector2(0.5f, 0.5f);
+                var fit = raw.GetComponent<AspectRatioFitter>();
+                fit.aspectMode = AspectRatioFitter.AspectMode.EnvelopeParent;
+                fit.aspectRatio = clip.photo.width / Mathf.Max(1f, clip.photo.height);
+            }
+
+            var frame = Img(root, "Footage/footage_frame_" + FrameTone(clip.mood), Color.white);
+            Stretch(frame.rectTransform);
+            string role = facts != null ? CutAnalysis.RoleWord(facts.main) : (clip.title ?? "кадр");
+            var label = TextOn(root, number + ". " + role.ToUpperInvariant(), 18, MoodStyle.ColorOf(clip.mood), TextAnchor.MiddleLeft);
+            label.fontStyle = FontStyle.Bold;
+            label.rectTransform.anchorMin = new Vector2(0f, 0f);
+            label.rectTransform.anchorMax = new Vector2(1f, 0f);
+            label.rectTransform.pivot = new Vector2(0.5f, 0f);
+            label.rectTransform.offsetMin = new Vector2(38f, 10f);
+            label.rectTransform.offsetMax = new Vector2(-30f, 46f);
+            UiKit.Shadow(label);
+            return root;
+        }
+
+        // Тон кадра → рамка пака: драма — золото исповеди, трэш — красный конфликт, семья — розовая романтика.
+        static string FrameTone(ShowMood mood)
+        {
+            switch (mood)
+            {
+                case ShowMood.Drama: return "confession";
+                case ShowMood.Trash: return "conflict";
+                default: return "romance";
+            }
+        }
+
+        void Comment(RectTransform list, ViewerReview review, string wish)
+        {
+            float height = review.offer ? 86f : 68f;
+            var row = new GameObject("comment", typeof(RectTransform), typeof(Image), typeof(LayoutElement));
+            row.transform.SetParent(list, false);
+            row.GetComponent<LayoutElement>().preferredHeight = height;
+            var plate = row.GetComponent<Image>();
+            plate.sprite = UiKit.Load(Tube + (review.offer ? "Comments/comment_row_featured_9slice" : "Comments/comment_row_default_9slice"));
+            plate.type = Image.Type.Sliced;
+            plate.raycastTarget = true;
+            var rowRect = row.GetComponent<RectTransform>();
+            string author = review.author ?? "";
+            // Аватар демона — по автору (один и тот же автор — одна и та же мордочка).
+            var avatar = Img(rowRect, "Icons/avatar_demon_0" + (1 + Hash(author) % 7), Color.white);
+            avatar.preserveAspect = true;
+            avatar.rectTransform.anchorMin = avatar.rectTransform.anchorMax = new Vector2(0f, 0.5f);
+            avatar.rectTransform.pivot = new Vector2(0f, 0.5f);
+            avatar.rectTransform.anchoredPosition = new Vector2(14f, 0f);
+            avatar.rectTransform.sizeDelta = new Vector2(44f, 44f);
+            Color mood = review.score >= 7 ? UiKit.Good : review.score >= 4 ? UiKit.Gold : UiKit.Ember;
+            var who = TextOn(rowRect, (review.offer ? "★  " : "") + author, 16, AuthorColor(author), TextAnchor.UpperLeft);
+            who.fontStyle = FontStyle.Bold;
+            Pin(who.rectTransform, 72f, 8f, 700f, 24f);
+            var body = TextOn(rowRect, review.body ?? "", 16, new Color(0.92f, 0.88f, 0.84f, 1f), TextAnchor.UpperLeft);
+            body.supportRichText = true;
+            Pin(body.rectTransform, 72f, 32f, review.offer ? 900f : 1000f, height - 36f);
+            if (review.offer)
+            {
+                _taskRow = rowRect;
+                var take = ButtonAt(rowRect, "☆ взять", Vector2.zero, ToggleTask);
+                var takeRect = take.GetComponent<RectTransform>();
+                takeRect.anchorMin = takeRect.anchorMax = new Vector2(1f, 0.5f);
+                takeRect.pivot = new Vector2(1f, 0.5f);
+                takeRect.anchoredPosition = new Vector2(-16f, 0f);
+                takeRect.sizeDelta = new Vector2(168f, 46f);
+                var gold = take.GetComponent<Image>();
+                gold.sprite = UiKit.Load(Tube + "Buttons/button_gold_9slice");
+                gold.type = Image.Type.Sliced;
+                gold.color = Color.white;
+                _takePlate = gold;
+                _takeLabel = take.GetComponentInChildren<Text>();
+                _wish = review.wish;
+                _wishLabel = wish;
+                return;
+            }
+
+            // Оценка зрителя: сердце цвета настроения и «9/10».
+            var heart = Icon(rowRect, "icon_heart", mood);
+            heart.rectTransform.anchorMin = heart.rectTransform.anchorMax = new Vector2(1f, 0.5f);
+            heart.rectTransform.pivot = new Vector2(1f, 0.5f);
+            heart.rectTransform.anchoredPosition = new Vector2(-74f, 0f);
+            heart.rectTransform.sizeDelta = new Vector2(22f, 22f);
+            var score = TextOn(rowRect, review.score + "/10", 16, mood, TextAnchor.MiddleRight);
+            score.fontStyle = FontStyle.Bold;
+            score.rectTransform.anchorMin = score.rectTransform.anchorMax = new Vector2(1f, 0.5f);
+            score.rectTransform.pivot = new Vector2(1f, 0.5f);
+            score.rectTransform.anchoredPosition = new Vector2(-18f, 0f);
+            score.rectTransform.sizeDelta = new Vector2(52f, 24f);
+        }
+
+        // Строка финального монтажа: номер, снимок, роль и кто в кадре, длина; справа — связь со следующим кадром.
+        void CutRow(RectTransform parent, float y, int number, FootageClip clip, ClipFacts facts, CutLink link)
+        {
+            var row = Tile(parent, "Panels/panel_generic_dark_9slice", false);
+            Pin(row, 20f, y, 554f, 92f);
+            var num = TextOn(row, number.ToString(), 30, UiKit.Gold, TextAnchor.MiddleCenter);
+            num.fontStyle = FontStyle.Bold;
+            Pin(num.rectTransform, 8f, 16f, 40f, 60f);
+            var shot = new GameObject("shot", typeof(RectTransform), typeof(RectMask2D)).GetComponent<RectTransform>();
+            shot.SetParent(row, false);
+            Pin(shot, 52f, 10f, 128f, 72f);
+            var dark = Panel(shot, new Color(0.05f, 0.03f, 0.05f, 1f));
+            Stretch(dark);
+            if (clip.photo != null)
+            {
+                var raw = new GameObject("img", typeof(RectTransform), typeof(RawImage), typeof(AspectRatioFitter));
+                raw.transform.SetParent(shot, false);
+                raw.GetComponent<RawImage>().texture = clip.photo;
+                raw.GetComponent<RawImage>().raycastTarget = false;
+                var rect = raw.GetComponent<RectTransform>();
+                rect.anchorMin = rect.anchorMax = new Vector2(0.5f, 0.5f);
+                var fit = raw.GetComponent<AspectRatioFitter>();
+                fit.aspectMode = AspectRatioFitter.AspectMode.EnvelopeParent;
+                fit.aspectRatio = clip.photo.width / Mathf.Max(1f, clip.photo.height);
+            }
+
+            string role = facts != null ? CutAnalysis.RoleWord(facts.main) : (clip.title ?? "кадр");
+            var name = TextOn(row, role.ToUpperInvariant(), 18, MoodStyle.ColorOf(clip.mood), TextAnchor.UpperLeft);
+            name.fontStyle = FontStyle.Bold;
+            Pin(name.rectTransform, 194f, 10f, 250f, 26f);
+            string who = clip.actorNames != null && clip.actorNames.Count > 0 ? string.Join(", ", clip.actorNames) : clip.Framed ? "в кадре" : "пусто";
+            var sub = TextOn(row, (clip.title ?? "") + "  ·  " + who + "\n" + Comma(clip.duration) + " с", 14, TubeMuted, TextAnchor.UpperLeft);
+            Pin(sub.rectTransform, 194f, 36f, 240f, 52f);
+            if (link != null)
+            {
+                var linkText = TextOn(row, "связка\n" + CutAnalysis.Level(link.level).ToLowerInvariant(), 14,
+                    link.level >= 2 ? UiKit.Good : link.level == 1 ? UiKit.Gold : UiKit.Ember, TextAnchor.MiddleRight);
+                linkText.rectTransform.anchorMin = linkText.rectTransform.anchorMax = new Vector2(1f, 0.5f);
+                linkText.rectTransform.pivot = new Vector2(1f, 0.5f);
+                linkText.rectTransform.anchoredPosition = new Vector2(-24f, 0f);
+                linkText.rectTransform.sizeDelta = new Vector2(104f, 48f);
+            }
+        }
+
+        // Строка итогов: значок, подпись, значение; доля 0..1 — полоска под строкой (−1 — без полоски).
+        RectTransform Stat(RectTransform parent, float y, string icon, string label, string value, float share)
+        {
+            var mark = Marker(parent, 16f, y, 562f, 56f);
+            var glyph = Icon(parent, icon, Color.white);
+            Pin(glyph.rectTransform, 30f, y + 8f, 28f, 28f);
+            var left = TextOn(parent, label, 18, TubeMuted, TextAnchor.MiddleLeft);
+            Pin(left.rectTransform, 72f, y + 4f, 300f, 36f);
+            var right = TextOn(parent, value, 22, Color.white, TextAnchor.MiddleRight);
+            right.fontStyle = FontStyle.Bold;
+            var rect = right.rectTransform;
+            rect.anchorMin = rect.anchorMax = new Vector2(1f, 1f);
+            rect.pivot = new Vector2(1f, 1f);
+            rect.anchoredPosition = new Vector2(-30f, -(y + 4f));
+            rect.sizeDelta = new Vector2(220f, 36f);
+            if (share >= 0f)
+            {
+                var back = Img(parent, "Progress/progress_thin_bg_9slice", Color.white);
+                back.type = Image.Type.Sliced;
+                Pin(back.rectTransform, 72f, y + 42f, 492f, 10f);
+                var fill = Img(back.rectTransform, "Progress/progress_thin_fill_white_9slice",
+                    share >= 0.7f ? UiKit.Good : share >= 0.4f ? UiKit.Gold : UiKit.Ember);
+                fill.type = Image.Type.Sliced;
+                fill.rectTransform.anchorMin = Vector2.zero;
+                fill.rectTransform.anchorMax = new Vector2(Mathf.Clamp01(share), 1f);
+                fill.rectTransform.offsetMin = fill.rectTransform.offsetMax = Vector2.zero;
+            }
+
+            return mark;
+        }
+
+        // Вертикальная прокрутка комментариев внутри рамки.
+        static RectTransform Scroll(RectTransform box)
+        {
+            var view = new GameObject("view", typeof(RectTransform), typeof(Image), typeof(RectMask2D), typeof(ScrollRect));
+            view.transform.SetParent(box, false);
+            var viewRect = view.GetComponent<RectTransform>();
+            Stretch(viewRect);
+            viewRect.offsetMin = new Vector2(16f, 14f);
+            viewRect.offsetMax = new Vector2(-16f, -14f);
+            view.GetComponent<Image>().color = new Color(0f, 0f, 0f, 0.01f);
+            var content = new GameObject("list", typeof(RectTransform), typeof(VerticalLayoutGroup), typeof(ContentSizeFitter)).GetComponent<RectTransform>();
+            content.SetParent(viewRect, false);
+            content.anchorMin = new Vector2(0f, 1f);
+            content.anchorMax = new Vector2(1f, 1f);
+            content.pivot = new Vector2(0.5f, 1f);
+            content.anchoredPosition = Vector2.zero;
+            content.sizeDelta = Vector2.zero;
+            var layout = content.GetComponent<VerticalLayoutGroup>();
+            layout.spacing = 8f;
+            layout.childControlHeight = true;
+            layout.childControlWidth = true;
+            layout.childForceExpandHeight = false;
+            layout.childForceExpandWidth = true;
+            content.GetComponent<ContentSizeFitter>().verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+            var scroll = view.GetComponent<ScrollRect>();
+            scroll.viewport = viewRect;
+            scroll.content = content;
+            scroll.horizontal = false;
+            scroll.vertical = true;
+            scroll.movementType = ScrollRect.MovementType.Clamped;
+            scroll.scrollSensitivity = 40f;
+            return content;
+        }
+
+        // Плашка пака (9-slice), под ней — сплошная тёмная заливка, если окно должно закрывать фон.
+        static RectTransform Tile(RectTransform parent, string sprite, bool solid)
+        {
+            var holder = new GameObject("tile", typeof(RectTransform)).GetComponent<RectTransform>();
+            holder.SetParent(parent, false);
+            if (solid)
+            {
+                var fill = Panel(holder, new Color(0.07f, 0.035f, 0.055f, 1f));
+                Stretch(fill);
+                fill.offsetMin = new Vector2(6f, 6f);
+                fill.offsetMax = new Vector2(-6f, -6f);
+            }
+
+            var frame = Img(holder, sprite, Color.white);
+            if (frame.sprite != null)
+                frame.type = Image.Type.Sliced;
+            else
+                frame.color = new Color(0.1f, 0.06f, 0.09f, 0.94f);
+            Stretch(frame.rectTransform);
+            return holder;
+        }
+
+        // Тоньше рамка 9-slice (для невысоких плашек: края пака рассчитаны на крупный размер).
+        static void Thin(RectTransform tile, float k)
+        {
+            foreach (var image in tile.GetComponentsInChildren<Image>())
+            {
+                if (image.type == Image.Type.Sliced)
+                    image.pixelsPerUnitMultiplier = k;
+            }
+        }
+
+        static Image Img(RectTransform parent, string sprite, Color color)
+        {
+            var img = UiKit.Img("img", parent, UiKit.Load(Tube + sprite), color);
+            return img;
+        }
+
+        static Image Icon(RectTransform parent, string icon, Color color)
+        {
+            var img = UiKit.Img("icon", parent, UiKit.Load(Tube + "Icons/" + icon), color);
+            img.preserveAspect = true;
+            return img;
+        }
+
+        static int Hash(string s)
+        {
+            int h = 7;
+            foreach (char c in s ?? "")
+                h = h * 31 + c;
+            return Mathf.Abs(h);
+        }
+
+        // Цвет ника — как в чатах: у каждого автора свой, из палитры HellTube.
+        static Color AuthorColor(string author)
+        {
+            Color[] palette =
+            {
+                new Color(1f, 0.82f, 0.36f), new Color(0.45f, 0.9f, 0.64f), new Color(1f, 0.42f, 0.5f),
+                new Color(1f, 0.58f, 0.3f), new Color(0.72f, 0.56f, 1f), new Color(0.4f, 0.86f, 1f), new Color(1f, 0.45f, 0.75f)
+            };
+            return palette[Hash(author) % palette.Length];
+        }
+
+        static string Clock(float seconds)
+        {
+            int s = Mathf.Max(0, Mathf.RoundToInt(seconds));
+            return (s / 60) + ":" + (s % 60).ToString("00");
         }
 
         static RectTransform Marker(RectTransform parent, float x, float y, float w, float h)
@@ -558,35 +879,6 @@ namespace RealityDirector.UI.Hub
                 _takeLabel.text = value;
             if (_takePlate != null)
                 _takePlate.color = plate;
-        }
-
-        static string CutLines(List<FootageClip> cut)
-        {
-            if (cut == null || cut.Count == 0)
-                return "В эфир ничего не вошло.";
-            var body = "МОНТАЖ";
-            for (int i = 0; i < cut.Count; i++)
-            {
-                var clip = cut[i];
-                string who = clip.actorNames != null && clip.actorNames.Count > 0 ? string.Join(", ", clip.actorNames) : clip.Framed ? "в кадре" : "пусто";
-                body += "\n" + (i + 1) + ". " + clip.title + "  " + Comma(clip.duration) + " с\n" + who;
-            }
-
-            return body;
-        }
-
-        RectTransform Stat(RectTransform parent, float y, string label, string value)
-        {
-            var mark = Marker(parent, 12f, y, 396f, 36f);
-            var left = TextOn(parent, label, 16, new Color(0.7f, 0.64f, 0.6f, 1f), TextAnchor.MiddleLeft);
-            Pin(left.rectTransform, 20f, y, 220f, 32f);
-            var right = TextOn(parent, value, 18, Color.white, TextAnchor.MiddleRight);
-            var rect = right.rectTransform;
-            rect.anchorMin = rect.anchorMax = new Vector2(1f, 1f);
-            rect.pivot = new Vector2(1f, 1f);
-            rect.anchoredPosition = new Vector2(-20f, -y);
-            rect.sizeDelta = new Vector2(180f, 32f);
-            return mark;
         }
 
         GameObject Card(RectTransform parent, FootageClip clip, bool picked)

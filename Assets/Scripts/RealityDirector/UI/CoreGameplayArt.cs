@@ -37,34 +37,6 @@ namespace RealityDirector.UI
             return true;
         }
 
-        public static string Frame(string category)
-        {
-            switch (category)
-            {
-                case "Provocation": return "UI/CardFrames/card_frame_provocation";
-                case "Social":
-                case "Confession": return "UI/CardFrames/card_frame_social";
-                case "Environment":
-                case "Comedy": return "UI/CardFrames/card_frame_environment";
-                case "Sponsor": return "UI/CardFrames/card_frame_sponsor";
-                default: return "UI/CardFrames/card_frame_deck";
-            }
-        }
-
-        public static string CardArt(string category)
-        {
-            switch (category)
-            {
-                case "Provocation": return "PlaceholderContent/Cards/card_art_provocation_placeholder";
-                case "Social":
-                case "Confession": return "PlaceholderContent/Cards/card_art_social_placeholder";
-                case "Environment":
-                case "Comedy": return "PlaceholderContent/Cards/card_art_environment_placeholder";
-                case "Sponsor": return "PlaceholderContent/Cards/card_art_sponsor_placeholder";
-                default: return "PlaceholderContent/Cards/card_art_deck_placeholder";
-            }
-        }
-
         public static string Die(DieSize die)
         {
             switch (die)

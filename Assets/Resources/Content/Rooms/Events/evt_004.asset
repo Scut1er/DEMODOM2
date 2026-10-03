@@ -19,7 +19,7 @@ MonoBehaviour:
   goal: 
   icon: 13
   color: {r: 0.28, g: 0.32, b: 0.48, a: 1}
-  art: {fileID: 0}
+  art: {fileID: 21300000, guid: 7da3d84be9663504582d6cebad84721f, type: 3}
   weight: 8
   conditions: []
   uniquePerEpisode: 0
@@ -37,6 +37,7 @@ MonoBehaviour:
   choices:
   - label: "\u041E\u0431\u0432\u0438\u043D\u0438\u0442\u044C \u0443\u0447\u0430\u0441\u0442\u043D\u0438\u043A\u0430"
     description: 
+    accent: 0
     conditions: []
     hideIfUnavailable: 0
     costMoney: 0
@@ -63,6 +64,7 @@ MonoBehaviour:
     designNote: "\u0423\u0441\u043F\u0435\u0445: Stress \u0446\u0435\u043B\u0438 +2; Suspicious; \u043F\u0440\u0438 \u0443\u0441\u043F\u0435\u0445\u0435 \u043D\u0430\u0439\u0442\u0438 \u043C\u0438\u043A\u0440\u043E\u0444\u043E\u043D\n\u041F\u0440\u043E\u0432\u0430\u043B: \u041D\u0435\u0432\u0435\u0440\u043D\u043E\u0435 \u043E\u0431\u0432\u0438\u043D\u0435\u043D\u0438\u0435: Trust -2"
   - label: "\u041A\u0443\u043F\u0438\u0442\u044C \u043D\u043E\u0432\u044B\u0439"
     description: 
+    accent: 0
     conditions: []
     hideIfUnavailable: 0
     costMoney: 0
@@ -81,6 +83,7 @@ MonoBehaviour:
     designNote: "\u0423\u0441\u043F\u0435\u0445: Budget -35; TechnicalQuality next Situation +1"
   - label: "\u0421\u043D\u0438\u043C\u0430\u0442\u044C \u043D\u0430 \u0437\u0430\u043F\u0430\u0441\u043D\u043E\u0439"
     description: 
+    accent: 0
     conditions: []
     hideIfUnavailable: 0
     costMoney: 0

@@ -1,0 +1,76 @@
+{
+  "targetReferenceResolution": [
+    1672,
+    941
+  ],
+  "canvas": {
+    "referenceResolution": [
+      1920,
+      1080
+    ],
+    "match": 0.5
+  },
+  "regions": {
+    "EventPanel": {
+      "x": 18,
+      "y": 10,
+      "w": 490,
+      "h": 555
+    },
+    "EventIllustration": {
+      "x": 510,
+      "y": 0,
+      "w": 925,
+      "h": 595
+    },
+    "StatsPanel": {
+      "x": 1285,
+      "y": 10,
+      "w": 340,
+      "h": 240
+    },
+    "Option1": {
+      "x": 285,
+      "y": 560,
+      "w": 360,
+      "h": 355
+    },
+    "Option2": {
+      "x": 645,
+      "y": 560,
+      "w": 360,
+      "h": 355
+    },
+    "Option3": {
+      "x": 1005,
+      "y": 560,
+      "w": 360,
+      "h": 355
+    },
+    "ProducerPanel": {
+      "x": 18,
+      "y": 755,
+      "w": 250,
+      "h": 150
+    },
+    "SideButtons": {
+      "x": 1435,
+      "y": 725,
+      "w": 190,
+      "h": 170
+    },
+    "BackButton": {
+      "x": 1435,
+      "y": 830,
+      "w": 190,
+      "h": 75
+    }
+  },
+  "rules": {
+    "dynamicText": "TextMeshPro",
+    "eventImage": "runtime EventDefinition art with fallback",
+    "optionCount": "1..3 runtime",
+    "effects": "generated from actual outcome/effect data",
+    "noBakedGameplayText": true
+  }
+}

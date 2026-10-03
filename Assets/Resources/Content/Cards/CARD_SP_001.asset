@@ -19,7 +19,7 @@ MonoBehaviour:
   targetType: 4
   requiredObjectId: 
   cardColor: {r: 0.75, g: 0.12, b: 0.14, a: 1}
-  cardArt: {fileID: 0}
+  cardArt: {fileID: 21300000, guid: 6cffce4b2848eae4c95bff86373e6d28, type: 3}
   tags:
   - Sponsor
   - Environment

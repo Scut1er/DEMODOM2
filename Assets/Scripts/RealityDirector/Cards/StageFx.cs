@@ -333,22 +333,14 @@ namespace RealityDirector.Cards
             var cam = Camera.main;
             if (cam == null)
                 yield break;
-            var go = new GameObject("cardFly", typeof(RectTransform), typeof(Image));
-            go.transform.SetParent(_canvas, false);
-            var img = go.GetComponent<Image>();
-            img.raycastTarget = false;
-            var frame = CoreGameplayArt.Sprite(CoreGameplayArt.Frame(def.category));
-            img.sprite = frame;
-            img.color = frame != null ? Color.white : def.cardColor;
-            var rect = (RectTransform)go.transform;
-            rect.sizeDelta = new Vector2(150f, 202f);
-            var art = new GameObject("art", typeof(RectTransform), typeof(Image));
-            art.transform.SetParent(go.transform, false);
-            var artImg = art.GetComponent<Image>();
-            artImg.sprite = def.cardArt != null ? def.cardArt : CoreGameplayArt.Sprite(CoreGameplayArt.CardArt(def.category));
-            artImg.preserveAspect = true;
-            artImg.raycastTarget = false;
-            ((RectTransform)art.transform).sizeDelta = new Vector2(110f, 80f);
+            // То же лицо карты, что в руке.
+            var face = CardFace.Create(_canvas, "cardFly", 150f);
+            face.Show(def);
+            face.SetMoods(def.moods);
+            foreach (var g in face.GetComponentsInChildren<Graphic>(true))
+                g.raycastTarget = false;
+            var go = face.gameObject;
+            var rect = face.Rect;
             Vector2 from = new Vector2(0f, -470f);
             float t = 0f;
             while (t < duration)

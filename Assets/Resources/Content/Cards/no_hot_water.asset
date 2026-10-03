@@ -19,7 +19,7 @@ MonoBehaviour:
   targetType: 2
   requiredObjectId: 
   cardColor: {r: 0.16, g: 0.32, b: 0.5, a: 1}
-  cardArt: {fileID: 0}
+  cardArt: {fileID: 21300000, guid: 535954ec48239a3409a8e11008b67b37, type: 3}
   tags:
   - Misery
   moods: 00000000i

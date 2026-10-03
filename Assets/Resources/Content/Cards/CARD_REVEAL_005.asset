@@ -19,7 +19,7 @@ MonoBehaviour:
   targetType: 4
   requiredObjectId: 
   cardColor: {r: 0.3, g: 0.2, b: 0.45, a: 1}
-  cardArt: {fileID: 0}
+  cardArt: {fileID: 21300000, guid: 3599065cd0cf58b41a1bfbbc8375b154, type: 3}
   tags:
   - Secret
   - Temptation

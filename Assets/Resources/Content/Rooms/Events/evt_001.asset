@@ -19,7 +19,7 @@ MonoBehaviour:
   goal: 
   icon: 13
   color: {r: 0.28, g: 0.32, b: 0.48, a: 1}
-  art: {fileID: 0}
+  art: {fileID: 21300000, guid: 3599065cd0cf58b41a1bfbbc8375b154, type: 3}
   weight: 7
   conditions:
   - type: 0
@@ -43,6 +43,7 @@ MonoBehaviour:
   choices:
   - label: "\u041F\u043E\u043E\u0431\u0435\u0449\u0430\u0442\u044C \u0441\u043A\u0430\u043D\u0434\u0430\u043B"
     description: 
+    accent: 0
     conditions: []
     hideIfUnavailable: 0
     costMoney: 0
@@ -77,6 +78,7 @@ MonoBehaviour:
     designNote: "\u0423\u0441\u043F\u0435\u0445: +80 \u043A\u0440; Trash +6; EpisodeFlag: BoardHappy\n\u041F\u0440\u043E\u0432\u0430\u043B: Stress \u043A\u0430\u0441\u0442\u0430 +2; SponsorRep -3"
   - label: "\u041F\u0440\u043E\u0434\u0430\u0442\u044C \u044D\u0444\u0438\u0440 \u0441\u043F\u043E\u043D\u0441\u043E\u0440\u0443"
     description: 
+    accent: 0
     conditions: []
     hideIfUnavailable: 0
     costMoney: 0
@@ -103,6 +105,7 @@ MonoBehaviour:
     designNote: "\u0423\u0441\u043F\u0435\u0445: +55 \u043A\u0440; \u043F\u043E\u043B\u0443\u0447\u0438\u0442\u044C \u0432\u0440\u0435\u043C\u0435\u043D\u043D\u0443\u044E Sponsor-\u043A\u0430\u0440\u0442\u0443; Family -2"
   - label: "\u0411\u0440\u043E\u0441\u0438\u0442\u044C \u0442\u0440\u0443\u0431\u043A\u0443"
     description: 
+    accent: 0
     conditions: []
     hideIfUnavailable: 0
     costMoney: 0

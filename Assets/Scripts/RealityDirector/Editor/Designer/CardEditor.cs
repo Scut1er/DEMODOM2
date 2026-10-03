@@ -135,8 +135,8 @@ namespace RealityDirector.EditorTools
             Upgrade(card, "upgradeTier3", "craftBudgetTier3", CardTier.III);
 
             Section("Вид", false);
-            Field("cardColor", "Цвет", "Фон арта и вспышка при розыгрыше. Рамка карты — по первому тону.");
-            Field("cardArt", "Арт", "Пусто — встроенная иконка (у встроенных карт) или только цвет.");
+            Field("cardColor", "Цвет", "Вспышка при розыгрыше. Рамка, иконка и цвет подписи — по категории (Resources/Content/CardVisuals).");
+            Field("cardArt", "Арт", "Картинка 16:9 в окне карты (обрезается по краям, не растягивается). Пусто — файл Art/UI/Cards/Art/<id>.png, нет и его — иконка категории.");
 
             Section("Design intent", false);
             Field("designIntent", "Зачем карта", "Для команды: какую ситуацию карта должна создавать. В игре не видно.");
@@ -248,8 +248,9 @@ namespace RealityDirector.EditorTools
 
         void DrawHeader(EventDefinition card)
         {
-            var rect = GUILayoutUtility.GetRect(10, 214, GUILayout.ExpandWidth(true));
-            var cardRect = new Rect(rect.x, rect.y + 4, 150, 206);
+            var size = RealityDirector.UI.CardFace.SizeFor(176f);
+            var rect = GUILayoutUtility.GetRect(10, size.y + 8, GUILayout.ExpandWidth(true));
+            var cardRect = new Rect(rect.x, rect.y + 4, size.x, size.y);
             CardInsight.DrawCard(cardRect, card);
 
             var text = new Rect(cardRect.xMax + 12, rect.y + 4, rect.width - cardRect.width - 12, rect.height);
@@ -456,6 +457,8 @@ namespace RealityDirector.EditorTools
                 EditorGUILayout.HelpBox("Карта исполняется в квартире целиком.", MessageType.None);
             if (ignored.Count > 0)
                 EditorGUILayout.HelpBox("Игра пока пропускает: " + string.Join(", ", ignored) + ". Карта работает, но без этого.", MessageType.Warning);
+            foreach (var look in CardArtAssets.Problems(card))
+                EditorGUILayout.HelpBox("Внешний вид: " + look + ".", MessageType.Warning);
 
             _showBrief = EditorGUILayout.Foldout(_showBrief, "Что увидит игрок (подсказка карты в руке)", true);
             if (!_showBrief)

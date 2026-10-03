@@ -19,7 +19,7 @@ MonoBehaviour:
   targetType: 0
   requiredObjectId: fridge
   cardColor: {r: 0.72, g: 0.32, b: 0.12, a: 1}
-  cardArt: {fileID: 0}
+  cardArt: {fileID: 21300000, guid: cea88ed3db11f90429f869df178d10bc, type: 3}
   tags:
   - Fire
   - Chaos

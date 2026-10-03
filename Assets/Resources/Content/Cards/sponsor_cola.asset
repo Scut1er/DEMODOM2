@@ -19,7 +19,7 @@ MonoBehaviour:
   targetType: 2
   requiredObjectId: 
   cardColor: {r: 0.75, g: 0.12, b: 0.14, a: 1}
-  cardArt: {fileID: 0}
+  cardArt: {fileID: 21300000, guid: dbc335b2b34fd4545ad81b834ea02e65, type: 3}
   tags: []
   moods: 
   rageSeconds: 0

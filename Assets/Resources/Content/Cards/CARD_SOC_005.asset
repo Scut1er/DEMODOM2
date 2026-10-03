@@ -19,7 +19,7 @@ MonoBehaviour:
   targetType: 3
   requiredObjectId: 
   cardColor: {r: 0.55, g: 0.25, b: 0.42, a: 1}
-  cardArt: {fileID: 0}
+  cardArt: {fileID: 21300000, guid: 3cc145542d7f5fa4099e3287afbcb79d, type: 3}
   tags:
   - Witness
   - Triangle

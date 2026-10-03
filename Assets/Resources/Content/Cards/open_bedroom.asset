@@ -19,7 +19,7 @@ MonoBehaviour:
   targetType: 0
   requiredObjectId: bed_door
   cardColor: {r: 0.38, g: 0.24, b: 0.32, a: 1}
-  cardArt: {fileID: 0}
+  cardArt: {fileID: 21300000, guid: dc3e09423dbf7d241b7f28cc7a1319b6, type: 3}
   tags:
   - Warmth
   moods: 02000000i

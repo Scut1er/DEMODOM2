@@ -1,0 +1,24 @@
+{
+  "palette": {
+    "bg": "#0A070C",
+    "panel": "#150B10",
+    "panel2": "#211019",
+    "text": "#F3EEE9",
+    "muted": "#B7A9AB",
+    "red": "#FF3048",
+    "red_dark": "#7E1325",
+    "gold": "#F5C34E",
+    "green": "#36EE8A",
+    "green_dark": "#0E6F40",
+    "purple": "#9C62FF",
+    "pink": "#FF55B7",
+    "cyan": "#50DBFF",
+    "orange": "#FF7A2F"
+  },
+  "optionAccents": {
+    "danger": "#FF3048",
+    "success": "#36EE8A",
+    "neutral": "#F5C34E"
+  },
+  "notes": "Use accent by semantic risk/outcome, not by option index when runtime data provides meaning."
+}
