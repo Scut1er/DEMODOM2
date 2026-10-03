@@ -194,7 +194,7 @@ namespace RealityDirector.Meta
             var result = Build(null, cut, tone);
             if (result.reviews == null)
                 result.reviews = new List<ViewerReview>();
-            var extra = Extras(cut, coherence, sponsorAired);
+            var extra = HellTubeComments.Pick(cut, tone, coherence, sponsorAired, 4);
             var seen = new HashSet<string>();
             for (int i = 0; i < result.reviews.Count; i++)
                 seen.Add(result.reviews[i].body ?? "");

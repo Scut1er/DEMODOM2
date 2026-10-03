@@ -145,6 +145,12 @@ namespace RealityDirector.Meta
             int chance = Mathf.Clamp(c.chance, 1, 100);
             int roll = rng != null ? rng.Next(100) : UnityEngine.Random.Range(0, 100);
             bool success = chance >= 100 || roll < chance;
+            if (!success && ctx.episode != null && ctx.episode.HasFlag("EventReroll"))
+            {
+                ctx.episode.flags.Remove("EventReroll");
+                roll = rng != null ? rng.Next(100) : UnityEngine.Random.Range(0, 100);
+                success = roll < chance;
+            }
 
             var effects = success ? c.effects : c.failEffects;
             var tags = success ? c.resultTags : c.failTags;

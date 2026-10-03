@@ -744,7 +744,21 @@ namespace RealityDirector
                     _ui.MarkUsed(_hand[i].id);
             }
             _ui.SetArmed(null);
-            _capture.Capacity = Progression.CaptureSlots(_state.operatorLevel);
+            int extra = 0;
+            if (_state.episode != null)
+            {
+                if (_state.episode.HasFlag("ExtraCaptureSlot"))
+                {
+                    extra++;
+                    _state.episode.flags.Remove("ExtraCaptureSlot");
+                }
+                if (_state.episode.HasFlag("CaptureSlotMinus"))
+                {
+                    extra--;
+                    _state.episode.flags.Remove("CaptureSlotMinus");
+                }
+            }
+            _capture.Capacity = Mathf.Max(1, Progression.CaptureSlots(_state.operatorLevel) + extra);
             _ui.SetCaptureCapacity(_capture.Capacity);
             string scene = string.IsNullOrEmpty(GameSession.SceneTitle) ? "" : "  ·  " + GameSession.SceneTitle;
             string roles = _state.episode != null && !string.IsNullOrEmpty(_state.episode.roleBrief) ? "\n" + _state.episode.roleBrief : "";
@@ -1834,10 +1848,16 @@ namespace RealityDirector
             return false;
         }
 
-        // Цена с учётом «Сэкономить токены»: скидка уходит на первую же оплаченную карту.
+        // «Сэкономить токены» — на первую оплаченную карту. «Реквизит со скидкой» — на первую Environment.
         float Cost(EventDefinition def)
         {
-            return def == null ? 0f : Mathf.Max(0f, def.cost - _discount);
+            if (def == null)
+                return 0f;
+            float cost = Mathf.Max(0f, def.cost - _discount);
+            var ep = _state != null ? _state.episode : null;
+            if (ep != null && ep.HasFlag("EnvDiscount") && def.category == "Environment")
+                cost = Mathf.Max(0f, cost - 0.75f);
+            return cost;
         }
 
         bool Pay(EventDefinition def)
@@ -1848,10 +1868,13 @@ namespace RealityDirector
             if (ep == null)
                 return true;
             float cost = Cost(def);
+            bool env = ep.HasFlag("EnvDiscount") && def.category == "Environment";
             if (cost <= 0f || ep.SpendHell(cost))
             {
                 if (_discount > 0f && !HasDeckEffect(def, CardEffectType.ReduceCost))
                     _discount = 0f;
+                if (env)
+                    ep.flags.Remove("EnvDiscount");
                 return true;
             }
 

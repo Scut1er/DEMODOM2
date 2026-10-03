@@ -9,14 +9,11 @@ namespace RealityDirector.Meta
     {
         public static void Fill(List<RoomDefinition> rooms, List<RoomDefinition> created)
         {
-            int events = Count(rooms, RoomType.Event);
+            var events = OwmEvents.All();
+            for (int i = 0; i < events.Length; i++)
+                Keep(rooms, created, events[i]);
+
             int situations = Count(rooms, RoomType.Situation);
-            if (events < 8)
-            {
-                var pack = Events();
-                for (int i = 0; i < pack.Length; i++)
-                    Keep(rooms, created, pack[i]);
-            }
 
             if (situations < 4)
             {
@@ -28,23 +25,7 @@ namespace RealityDirector.Meta
 
         public static List<MarketingOffer> Offers(int reputation)
         {
-            var all = new[]
-            {
-                Buy("spoiled_food", "Тухлятина", "Разовая карта в руку до эфира.", 35, 0),
-                Buy("cut_wifi", "Нет сети", "Разовая карта в руку до эфира.", 30, 0),
-                Buy("meditation_bell", "Колокол", "Разовая карта в руку до эфира.", 40, 0),
-                Deal("sponsor_energy", "Энергетик", "Сними кадр и вставь его в эфир. Иначе выплаты нет.", 0, 70, 1),
-                Deal("sponsor_cola", "Банка колы", "Дороже и злее к отзывам, если кадр доживёт до эфира.", 40, 110, 2),
-                Deal("sponsor_ship", "Верфь Инферно", "Крупный чек. Кадр обязателен в монтаже.", 70, 200, 3)
-            };
-            var list = new List<MarketingOffer>();
-            for (int i = 0; i < all.Length; i++)
-            {
-                if (reputation >= all[i].minReputation)
-                    list.Add(all[i]);
-            }
-
-            return list;
+            return OwmOffers.All(reputation);
         }
 
         static void Keep(List<RoomDefinition> rooms, List<RoomDefinition> created, RoomDefinition room)

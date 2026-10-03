@@ -127,6 +127,56 @@ namespace RealityDirector.Meta
             return true;
         }
 
+        public bool TryBuyOffer(MarketingOffer offer)
+        {
+            if (offer == null)
+                return false;
+            if (offer.kind == OfferKind.Contract)
+                return TryTakeContract(offer.cardId, offer.payout, offer.scoreHit);
+
+            var ep = _state.episode;
+            if (ep == null)
+                return false;
+            ep.EnsureLists();
+            string bought = "bought_" + (string.IsNullOrEmpty(offer.id) ? offer.title : offer.id);
+            if (ep.HasFlag(bought))
+            {
+                Reject = "Уже куплено в этом выпуске.";
+                return false;
+            }
+
+            if (offer.price > 0 && ep.cash < offer.price)
+            {
+                Reject = "Не хватает нала.";
+                return false;
+            }
+
+            if (!string.IsNullOrEmpty(offer.cardId))
+            {
+                if (ep.tempCards.Contains(offer.cardId))
+                {
+                    Reject = "Эта карта уже в выпуске.";
+                    return false;
+                }
+
+                if (Find(offer.cardId) == null)
+                {
+                    Reject = "Карты нет в колоде контента.";
+                    return false;
+                }
+            }
+
+            if (offer.price > 0)
+                ep.cash -= offer.price;
+            if (!string.IsNullOrEmpty(offer.cardId))
+                ep.tempCards.Add(offer.cardId);
+            if (!string.IsNullOrEmpty(offer.flag))
+                ep.SetFlag(offer.flag);
+            ep.SetFlag(bought);
+            Reject = null;
+            return true;
+        }
+
         // Магазин выпуска: карта в руку до эфира, потом сгорает. Платит нал, не кр.
         public bool TryBuyRun(string id)
         {
