@@ -45,8 +45,13 @@ namespace RealityDirector.UI.Hub
         {
             if (level != null)
                 level.text = "Уровень " + lvl;
-            if (selected != null)
-                selected.SetActive(isSelected);
+            SetChosen(isSelected);
+        }
+
+        public void SetChosen(bool on)
+        {
+            if (selected != null && selected.activeSelf != on)
+                selected.SetActive(on);
         }
     }
 }
