@@ -72,6 +72,7 @@ namespace RealityDirector.NPC
         PoseKind _pose;
         bool _hasPending;
         bool _noticed;
+        float _approachUntil;
         float _noticeAt;
         float _reactHoldUntil;
         Vector2 _locus;
@@ -97,14 +98,19 @@ namespace RealityDirector.NPC
                 _ring.enabled = false;
         }
 
+        static readonly List<NPCController> Live = new List<NPCController>();
+
         void OnEnable()
         {
             EventBus.Published += OnWorld;
+            if (!Live.Contains(this))
+                Live.Add(this);
         }
 
         void OnDisable()
         {
             EventBus.Published -= OnWorld;
+            Live.Remove(this);
         }
 
         public void ResetState()
@@ -233,7 +239,7 @@ namespace RealityDirector.NPC
             _hasPending = true;
             if (_noticed)
                 return;
-            _noticeAt = Time.time + Mathf.Min(2.6f, 0.16f + dist * 0.32f);
+            _noticeAt = Time.time + Mathf.Min(0.55f, 0.08f + dist * 0.06f);
         }
 
         void BeginApproach()
@@ -246,6 +252,7 @@ namespace RealityDirector.NPC
             _goal = _locus + new Vector2(side, -0.2f);
             if (BlockEast && _goal.x > EastLimit - 0.2f)
                 _goal.x = EastLimit - 0.2f;
+            _approachUntil = Time.time + 2.4f;
             _action = NpcActionId.Roam;
             Say("!", 2.6f, false);
         }
@@ -265,7 +272,7 @@ namespace RealityDirector.NPC
             Run(rule.action, rule.emote);
             Bump(rule.action);
             if (rule.action == NpcActionId.Panic)
-                _reactHoldUntil = Time.time + 0.95f;
+                _reactHoldUntil = Time.time + (IsPanicker ? 0.15f : 0.55f);
             else if (rule.action == NpcActionId.SeekFight)
                 _reactHoldUntil = Time.time + 0.4f;
             else
@@ -486,11 +493,9 @@ namespace RealityDirector.NPC
             }
 
             if (_action == NpcActionId.Roam)
-            {
                 MoveTowards(_goal, 1.75f);
-                if (Vector2.Distance(transform.position, _goal) < 0.82f)
-                    CommitPending();
-            }
+            if (Vector2.Distance(transform.position, _goal) < 0.82f || Time.time >= _approachUntil)
+                CommitPending();
         }
 
         void TickPassive()
@@ -1040,9 +1045,24 @@ namespace RealityDirector.NPC
 
         Vector2 Separate(Vector2 current, Vector2 next)
         {
-            if (Rival == null || IsFighting || Rival.IsFighting)
+            if (IsFighting)
                 return next;
-            Vector2 other = Rival.transform.position;
+            Vector2 resolved = next;
+            for (int i = 0; i < Live.Count; i++)
+            {
+                var other = Live[i];
+                if (other == null || other == this)
+                    continue;
+                if (other.IsFighting && other.Rival == this)
+                    continue;
+                resolved = PushOff(current, resolved, other.transform.position);
+            }
+
+            return resolved;
+        }
+
+        static Vector2 PushOff(Vector2 current, Vector2 next, Vector2 other)
+        {
             Vector2 gap = next - other;
             float dist = gap.magnitude;
             if (dist >= BodyGap)

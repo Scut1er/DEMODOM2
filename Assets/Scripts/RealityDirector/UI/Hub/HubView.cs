@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using RealityDirector.Meta;
 using UnityEngine;
+using UnityEngine.InputSystem;
 using UnityEngine.UI;
 
 namespace RealityDirector.UI.Hub
@@ -44,6 +45,10 @@ namespace RealityDirector.UI.Hub
 
         // Пусто, пока игрок сам не выбрал зону: при входе в хаб панель зоны закрыта.
         CrewTrack? _selected;
+        bool _lockZones;
+        Button[] _hover;
+        Vector3[] _hoverRest;
+        Canvas _canvas;
 
         public CrewTrack? Selected => _selected;
 
@@ -92,6 +97,50 @@ namespace RealityDirector.UI.Hub
                 settingsButton.onClick.AddListener(() => OpenSettings?.Invoke());
             if (menuButton != null)
                 menuButton.onClick.AddListener(() => Menu?.Invoke());
+            DressHover();
+        }
+
+        void LateUpdate()
+        {
+            if (_hover == null)
+                return;
+            var mouse = Mouse.current;
+            if (mouse == null)
+                return;
+            Vector2 pos = mouse.position.ReadValue();
+            Camera cam = _canvas != null && _canvas.renderMode != RenderMode.ScreenSpaceOverlay ? _canvas.worldCamera : null;
+            float t = 1f - Mathf.Exp(-18f * Time.unscaledDeltaTime);
+            for (int i = 0; i < _hover.Length; i++)
+            {
+                var button = _hover[i];
+                if (button == null)
+                    continue;
+                var rt = button.transform as RectTransform;
+                bool hot = button.interactable && button.gameObject.activeInHierarchy && rt != null
+                    && RectTransformUtility.RectangleContainsScreenPoint(rt, pos, cam);
+                var target = hot ? _hoverRest[i] * 1.045f : _hoverRest[i];
+                button.transform.localScale = Vector3.Lerp(button.transform.localScale, target, t);
+            }
+        }
+
+        void DressHover()
+        {
+            _canvas = GetComponentInParent<Canvas>();
+            _hover = GetComponentsInChildren<Button>(true);
+            _hoverRest = new Vector3[_hover.Length];
+            for (int i = 0; i < _hover.Length; i++)
+            {
+                _hoverRest[i] = _hover[i].transform.localScale;
+                var colors = _hover[i].colors;
+                var n = colors.normalColor;
+                colors.highlightedColor = new Color(
+                    Mathf.Clamp01(n.r + 0.14f),
+                    Mathf.Clamp01(n.g + 0.14f),
+                    Mathf.Clamp01(n.b + 0.14f),
+                    n.a);
+                colors.fadeDuration = 0.08f;
+                _hover[i].colors = colors;
+            }
         }
 
         // Выбор зоны — перерисовка целиком, её делает HubFlow.
@@ -109,7 +158,7 @@ namespace RealityDirector.UI.Hub
                 if (zones[i] == null)
                     continue;
                 var info = crew[(int)zones[i].Track];
-                zones[i].Show(info.level, _selected.HasValue && zones[i].Track == _selected.Value);
+                zones[i].Show(info.level, zones[i].Track == _selected && !_lockZones);
             }
 
             if (detail != null)
@@ -185,15 +234,18 @@ namespace RealityDirector.UI.Hub
             return start != null ? start.transform as RectTransform : null;
         }
 
-        // Обучение: пока босс говорит — ничего. После речи на хабе жива только кнопка старта.
+        // Обучение: пока босс говорит — ничего. После речи на хабе золотая только кнопка старта.
         public void ApplyTutorial(bool teach, bool talking, bool startReady)
         {
             bool chrome = !teach;
             bool canStart = !teach || (startReady && !talking);
+            _lockZones = teach;
             for (int i = 0; i < zones.Length; i++)
             {
-                if (zones[i] != null)
-                    zones[i].SetEnabled(!teach && !talking);
+                if (zones[i] == null)
+                    continue;
+                zones[i].SetEnabled(!teach && !talking);
+                zones[i].SetChosen(!_lockZones && zones[i].Track == _selected);
             }
 
             if (detail != null)

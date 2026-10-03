@@ -39,6 +39,11 @@ namespace RealityDirector.Persistence
         public int sponsorReputation = 25;
         public bool wantsTutorial;
         public int tutorialBeat;
+        public List<string> hand = new List<string>();
+        public bool embarked;
+        public string roomNodeId;
+        public string sceneTitle;
+        public string sceneId;
         public int seasonLength;
         public List<string> flags = new List<string>();
         // JsonUtility не умеет null для вложенных классов — поэтому отдельный флаг.
@@ -53,7 +58,23 @@ namespace RealityDirector.Persistence
 
         static string FilePath => Path.Combine(Application.persistentDataPath, "season.json");
 
-        public static bool HasSave => File.Exists(FilePath);
+        public static bool HasSave
+        {
+            get
+            {
+                if (!File.Exists(FilePath))
+                    return false;
+                try
+                {
+                    var data = JsonUtility.FromJson<SaveData>(File.ReadAllText(FilePath));
+                    return data != null && data.version == Version;
+                }
+                catch (Exception)
+                {
+                    return false;
+                }
+            }
+        }
 
         public static void Save(SeasonState state, SeasonTone tone)
         {
@@ -80,6 +101,11 @@ namespace RealityDirector.Persistence
                 sponsorReputation = state.sponsorReputation,
                 wantsTutorial = state.wantsTutorial,
                 tutorialBeat = state.tutorialBeat,
+                hand = new List<string>(state.hand),
+                embarked = state.embarked,
+                roomNodeId = state.roomNodeId,
+                sceneTitle = state.sceneTitle,
+                sceneId = state.sceneId,
                 seasonLength = state.seasonLength,
                 flags = new List<string>(state.flags),
                 hasEpisode = state.episode != null,
@@ -123,8 +149,10 @@ namespace RealityDirector.Persistence
             state.castLevel = data.castLevel;
             state.operatorLevel = data.operatorLevel;
             state.writerLevel = data.writerLevel;
-            state.played.UnionWith(data.played);
-            state.picked.AddRange(data.picked);
+            if (data.played != null)
+                state.played.UnionWith(data.played);
+            if (data.picked != null)
+                state.picked.AddRange(data.picked);
             state.step = data.step;
             state.seasonNumber = data.seasonNumber;
             state.producerName = data.producerName ?? "";
@@ -133,14 +161,25 @@ namespace RealityDirector.Persistence
             state.sponsorReputation = data.sponsorReputation;
             state.wantsTutorial = data.wantsTutorial;
             state.tutorialBeat = data.tutorialBeat;
+            if (data.hand != null)
+                state.hand.AddRange(data.hand);
+            state.embarked = data.embarked;
+            state.roomNodeId = data.roomNodeId;
+            state.sceneTitle = data.sceneTitle;
+            state.sceneId = data.sceneId;
             state.seasonLength = data.seasonLength;
             if (data.flags != null)
                 state.flags.AddRange(data.flags);
             state.episode = data.hasEpisode ? data.episode : null;
+            if (state.episode != null)
+                state.episode.EnsureLists();
             state.ratingSum = data.ratingSum;
             state.rated = data.rated;
-            for (int i = 0; i < data.tasks.Count; i++)
-                state.tasks.Add(new ViewerTask { id = data.tasks[i].id, label = data.tasks[i].label });
+            if (data.tasks != null)
+            {
+                for (int i = 0; i < data.tasks.Count; i++)
+                    state.tasks.Add(new ViewerTask { id = data.tasks[i].id, label = data.tasks[i].label });
+            }
 
             tone.Reset();
             tone.Drama = data.drama;

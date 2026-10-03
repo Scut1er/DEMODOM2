@@ -112,7 +112,12 @@ namespace RealityDirector
             content.Vote = Event("night_vote", "Голосование", "сразу на весь дом", TargetType.Global, null,
                 new Color(0.32f, 0.18f, 0.42f, 1f), 0f, false, IllustratedArt.IconTear, MomentTags.Conflict);
             content.Guest.price = 150;
+            content.Guest.cost = 3;
             content.Vote.price = 180;
+            content.Vote.cost = 3;
+            content.SponsorCola.cost = 2;
+            content.SponsorEnergy.cost = 1;
+            content.SponsorShip.cost = 3;
 
             Stamp(content.Provoke, ShowMood.Trash, ShowMood.Drama);
             Stamp(content.FridgeFire, ShowMood.Trash);
@@ -134,13 +139,6 @@ namespace RealityDirector
                 content.SponsorCola, content.SponsorEnergy, content.SponsorShip,
                 content.Guest, content.Vote
             });
-            // Ассет карты затирает поля, которых в нём ещё нет. Цены нала и спонсоров возвращаем, если пусто.
-            KeepRun(content.All, "spoiled_food", 35);
-            KeepRun(content.All, "cut_wifi", 30);
-            KeepRun(content.All, "meditation_bell", 40);
-            KeepSponsor(content.All, "sponsor_cola", 45, 110, 2);
-            KeepSponsor(content.All, "sponsor_energy", 25, 70, 1);
-            KeepSponsor(content.All, "sponsor_ship", 0, 200, 3);
             Cat(content.All, "provoke", "Provocation");
             Cat(content.All, "cut_wifi", "Provocation");
             Cat(content.All, "fridge_fire", "Environment");
@@ -152,26 +150,6 @@ namespace RealityDirector
             Cat(content.All, "invite_guest", "Social");
             Cat(content.All, "confession_cam", "Confession");
             Cat(content.All, "night_vote", "Reveal");
-            KeepCost(content.All, "provoke", 2);
-            KeepCost(content.All, "fridge_fire", 2);
-            KeepCost(content.All, "no_hot_water", 1);
-            KeepCost(content.All, "open_bathroom", 1);
-            KeepCost(content.All, "open_bedroom", 1);
-            KeepCost(content.All, "spoiled_food", 1);
-            KeepCost(content.All, "cut_wifi", 2);
-            KeepCost(content.All, "meditation_bell", 2);
-            KeepCost(content.All, "confession_cam", 3);
-            KeepCost(content.All, "invite_guest", 3);
-            KeepCost(content.All, "night_vote", 3);
-            KeepCost(content.All, "sponsor_energy", 1);
-            KeepCost(content.All, "sponsor_cola", 2);
-            KeepCost(content.All, "sponsor_ship", 3);
-            for (int i = 0; i < content.All.Length; i++)
-            {
-                if (content.All[i] != null && content.All[i].cost <= 0)
-                    content.All[i].cost = 1;
-            }
-
             return content;
         }
 
@@ -327,37 +305,6 @@ namespace RealityDirector
                 emote = emote,
                 priority = priority
             };
-        }
-
-        static void KeepRun(EventDefinition[] all, string id, int price)
-        {
-            var def = Find(all, id);
-            if (def != null && def.runPrice <= 0)
-                def.runPrice = price;
-        }
-
-        static void KeepSponsor(EventDefinition[] all, string id, int price, int pay, int hit)
-        {
-            var def = Find(all, id);
-            if (def == null)
-                return;
-            if (!def.sponsor)
-            {
-                def.runPrice = price;
-                def.sponsor = true;
-            }
-
-            if (def.sponsorPay <= 0)
-                def.sponsorPay = pay;
-            if (def.sponsorScoreHit <= 0)
-                def.sponsorScoreHit = hit;
-        }
-
-        static void KeepCost(EventDefinition[] all, string id, int cost)
-        {
-            var def = Find(all, id);
-            if (def != null && def.cost <= 0)
-                def.cost = cost;
         }
 
         static void Cat(EventDefinition[] all, string id, string category)

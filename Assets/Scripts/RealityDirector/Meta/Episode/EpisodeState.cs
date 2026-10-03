@@ -96,6 +96,10 @@ namespace RealityDirector.Meta
         public int hell;
         public int hellMax;
         public string hellRoom;
+        public string setRoom;
+        public bool setOnFire;
+        public bool setBathOpen;
+        public bool setBedOpen;
         [Tooltip("Сыгранные спонсорские карты, которым ещё нужен кадр.")]
         public List<string> pendingSponsors = new List<string>();
         public int footageLimit = 5;

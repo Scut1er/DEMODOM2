@@ -35,6 +35,11 @@ namespace RealityDirector.Meta
         public int sponsorReputation = 25;
         public bool wantsTutorial;
         public int tutorialBeat;
+        public readonly List<string> hand = new List<string>();
+        public bool embarked;
+        public string roomNodeId;
+        public string sceneTitle;
+        public string sceneId;
         // Текущий выпуск: от выхода из хаба до эфира. null — игрок в хабе между выпусками.
         public EpisodeState episode;
         // Устарело: квартира (PitchFlow) ещё увеличивает это поле. Мета смотрит на episode.step.
@@ -62,6 +67,11 @@ namespace RealityDirector.Meta
             sponsorReputation = 25;
             wantsTutorial = false;
             tutorialBeat = 0;
+            hand.Clear();
+            embarked = false;
+            roomNodeId = null;
+            sceneTitle = null;
+            sceneId = null;
             episode = null;
             if (starters == null)
                 return;
