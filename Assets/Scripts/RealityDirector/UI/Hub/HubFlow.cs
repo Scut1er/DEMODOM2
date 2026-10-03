@@ -140,6 +140,7 @@ namespace RealityDirector.UI.Hub
             _cut = CutFlowUi.Create();
             _screens = HubOverlays.Create();
             _cut.Confirm += ConfirmCut;
+            _cut.Extra = MontageExtra;
             _cut.Next += CloseAir;
         }
 
@@ -827,12 +828,14 @@ namespace RealityDirector.UI.Hub
             var episode = _episode.Current;
             episode.EnsureLists();
             var cut = LoadCut(episode);
-            int coherence = MontageCut.Coherence(cut);
+            // Монтаж V2: связность, комбо и повторы считаются по всей склейке и двигают оценку эфира.
+            var report = CutAnalysis.Analyze(cut);
+            int coherence = report.coherence;
             var moments = Shells(cut);
             if (!episode.settled)
                 Settle(episode, cut, moments, coherence);
             int hit = AiredHit(episode);
-            var result = FeedbackGenerator.BuildCut(moments, GameSession.Tone, coherence, hit > 0);
+            var result = FeedbackGenerator.BuildCut(moments, GameSession.Tone, coherence, hit > 0, report, Brand(episode));
             if (hit > 0)
                 result = FeedbackGenerator.ApplySponsor(result, hit);
             _airWish = result.nextWish;
@@ -896,7 +899,7 @@ namespace RealityDirector.UI.Hub
                 }
             }
 
-            var result = FeedbackGenerator.BuildCut(moments, GameSession.Tone, coherence, hit > 0);
+            var result = FeedbackGenerator.BuildCut(moments, GameSession.Tone, coherence, hit > 0, CutAnalysis.Analyze(cut), Brand(episode));
             if (hit > 0)
                 result = FeedbackGenerator.ApplySponsor(result, hit);
             bool hadTasks = GameSession.State.tasks.Count > 0;
@@ -915,6 +918,86 @@ namespace RealityDirector.UI.Hub
             episode.settledSponsor = sponsorMoney;
             episode.settledLine = line;
             GameSession.Save();
+        }
+
+        // Бренд спонсора в эфире (для комментариев): из названия карты контракта «Hell Cola — Холодильник».
+        string Brand(EpisodeState episode)
+        {
+            if (episode == null || episode.contracts == null)
+                return null;
+            foreach (var c in episode.contracts)
+            {
+                if (c == null || string.IsNullOrEmpty(c.grantedCardId))
+                    continue;
+                string name = CardName(c.grantedCardId);
+                int dash = name.IndexOf(" — ", System.StringComparison.Ordinal);
+                return dash > 0 ? name.Substring(0, dash) : name.Replace("Постер ", "").Trim('«', '»');
+            }
+
+            return null;
+        }
+
+        // Итог монтажа: спонсор, задачи зрителей, купленные подсказки — строки под прогнозом аудитории.
+        List<string> MontageExtra(List<FootageClip> chosen)
+        {
+            var lines = new List<string>();
+            var ep = _episode != null && _episode.Active ? _episode.Current : null;
+            var state = GameSession.State;
+            if (ep == null || state == null || chosen == null)
+                return lines;
+            var moments = Shells(chosen);
+            bool ad = chosen.Exists(c => c != null && c.tags != null && c.tags.Contains(MomentTags.Sponsor));
+            foreach (var contract in ep.contracts)
+            {
+                if (contract == null || contract.status != ContractStatus.Active)
+                    continue;
+                bool inCut = chosen.Exists(c => c != null && contract.matchingFootageIds.Contains(c.id));
+                lines.Add("Спонсор «" + CardName(contract.grantedCardId) + "»: " + (inCut ? "<color=#7FE08A>выполнен ✓</color>" : ad ? "<color=#F2C35C>реклама есть, но не его кадр</color>" : "<color=#FF7A5C>кадра нет ✗</color>"));
+            }
+
+            foreach (var task in state.tasks)
+            {
+                if (task == null)
+                    continue;
+                bool met = Progression.WishMet(task.id, moments, GameSession.Tone);
+                lines.Add("Задача зрителей «" + task.label + "»: " + (met ? "<color=#7FE08A>выполнено ✓</color>" : "<color=#A89F96>нет</color>"));
+            }
+
+            // Купленные в маркетинге подсказки.
+            if (ep.HasFlag("MontageHint"))
+                lines.Add(BestPair());
+            if (ep.HasFlag("ToneForecast") && chosen.Count > 0)
+            {
+                var report = CutAnalysis.Analyze(chosen);
+                var forecast = FeedbackGenerator.BuildCut(moments, GameSession.Tone, report.coherence, false, report, null);
+                lines.Add("<color=#8FE3FF>Мониторинг HellTube: прогноз оценки ≈ " + forecast.score.ToString("0.0") + "</color>");
+            }
+
+            return lines;
+        }
+
+        // «Срочный монтажный совет»: лучшая связь среди всего отснятого.
+        string BestPair()
+        {
+            var library = Library(_episode.Current);
+            int best = int.MinValue;
+            string text = null;
+            for (int i = 0; i < library.Count; i++)
+            {
+                for (int j = 0; j < library.Count; j++)
+                {
+                    if (i == j)
+                        continue;
+                    var r = CutAnalysis.Analyze(new List<FootageClip> { library[i], library[j] });
+                    if (r.links.Count == 1 && r.links[0].score > best)
+                    {
+                        best = r.links[0].score;
+                        text = "«" + r.clips[0].what + "» → «" + r.clips[1].what + "»";
+                    }
+                }
+            }
+
+            return text == null ? "<color=#8FE3FF>Совет монтажёра: снимите хотя бы два кадра</color>" : "<color=#8FE3FF>Совет монтажёра: лучшая связь — " + text + "</color>";
         }
 
         void CloseAir()
