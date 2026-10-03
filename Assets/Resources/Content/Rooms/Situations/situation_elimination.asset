@@ -41,3 +41,26 @@ MonoBehaviour:
     value: 10
     mood: 1
   scene: Apartment_Pitch
+  roleBrief: 
+  actors:
+  - castSlot: -1
+    room: 1
+    stress: 25
+    anger: 0
+    sadness: 0
+    attraction: 0
+    confidence: 0
+    selfControl: 0
+    states: []
+  hostility: 0
+  trust: 0
+  startEvents:
+  - Public
+  props: []
+  openBedroom: 0
+  openBathroom: 0
+  privateRooms: 
+  pressureRooms: 01000000i
+  allowedCategories: []
+  blockedCategories: []
+  hellTokenBudget: 12

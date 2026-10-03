@@ -126,6 +126,8 @@ namespace RealityDirector.Cards
             var rect = go.GetComponent<RectTransform>();
             rect.SetParent(_canvas, false);
             rect.anchorMin = rect.anchorMax = new Vector2(0.5f, 0.5f);
+            // До первого кадра слежения — за экраном, а не посреди него.
+            rect.anchoredPosition = new Vector2(-10000f, -10000f);
             var group = go.GetComponent<CanvasGroup>();
             if (group == null)
                 group = go.AddComponent<CanvasGroup>();
@@ -222,6 +224,57 @@ namespace RealityDirector.Cards
             StartCoroutine(Punch(go.transform, 1.25f, 0.25f));
         }
 
+        // Плашка постановки съёмки: по центру сверху, несколько строк, сама гаснет. Не привязана к людям.
+        public void Slate(string title, IList<string> lines, Color color, float life = 6f)
+        {
+            var go = new GameObject("slate", typeof(RectTransform), typeof(Image), typeof(CanvasGroup));
+            go.transform.SetParent(_canvas, false);
+            var plate = go.GetComponent<Image>();
+            UiKit.Dress(plate, UiKit.Frame.Dialog, 1.4f);
+            plate.raycastTarget = false;
+            var rect = (RectTransform)go.transform;
+            rect.anchorMin = rect.anchorMax = new Vector2(0.5f, 1f);
+            rect.pivot = new Vector2(0.5f, 1f);
+            var head = MakeText(go.transform, title, 26, color);
+            float w = head.preferredWidth;
+            var texts = new List<Text>();
+            if (lines != null)
+            {
+                foreach (var line in lines)
+                {
+                    if (string.IsNullOrEmpty(line))
+                        continue;
+                    var t = MakeText(go.transform, line, 17, texts.Count == 0 ? UiKit.Paper : UiKit.Muted);
+                    texts.Add(t);
+                    w = Mathf.Max(w, t.preferredWidth);
+                }
+            }
+
+            float width = Mathf.Min(980f, w + 70f);
+            float height = 54f + texts.Count * 24f;
+            rect.sizeDelta = new Vector2(width, height);
+            rect.anchoredPosition = new Vector2(0f, -150f);
+            ((RectTransform)head.transform).anchoredPosition = new Vector2(0f, height * 0.5f - 28f);
+            for (int i = 0; i < texts.Count; i++)
+                ((RectTransform)texts[i].transform).anchoredPosition = new Vector2(0f, height * 0.5f - 58f - i * 24f);
+            StartCoroutine(Punch(go.transform, 1.15f, 0.25f));
+            StartCoroutine(FadeOut(go.GetComponent<CanvasGroup>(), life));
+        }
+
+        static IEnumerator FadeOut(CanvasGroup group, float life)
+        {
+            float t = 0f;
+            while (t < life && group != null)
+            {
+                t += Time.deltaTime;
+                group.alpha = Mathf.Clamp01((life - t) / 0.8f);
+                yield return null;
+            }
+
+            if (group != null)
+                Destroy(group.gameObject);
+        }
+
         // Метка реквизита под ним — живёт, пока жив реквизит.
         public void Label(Transform target, string text, Color color, Vector2 offset)
         {
@@ -233,6 +286,45 @@ namespace RealityDirector.Cards
             var t = MakeText(go.transform, text, 15, color);
             ((RectTransform)go.transform).sizeDelta = new Vector2(t.preferredWidth + 22f, 26f);
             Track(go, () => target.position, offset, float.MaxValue, 0f, false);
+        }
+
+        // Подсказка над тем, на кого сейчас наведена карта: прогноз реакции. Одна на сцену, живёт, пока наводят.
+        GameObject _hint;
+        Text _hintText;
+        Transform _hintTarget;
+
+        public void Hint(Transform target, string text)
+        {
+            if (target == null || string.IsNullOrEmpty(text))
+            {
+                _hintTarget = null;
+                if (_hint != null)
+                    _hint.SetActive(false);
+                return;
+            }
+
+            if (_hint == null)
+            {
+                _hint = new GameObject("aimHint", typeof(RectTransform), typeof(Image));
+                var plate = _hint.GetComponent<Image>();
+                UiKit.Dress(plate, UiKit.Frame.Dark);
+                plate.color = new Color(1f, 1f, 1f, 0.94f);
+                plate.raycastTarget = false;
+                _hintText = MakeText(_hint.transform, "", 16, UiKit.Paper);
+                _hintText.lineSpacing = 1.05f;
+                Track(_hint, () => _hintTarget != null ? _hintTarget.position + Vector3.up * 1.9f : new Vector3(9999f, 0f, 0f), new Vector2(0f, 60f), float.MaxValue, 0f, false);
+            }
+
+            _hintTarget = target;
+            if (_hintText.text != text)
+            {
+                _hintText.text = text;
+                ((RectTransform)_hint.transform).sizeDelta = new Vector2(Mathf.Max(220f, _hintText.preferredWidth) + 30f, Mathf.Max(30f, _hintText.preferredHeight) + 16f);
+            }
+
+            if (!_hint.activeSelf)
+                _hint.SetActive(true);
+            _hint.transform.SetAsLastSibling();
         }
 
         // Полёт карты из руки в точку на площадке: видно, куда «ударил» продюсер.

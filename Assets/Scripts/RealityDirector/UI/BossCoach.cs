@@ -280,6 +280,12 @@ namespace RealityDirector.UI
             Cut(hole);
         }
 
+        // Цепочка реплик вне обучения (например, студия открылась после первого эфира).
+        public void Tell(CoachStep[] steps, Action done)
+        {
+            Chain(steps, done);
+        }
+
         void Chain(CoachStep[] steps, Action done)
         {
             Hide();
@@ -437,6 +443,9 @@ namespace RealityDirector.UI
             {
                 state.wantsTutorial = false;
                 state.tutorialBeat = DoneBeat;
+                // Пропустил обучение — и студию после первого эфира объяснять не будем.
+                if (!state.flags.Contains("tut_skipped"))
+                    state.flags.Add("tut_skipped");
                 GameSession.Save();
             }
 

@@ -6,18 +6,27 @@ using UnityEngine;
 
 namespace RealityDirector.Meta
 {
+    [System.Serializable]
     public class HellTubeComment
     {
         public string id;
+        [Tooltip("Автор (ник зрителя). {actor} — имя участника из эфира.")]
         public string persona;
         public string category;
-        public string template;
+        [Tooltip("Текст. {actor} {actorA} {actorB} {event} {brand} {tone} {situation} {episode} — только из того, что было в эфире.")]
+        [TextArea(1, 3)] public string template;
+        [Tooltip("Drama / Trash / Family / Neutral — от него оценка зрителя.")]
         public string tone;
+        [Tooltip("Чем выше — тем раньше выбирается (конкретные реакции выше общих).")]
         public int priority;
         public int weight;
+        [Tooltip("Когда уместен: Drama, Trash, Family, Romance, Conflict, Reveal, Sponsor, Technical, EditingGood, EditingBad, "
+                 + "Repetition, OneActor, Combo:reveal_reaction / arc / chaos / triangle / setup_payoff, Seq:romance_conflict… Пусто — всегда.")]
         public string required;
+        [Tooltip("Смысловая группа: из одной группы в ленту попадает один комментарий.")]
         public string group;
     }
+
 
     public static class HellTubeComments
     {
@@ -93,16 +102,16 @@ namespace RealityDirector.Meta
             new HellTubeComment { id = "HTC_068", persona = "хейтер_шоу", category = "Reveal", template = "кто слил это продюсеру и почему я хочу пожать ему руку", tone = "Drama", priority = 90, weight = 7, required = "Reveal", group = "reveal" },
             new HellTubeComment { id = "HTC_069", persona = "продажный_инсайдер", category = "Reveal", template = "секрет раскрыт, доверие тоже", tone = "Drama", priority = 95, weight = 10, required = "Reveal", group = "reveal" },
             new HellTubeComment { id = "HTC_070", persona = "фанат_{actor}", category = "Reveal", template = "этот reveal реально изменил весь выпуск задним числом", tone = "Drama", priority = 85, weight = 9, required = "Reveal", group = "reveal" },
-            new HellTubeComment { id = "HTC_071", persona = "скучающий_демон", category = "Editing", template = "редкий случай когда монтажёр реально пришёл на работу", tone = "Neutral", priority = 80, weight = 10, required = "Editing", group = "editing" },
-            new HellTubeComment { id = "HTC_072", persona = "мама_антихриста", category = "Editing", template = "первый кадр задал вопрос, последний ответил — чудеса", tone = "Neutral", priority = 85, weight = 9, required = "Editing", group = "editing" },
-            new HellTubeComment { id = "HTC_073", persona = "диванный_критик", category = "Editing", template = "а почему они сначала расстались, а потом познакомились", tone = "Neutral", priority = 90, weight = 8, required = "Editing", group = "editing" },
-            new HellTubeComment { id = "HTC_074", persona = "шиппер_666", category = "Editing", template = "монтаж прыгает так, будто между сценами был пожар", tone = "Neutral", priority = 80, weight = 7, required = "Editing", group = "editing" },
-            new HellTubeComment { id = "HTC_075", persona = "монтажёр_с_опытом", category = "Editing", template = "три одинаковых конфликта подряд — смелое признание в отсутствии выбора", tone = "Neutral", priority = 85, weight = 10, required = "Editing", group = "editing" },
-            new HellTubeComment { id = "HTC_076", persona = "фанат_драмы", category = "Editing", template = "это сериал про {actor} или остальные просто массовка", tone = "Neutral", priority = 90, weight = 9, required = "Editing", group = "editing" },
-            new HellTubeComment { id = "HTC_077", persona = "я_тут_ради_мемов", category = "Editing", template = "переход {actorA} → {actorB} наконец-то имеет смысл", tone = "Neutral", priority = 80, weight = 8, required = "Editing", group = "editing" },
-            new HellTubeComment { id = "HTC_078", persona = "хейтер_шоу", category = "Editing", template = "сюжет собран из осколков, но хотя бы картинка красивая", tone = "Neutral", priority = 85, weight = 7, required = "Editing", group = "editing" },
-            new HellTubeComment { id = "HTC_079", persona = "продажный_инсайдер", category = "Editing", template = "эта последовательность реально усилила финальный момент", tone = "Neutral", priority = 90, weight = 10, required = "Editing", group = "editing" },
-            new HellTubeComment { id = "HTC_080", persona = "фанат_{actor}", category = "Editing", template = "кто поставил karaoke между reveal и дракой, я хочу поговорить", tone = "Neutral", priority = 80, weight = 9, required = "Editing", group = "editing" },
+            new HellTubeComment { id = "HTC_071", persona = "скучающий_демон", category = "Editing", template = "редкий случай когда монтажёр реально пришёл на работу", tone = "Neutral", priority = 80, weight = 10, required = "EditingGood", group = "editing" },
+            new HellTubeComment { id = "HTC_072", persona = "мама_антихриста", category = "Editing", template = "первый кадр задал вопрос, последний ответил — чудеса", tone = "Neutral", priority = 85, weight = 9, required = "EditingGood", group = "editing" },
+            new HellTubeComment { id = "HTC_073", persona = "диванный_критик", category = "Editing", template = "а почему они сначала расстались, а потом познакомились", tone = "Neutral", priority = 90, weight = 8, required = "EditingBad", group = "editing" },
+            new HellTubeComment { id = "HTC_074", persona = "шиппер_666", category = "Editing", template = "монтаж прыгает так, будто между сценами был пожар", tone = "Neutral", priority = 80, weight = 7, required = "EditingBad", group = "editing" },
+            new HellTubeComment { id = "HTC_075", persona = "монтажёр_с_опытом", category = "Editing", template = "три одинаковых конфликта подряд — смелое признание в отсутствии выбора", tone = "Neutral", priority = 85, weight = 10, required = "Repetition", group = "editing" },
+            new HellTubeComment { id = "HTC_076", persona = "фанат_драмы", category = "Editing", template = "это сериал про {actor} или остальные просто массовка", tone = "Neutral", priority = 90, weight = 9, required = "OneActor", group = "editing" },
+            new HellTubeComment { id = "HTC_077", persona = "я_тут_ради_мемов", category = "Editing", template = "переход {actorA} → {actorB} наконец-то имеет смысл", tone = "Neutral", priority = 80, weight = 8, required = "EditingGood", group = "editing" },
+            new HellTubeComment { id = "HTC_078", persona = "хейтер_шоу", category = "Editing", template = "сюжет собран из осколков, но хотя бы картинка красивая", tone = "Neutral", priority = 85, weight = 7, required = "EditingBad", group = "editing" },
+            new HellTubeComment { id = "HTC_079", persona = "продажный_инсайдер", category = "Editing", template = "эта последовательность реально усилила финальный момент", tone = "Neutral", priority = 90, weight = 10, required = "EditingGood", group = "editing" },
+            new HellTubeComment { id = "HTC_080", persona = "фанат_{actor}", category = "Editing", template = "кто поставил karaoke между reveal и дракой, я хочу поговорить", tone = "Neutral", priority = 80, weight = 9, required = "EditingBad", group = "editing" },
             new HellTubeComment { id = "HTC_081", persona = "скучающий_демон", category = "Sponsor", template = "они что, реально поставили {brand} посреди расставания 💀", tone = "Neutral", priority = 70, weight = 10, required = "Sponsor", group = "sponsor" },
             new HellTubeComment { id = "HTC_082", persona = "мама_антихриста", category = "Sponsor", template = "бренд в кадре пережил отношения, уважение", tone = "Neutral", priority = 75, weight = 9, required = "Sponsor", group = "sponsor" },
             new HellTubeComment { id = "HTC_083", persona = "диванный_критик", category = "Sponsor", template = "{brand}: когда твой продукт эмоционально стабильнее участников", tone = "Neutral", priority = 80, weight = 8, required = "Sponsor", group = "sponsor" },
@@ -123,27 +132,60 @@ namespace RealityDirector.Meta
             new HellTubeComment { id = "HTC_098", persona = "хейтер_шоу", category = "Technical", template = "технически плохо, эмоционально идеально", tone = "Neutral", priority = 60, weight = 7, required = "Technical", group = "technical" },
             new HellTubeComment { id = "HTC_099", persona = "продажный_инсайдер", category = "Technical", template = "идеальный момент, снятый буквально за секунду до катастрофы", tone = "Neutral", priority = 65, weight = 10, required = "Technical", group = "technical" },
             new HellTubeComment { id = "HTC_100", persona = "фанат_{actor}", category = "Technical", template = "камера видела больше, чем участники хотели бы", tone = "Neutral", priority = 55, weight = 9, required = "Technical", group = "technical" },
+
+            // Монтаж V2: комбо и последовательности (теги из CutAnalysis). Самые конкретные — выше приоритет.
+            new HellTubeComment { id = "HTC_101", persona = "драма_наркоман", category = "Combo", template = "Я ЗНАЛА ЧТО {actorB} ТАК ОТРЕАГИРУЕТ", tone = "Drama", priority = 97, weight = 10, required = "Combo:reveal_reaction", group = "combo_reveal" },
+            new HellTubeComment { id = "HTC_102", persona = "монтажёр_с_опытом", category = "Combo", template = "раскрыли — и сразу лицо {actorB}. вот это монтаж", tone = "Drama", priority = 96, weight = 9, required = "Combo:reveal_reaction", group = "combo_reveal" },
+            new HellTubeComment { id = "HTC_103", persona = "шиппер_666", category = "Combo", template = "реакция на секрет лучше самого секрета", tone = "Drama", priority = 95, weight = 8, required = "Combo:reveal_reaction", group = "combo_reveal" },
+            new HellTubeComment { id = "HTC_104", persona = "диванный_критик", category = "Combo", template = "начало, взрыв, последствия — у этой серии есть сюжет, я в шоке", tone = "Drama", priority = 97, weight = 10, required = "Combo:arc", group = "combo_arc" },
+            new HellTubeComment { id = "HTC_105", persona = "мама_антихриста", category = "Combo", template = "у {actorA} полный круг ада за три кадра", tone = "Drama", priority = 96, weight = 9, required = "Combo:arc", group = "combo_arc" },
+            new HellTubeComment { id = "HTC_106", persona = "продажный_инсайдер", category = "Combo", template = "вот это называется история, а не нарезка", tone = "Neutral", priority = 95, weight = 8, required = "Combo:arc", group = "combo_arc" },
+            new HellTubeComment { id = "HTC_107", persona = "я_тут_ради_мемов", category = "Combo", template = "я не понял ни одного перехода, но мне понравилось всё", tone = "Trash", priority = 96, weight = 10, required = "Combo:chaos", group = "combo_chaos" },
+            new HellTubeComment { id = "HTC_108", persona = "скучающий_демон", category = "Combo", template = "это не монтаж, это пожарная тревога в формате серии", tone = "Trash", priority = 95, weight = 9, required = "Combo:chaos", group = "combo_chaos" },
+            new HellTubeComment { id = "HTC_109", persona = "хейтер_шоу", category = "Combo", template = "три катастрофы подряд и ни одной причины. идеально", tone = "Trash", priority = 94, weight = 8, required = "Combo:chaos", group = "combo_chaos" },
+            new HellTubeComment { id = "HTC_110", persona = "шиппер_666", category = "Combo", template = "{actorA}, {actorB} и третий лишний — треугольник с острыми углами", tone = "Drama", priority = 96, weight = 10, required = "Combo:triangle", group = "combo_triangle" },
+            new HellTubeComment { id = "HTC_111", persona = "фанат_драмы", category = "Combo", template = "три человека, две эмоции, один диван", tone = "Trash", priority = 95, weight = 9, required = "Combo:triangle", group = "combo_triangle" },
+            new HellTubeComment { id = "HTC_112", persona = "монтажёр_с_опытом", category = "Combo", template = "первый кадр был ружьём, последний — выстрелом. уважаю", tone = "Neutral", priority = 95, weight = 10, required = "Combo:setup_payoff", group = "combo_setup" },
+            new HellTubeComment { id = "HTC_113", persona = "мама_антихриста", category = "Combo", template = "показали завязку — и выстрелило в финале", tone = "Drama", priority = 94, weight = 9, required = "Combo:setup_payoff", group = "combo_setup" },
+            new HellTubeComment { id = "HTC_114", persona = "фанат_{actor}", category = "Sequence", template = "после флирта терпения у {actor} хватило ровно на семь секунд", tone = "Drama", priority = 92, weight = 10, required = "Seq:romance_conflict", group = "seq_romance" },
+            new HellTubeComment { id = "HTC_115", persona = "шиппер_666", category = "Sequence", template = "романтика началась мило и закончилась как положено — скандалом", tone = "Drama", priority = 91, weight = 9, required = "Seq:romance_conflict", group = "seq_romance" },
+            new HellTubeComment { id = "HTC_116", persona = "диванный_критик", category = "Sequence", template = "сначала уколы, потом взрыв — {actorA} доводили профессионально", tone = "Trash", priority = 90, weight = 9, required = "Seq:escalation_conflict", group = "seq_escalation" },
+            new HellTubeComment { id = "HTC_117", persona = "мама_антихриста", category = "Sequence", template = "после драки показали, как им плохо. неожиданно по-человечески", tone = "Family", priority = 90, weight = 9, required = "Seq:conflict_aftermath", group = "seq_aftermath" },
+            new HellTubeComment { id = "HTC_118", persona = "хейтер_шоу", category = "Editing", template = "снова драка. и снова. я понял, спасибо", tone = "Neutral", priority = 89, weight = 9, required = "Repetition", group = "repetition" },
+            new HellTubeComment { id = "HTC_119", persona = "диванный_критик", category = "Editing", template = "{actorA} ссорится, потом поёт, потом опять ссорится. кто монтировал?", tone = "Neutral", priority = 88, weight = 9, required = "EditingBad", group = "bad_editing" },
+            new HellTubeComment { id = "HTC_120", persona = "фанат_драмы", category = "Editing", template = "это сериал про {actor} или остальные просто массовка", tone = "Neutral", priority = 88, weight = 8, required = "OneActor", group = "one_actor" },
         };
 
-        public static List<ViewerReview> Pick(IReadOnlyList<CapturedMoment> cut, SeasonTone season, int coherence, bool sponsorAired, int want)
+        public static List<ViewerReview> Pick(IReadOnlyList<CapturedMoment> cut, SeasonTone season, int coherence, bool sponsorAired, int want,
+            CutReport report = null, string brand = null)
         {
             var facts = Facts(cut, season, coherence, sponsorAired);
+            if (report != null)
+                Montage(facts, report);
+            if (!string.IsNullOrEmpty(brand))
+                facts.brand = brand;
             var eligible = new List<HellTubeComment>();
-            for (int i = 0; i < All.Length; i++)
+            var pool = Pool();
+            for (int i = 0; i < pool.Length; i++)
             {
-                if (Matches(All[i], facts))
-                    eligible.Add(All[i]);
+                if (pool[i] != null && Matches(pool[i], facts))
+                    eligible.Add(pool[i]);
             }
             eligible.Sort(Compare);
             var picked = new List<HellTubeComment>();
             var groups = new HashSet<string>();
+            var authors = new HashSet<string>();
             int generic = 0;
             for (int i = 0; i < eligible.Count && picked.Count < want; i++)
             {
                 var c = eligible[i];
                 string g = string.IsNullOrEmpty(c.group) ? c.id : c.group;
+                // Один автор — один комментарий в ленте.
+                if (authors.Contains(c.persona ?? ""))
+                    continue;
                 if (!groups.Add(g))
                     continue;
+                authors.Add(c.persona ?? "");
                 bool filler = c.category == "Generic";
                 if (filler && generic >= 2)
                     continue;
@@ -155,6 +197,23 @@ namespace RealityDirector.Meta
             for (int i = 0; i < picked.Count; i++)
                 list.Add(ToReview(picked[i], facts));
             return list;
+        }
+
+        static HellTubeComment[] _pool;
+
+        static HellTubeComment[] Pool()
+        {
+            if (_pool != null)
+                return _pool;
+            var asset = Resources.Load<HellTubeCommentPool>("Content/HellTubeComments");
+            _pool = asset != null && asset.comments != null && asset.comments.Count > 0 ? asset.comments.ToArray() : All;
+            return _pool;
+        }
+
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        static void ResetPool()
+        {
+            _pool = null;
         }
 
         static int Compare(HellTubeComment a, HellTubeComment b)
@@ -223,6 +282,62 @@ namespace RealityDirector.Meta
             return f;
         }
 
+        // Факты монтажа (CutAnalysis): комбо, последовательности, качество склейки, повторы, «шоу одного».
+        // Комментарий может сослаться только на то, что было в эфире: всё берётся из кадров ката.
+        static void Montage(CutFacts f, CutReport r)
+        {
+            int n = r.clips.Count;
+            f.tags.Remove("Editing");
+            if (n >= 2 && r.coherence >= 70)
+                f.tags.Add("EditingGood");
+            if (n >= 2 && (r.coherence <= 35 || r.backwards))
+                f.tags.Add("EditingBad");
+            if (r.repetition >= 2)
+                f.tags.Add("Repetition");
+            if (n >= 3 && r.topActorCount >= n)
+            {
+                f.tags.Add("OneActor");
+                f.actors.Remove(r.topActor);
+                f.actors.Insert(0, r.topActor);
+            }
+
+            foreach (var c in r.combos)
+                f.tags.Add("Combo:" + c.id);
+            foreach (var clip in r.clips)
+            {
+                if (clip.roles.Contains(NarrativeRole.Romance))
+                    f.tags.Add("Romance");
+                if (clip.roles.Contains(NarrativeRole.Reveal))
+                    f.tags.Add("Reveal");
+                if (clip.roles.Contains(NarrativeRole.Conflict) || clip.roles.Contains(NarrativeRole.Climax))
+                    f.tags.Add("Conflict");
+            }
+
+            for (int i = 0; i + 1 < n; i++)
+            {
+                var a = r.clips[i];
+                var b = r.clips[i + 1];
+                if (a.roles.Contains(NarrativeRole.Romance) && (b.roles.Contains(NarrativeRole.Conflict) || b.roles.Contains(NarrativeRole.Climax)))
+                    f.tags.Add("Seq:romance_conflict");
+                if (a.roles.Contains(NarrativeRole.Escalation) && (b.roles.Contains(NarrativeRole.Conflict) || b.roles.Contains(NarrativeRole.Climax)))
+                    f.tags.Add("Seq:escalation_conflict");
+                if ((a.roles.Contains(NarrativeRole.Conflict) || a.roles.Contains(NarrativeRole.Climax)) && (b.roles.Contains(NarrativeRole.Aftermath) || b.roles.Contains(NarrativeRole.Reaction)))
+                    f.tags.Add("Seq:conflict_aftermath");
+            }
+
+            // В РАСКРЫТИЕ → РЕАКЦИЯ {actorB} — тот, кто реагирует.
+            for (int i = 0; i + 1 < n; i++)
+            {
+                if (r.clips[i].roles.Contains(NarrativeRole.Reveal) && r.clips[i + 1].actors.Count > 0)
+                {
+                    string reacting = r.clips[i + 1].actors[0];
+                    f.actors.Remove(reacting);
+                    f.actors.Insert(Mathf.Min(1, f.actors.Count), reacting);
+                    break;
+                }
+            }
+        }
+
         static bool Matches(HellTubeComment c, CutFacts f)
         {
             if (string.IsNullOrEmpty(c.required) || c.required == "Generic")
@@ -243,6 +358,11 @@ namespace RealityDirector.Meta
             if (c.tone == "Drama") score = 7;
             else if (c.tone == "Trash") score = 8;
             else if (c.tone == "Family") score = 7;
+            // Оценка зрителя следует за монтажом: каша и повторы — ниже, комбо и хорошая склейка — выше.
+            if (c.required == "EditingBad" || c.required == "Repetition" || c.required == "OneActor")
+                score = 3;
+            else if (c.required == "EditingGood" || (c.required != null && c.required.StartsWith("Combo:")))
+                score = Mathf.Max(score, 8);
             if (c.priority >= 80) score = Mathf.Min(10, score + 1);
             if (c.priority <= 20) score = Mathf.Max(1, score - 1);
             string author = (c.persona ?? "зритель").Replace("{actor}", a);

@@ -19,7 +19,8 @@ namespace RealityDirector.EditorTools
             serializedObject.Update();
 
             DrawHeader(card);
-            EditorGUILayout.LabelField("◇ — данные для съёмки по GDD: квартира их пока не читает, но они сохраняются и попадут в игру вместе с ядром карт.",
+            RuntimeBox(card);
+            EditorGUILayout.LabelField("◇ — поле сохраняется, но квартира его пока не читает.",
                 EditorStyles.wordWrappedMiniLabel);
 
             // ID, Название, Статус, Категория, Теги, Tier, Редкость, HellToken
@@ -59,22 +60,24 @@ namespace RealityDirector.EditorTools
 
             Section("Описание для игрока", false);
             Field("hint", "Подсказка", "Коротко на карте: «клик по холодильнику», «сразу на весь дом». Показывается и при неверной цели.");
-            Field("description", "Описание ◇", "Полный текст карты для игрока.");
+            Field("description", "Описание", "Полный текст карты: показывается плашкой над целью при розыгрыше. Подсказка в руке собирается из эффектов и кубиков сама (блок «Что увидит игрок»).");
 
             Section("Эффекты / правила", false);
             if (card.PlayTarget == TargetType.Actor)
                 Number("rageSeconds", "Злость, сек", "Сколько секунд цель злится (0 — не злит). Злость открывает реакции «если уже злится».");
             if (card.PlayTarget == TargetType.Object)
                 Field("ignite", "Поджигает", "Объект загорается.");
-            Field("effects", "Эффекты ◇", "Эмоции, отношения, временные состояния, события, управление колодой.");
+            Field("effects", "Эффекты", "Эмоции, отношения, временные состояния, события, управление колодой. "
+                                          + "Красное «NOT RUNTIME SUPPORTED» ниже — эффект, который квартира не исполняет.");
+            EffectSupport(card);
 
-            Section("Dice effects", true);
+            Section("Dice effects", false);
             Field("diceEffects", "Броски", "Например «Злость +1d6»; Step Up растит кубик d6 → d8 рядом с алкоголем.");
             foreach (var line in CardInsight.DiceLines(card))
                 EditorGUILayout.LabelField("🎲 " + line, EditorStyles.miniLabel);
 
-            Section("Environment / Prefab", true);
-            Field("environmentPrefab", "Префаб", "Объект, который карта ставит в мир.");
+            Section("Environment / Prefab", false);
+            Field("environmentPrefab", "Префаб ◇", "Объект, который карта ставит в мир. Пока квартира рисует объект по «Id объекта».");
             Field("environmentId", "Id объекта", "Имя объекта из таблицы (AlcoholCrate). Нужен, пока префаба нет.");
             if (card.environmentPrefab != null || !string.IsNullOrEmpty(card.environmentId))
             {
@@ -83,7 +86,7 @@ namespace RealityDirector.EditorTools
                     Number("environmentSeconds", "Секунд", "");
             }
 
-            Section("Aura / влияние локации", true);
+            Section("Aura / влияние локации", false);
             var aura = serializedObject.FindProperty("aura");
             var auraOn = aura.FindPropertyRelative("enabled");
             EditorGUILayout.PropertyField(auraOn, new GUIContent("Есть аура", "Зона вокруг объекта карты меняет эмоции, кубики и поведение актёров."));
@@ -94,7 +97,7 @@ namespace RealityDirector.EditorTools
                 Sub(aura, "tags", "Теги зоны");
                 Sub(aura, "actorModifiers", "Эмоции в зоне");
                 Sub(aura, "diceModifiers", "Кубики в зоне");
-                Sub(aura, "behaviourWeights", "Веса поведения");
+                Sub(aura, "behaviourWeights", "Веса поведения ◇");
                 EditorGUI.indentLevel--;
             }
 
@@ -121,9 +124,10 @@ namespace RealityDirector.EditorTools
                 Number("price", "Магазин хаба, кр", card.sponsor ? "Спонсорские карты в хабе не продаются." : "Покупка в колоду навсегда. 0 — не продаётся.");
             Number("runPrice", "Магазин выпуска, нал", "Покупка на карте выпуска. Карта живёт только до эфира. 0 — не продаётся.");
 
-            Section("Special rules / Lifecycle", true);
+            Section("Special rules / Lifecycle", false);
             Field("lifetime", "Жизненный цикл", "Что с картой после розыгрыша.");
-            Field("specialRules", "Особые правила", "Удерживается, всегда в стартовой руке, не теряется при катастрофе...");
+            Field("specialRules", "Особые правила", "Удерживается, всегда в стартовой руке, не теряется при катастрофе... "
+                                                    + "Игра читает «Удерживается» и «Всегда в стартовой руке»; остальные — предупреждением ниже.");
 
             Section("Upgrade Tier II", true);
             Upgrade(card, "upgradeTier2", "craftBudgetTier2", CardTier.II);
@@ -383,8 +387,8 @@ namespace RealityDirector.EditorTools
                 EditorGUILayout.HelpBox("Пустой id — карта не загрузится.", MessageType.Error);
             if (card.status != CardStatus.Disabled && !CardInsight.Obtainable(card))
                 EditorGUILayout.HelpBox("Карту негде взять: не стартовая, без цены в хабе и в выпуске.", MessageType.Warning);
-            if (!card.sponsor && (card.tags == null || card.tags.Count == 0))
-                EditorGUILayout.HelpBox("Без тегов участники не отреагируют на карту.", MessageType.Warning);
+            if (!card.sponsor && (card.tags == null || card.tags.Count == 0) && (card.effects == null || card.effects.Count == 0))
+                EditorGUILayout.HelpBox("Ни эффектов, ни тегов — участники не отреагируют на карту.", MessageType.Warning);
             if (card.moods == null || card.moods.Count == 0)
                 EditorGUILayout.HelpBox("Без тона карта не двигает тон сезона, рамка будет «трэш».", MessageType.Info);
             if (card.moods != null && card.moods.Count > CardInsight.MoodLimit)
@@ -419,6 +423,62 @@ namespace RealityDirector.EditorTools
             var missing = CardSync.MissingFields(card);
             if (missing.Count > 0)
                 EditorGUILayout.HelpBox("В ассете нет новых полей (" + string.Join(", ", missing) + ") — нажмите «Синхронизировать» в мастерской карт.", MessageType.Warning);
+        }
+
+        static GUIStyle _bad;
+
+        static GUIStyle Bad
+        {
+            get
+            {
+                if (_bad == null)
+                {
+                    _bad = new GUIStyle(EditorStyles.boldLabel) { wordWrap = true };
+                    _bad.normal.textColor = new Color(1f, 0.35f, 0.3f);
+                }
+
+                return _bad;
+            }
+        }
+
+        static bool _showBrief = true;
+
+        // Что квартира исполнит из этой карты: красным — NOT RUNTIME SUPPORTED, жёлтым — поля, которые игра пока пропускает,
+        // и сразу «что увидит игрок» — та же подсказка, что в руке на съёмке.
+        static void RuntimeBox(EventDefinition card)
+        {
+            var problems = RealityDirector.Cards.CardRuntime.Problems(card);
+            var ignored = RealityDirector.Cards.CardRuntime.Ignored(card);
+            if (problems.Count > 0)
+                EditorGUILayout.HelpBox("NOT RUNTIME SUPPORTED\n• " + string.Join("\n• ", problems)
+                                        + "\nТакая карта не попадёт в случайный старт и в магазин хаба.", MessageType.Error);
+            else
+                EditorGUILayout.HelpBox("Карта исполняется в квартире целиком.", MessageType.None);
+            if (ignored.Count > 0)
+                EditorGUILayout.HelpBox("Игра пока пропускает: " + string.Join(", ", ignored) + ". Карта работает, но без этого.", MessageType.Warning);
+
+            _showBrief = EditorGUILayout.Foldout(_showBrief, "Что увидит игрок (подсказка карты в руке)", true);
+            if (!_showBrief)
+                return;
+            EditorGUI.indentLevel++;
+            foreach (var line in RealityDirector.Cards.CardBrief.What(card))
+                EditorGUILayout.LabelField("• " + line, EditorStyles.wordWrappedLabel);
+            EditorGUILayout.LabelField("Как играть: " + RealityDirector.Cards.CardBrief.How(card), EditorStyles.wordWrappedMiniLabel);
+            var conditions = RealityDirector.Cards.CardBrief.Conditions(card);
+            if (conditions.Count > 0)
+                EditorGUILayout.LabelField("Условия: " + string.Join("; ", conditions), EditorStyles.wordWrappedMiniLabel);
+            EditorGUI.indentLevel--;
+        }
+
+        static void EffectSupport(EventDefinition card)
+        {
+            if (card.effects == null)
+                return;
+            foreach (var e in card.effects)
+            {
+                if (e != null && !RealityDirector.Cards.CardRuntime.Supports(e.type))
+                    EditorGUILayout.LabelField("NOT RUNTIME SUPPORTED: «" + CardInsight.Enum(e.type) + "» — квартира этот эффект не исполняет.", Bad);
+            }
         }
 
         void Buttons(EventDefinition card)

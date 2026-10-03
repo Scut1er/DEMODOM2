@@ -90,10 +90,14 @@ namespace RealityDirector
             // Карты играют на площадке по своим данным: кубики, реквизит, действия людей.
             _stage = gameObject.AddComponent<CardStage>();
             _stage.Init(_cast, () => _bedOpen, () => _bathOpen, _ui.Toast, _shake, _fridge.transform);
+            _ui.Explain = (def, hell) => CardBrief.Tooltip(def, _cast, hell, Cost(def))
+                                         + (Blocked(def) ? "\n<color=#FF6A4A>В этой съёмке карта не играется: " + _situation.title + "</color>" : "");
             _executor.Stage = _stage;
             _capture = gameObject.AddComponent<CaptureSystem>();
             _capture.Init(_context, _cast, () => _fridge != null && _fridge.IsOnFire, _fridge.transform, _bathroom.transform, () => _bathOpen);
             _capture.Captured += OnCaptured;
+            CaptureHud.Create(_capture, _stage, () => _state != null && _state.episode != null && _state.episode.ContractActive(null));
+            _ui.UseCompactCapture();
             _capture.Missed += () =>
             {
                 _ui.Toast("Кадр не вышел.");
@@ -111,7 +115,7 @@ namespace RealityDirector
         {
             if (!GameSession.Active && !GameSession.Continue())
             {
-                GameSession.NewSeason(_content.StarterIds());
+                GameSession.NewSeason(_content.SeasonDeck(null));
                 GameSession.Commit();
             }
             if (GameSession.Embarked)
@@ -181,6 +185,9 @@ namespace RealityDirector
             {
                 bool zone = _phase == PitchPhase.Play && _armed != null && _armed.targetType == TargetType.Zone && Mouse.current != null;
                 _stage.Preview(zone ? _armed : null, zone ? MouseWorld() : Vector2.zero);
+                bool aimActor = _phase == PitchPhase.Play && _armed != null && _armed.PlayTarget == TargetType.Actor && Mouse.current != null;
+                var aimed = aimActor ? ActorNear(MouseWorld()) : null;
+                _stage.PreviewActor(aimed != null ? _armed : null, aimed);
             }
         }
 
@@ -716,6 +723,7 @@ namespace RealityDirector
             ResetSet();
             RestoreMood();
             RestoreSet();
+            _stage.ProductionSlots = _state.episode != null && _state.episode.productionSlots > 0 ? _state.episode.productionSlots : 3;
             if (ShootLesson() && !_state.played.Contains("fridge_fire") && !GameSession.Hand.Contains("fridge_fire"))
             {
                 // «Поджога» нет в колоде — урок всё равно на нём. Лишняя карта уходит наверх библиотеки.
@@ -731,6 +739,14 @@ namespace RealityDirector
 
             if (_state.episode != null)
                 _state.episode.OpenHell(GameSession.RoomNodeId);
+            ApplySituation();
+            // «Запасной микрофон» (маркетинг): первый кадр этой съёмки — повышенного качества.
+            if (_state.episode != null && _state.episode.HasFlag("TechFloor"))
+            {
+                _state.episode.flags.Remove("TechFloor");
+                CaptureSystem.BonusUntil = float.MaxValue;
+            }
+
             _hand = SelectedHand();
             _ui.ClearHand();
             _ui.BindCards(_hand, Arm);
@@ -780,6 +796,43 @@ namespace RealityDirector
             _ui.RefreshTone(_tone);
             _ui.SetSlots(_capture.Moments, _capture.Capacity);
             RefreshTasks(true);
+        }
+
+        // ---------- Постановка съёмки (SituationRoomDefinition) ----------
+
+        SituationRoomDefinition _situation;
+
+        // Один раз на узел карты: позиции, эмоции, отношения, реквизит, приватные комнаты, стартовые события, бюджет.
+        // Повторный вход в ту же комнату (выход в хаб и назад) постановку не повторяет.
+        void ApplySituation()
+        {
+            var ep = _state.episode;
+            _situation = null;
+            if (ep == null || string.IsNullOrEmpty(ep.situationId))
+                return;
+            foreach (var s in ContentLibrary.All<SituationRoomDefinition>())
+            {
+                if (s != null && s.Id == ep.situationId)
+                    _situation = s;
+            }
+
+            string node = GameSession.RoomNodeId ?? "";
+            if (_situation == null || ep.setupNode == node)
+                return;
+            ep.setupNode = node;
+            _stage.ApplySetup(_situation, _content.Find, SnapBedroom, SnapBathroom);
+            if (_situation.hellTokenBudget > 0f)
+            {
+                ep.hell = _situation.hellTokenBudget;
+                ep.hellRoomMax = _situation.hellTokenBudget;
+            }
+
+            PersistMood();
+        }
+
+        bool Blocked(EventDefinition def)
+        {
+            return _situation != null && def != null && !_situation.Allows(def.category);
         }
 
         // Съёмка — комната карты. Клипы в библиотеку выпуска, эфир и деньги после монтажа.
@@ -979,6 +1032,13 @@ namespace RealityDirector
                 Sfx.Play(Cue.Miss, 0.35f);
                 return;
             }
+            if (Blocked(def))
+            {
+                _ui.Toast("В этой съёмке («" + _situation.title + "») такие карты не играются.");
+                Sfx.Play(Cue.Miss, 0.4f);
+                return;
+            }
+
             if (_state.played.Contains(def.id))
             {
                 _ui.Toast("Уже сыграно в этой съёмке.");
@@ -1109,6 +1169,13 @@ namespace RealityDirector
                     return;
                 }
 
+                if (!_stage.SlotFree(_armed))
+                {
+                    _ui.Toast("Все Production Slots заняты (" + _stage.SlotsUsed + "/" + _stage.ProductionSlots + "): объекты стоят до конца съёмки.");
+                    Sfx.Play(Cue.Miss, 0.4f);
+                    return;
+                }
+
                 if (!Pay(_armed))
                     return;
                 EventDefinition placed = _armed;
@@ -1117,6 +1184,8 @@ namespace RealityDirector
                 Echo(placed, null, null, world);
                 _ui.MarkUsed(placed.id);
                 NoteCard(placed);
+                if (CardRuntime.HasDeckEffect(placed))
+                    DeckPlay(placed);
                 _armed = null;
                 _ui.SetArmed(null);
                 _stage.Preview(null, Vector2.zero);
@@ -1155,6 +1224,8 @@ namespace RealityDirector
                 Echo(_armed, null, npc, null);
                 _ui.MarkUsed(_armed.id);
                 NoteCard(_armed);
+                if (CardRuntime.HasDeckEffect(_armed))
+                    DeckPlay(_armed);
                 _armed = null;
                 _ui.SetArmed(null);
                 return;
@@ -1185,6 +1256,8 @@ namespace RealityDirector
             Echo(played, obj, null, null);
             _ui.MarkUsed(played.id);
             NoteCard(played);
+            if (CardRuntime.HasDeckEffect(played))
+                DeckPlay(played);
             _armed = null;
             _ui.SetArmed(null);
             if (openBath)
@@ -1340,8 +1413,8 @@ namespace RealityDirector
                 if (_capture.Moments.Count == 0)
                     return "Зажми ЛКМ и веди рамку. Пустой угол съест слот.";
                 if (_capture.IsFull)
-                    return "Слоты полные. Карты ещё можно кидать. СДАНО — на карту эпизода.";
-                return "Кадр есть. Сними ещё или жми СДАНО — вернёшься на карту эпизода.";
+                    return "Слоты полные. Карты ещё можно кидать. СНЯТО! — на карту выпуска.";
+                return "Кадр есть. Сними ещё или жми СНЯТО! — вернёшься на карту выпуска.";
             }
 
             if (Time.unscaledTime < _handUntil)
@@ -1371,7 +1444,7 @@ namespace RealityDirector
             if (_fridge.IsOnFire)
                 return "Ждут, кто заметит огонь. Ближний подойдёт первым.";
             if (_capture.IsFull)
-                return "Слоты полные. Карты ещё можно кидать. СДАНО — на карту эпизода.";
+                return "Слоты полные. Карты ещё можно кидать. СНЯТО! — на карту выпуска.";
             if (_capture.Moments.Count > 0)
                 return "Можно снять ещё или сдать комнату. Эфир будет после монтажа.";
             return "Карты внизу. C — камера, зажми ЛКМ — ролик до 3 секунд.";
@@ -1592,6 +1665,7 @@ namespace RealityDirector
             if (_state.episode != null)
                 _state.episode.tempCards.Remove(def.id);
             _state.played.Add(def.id);
+            _state.retained.Remove(def.id);
             DrawInto(def);
             if (def.sponsor && _state.episode != null)
             {
@@ -1678,7 +1752,7 @@ namespace RealityDirector
                         _frozen = false;
                         Time.timeScale = 1f;
                         _lesson = Lesson.TurnIn;
-                        BossCoach.Ensure().Order("СДАНО закрывает комнату. Клипы лягут в библиотеку, ты вернёшься на карту. Это ещё не эфир. ХАБ рядом тоже сдаёт снятое и закрывает комнату, только выкидывает в хаб, а не на карту.", _ui.DoneRect);
+                        BossCoach.Ensure().Order("СНЯТО! закрывает комнату. Клипы лягут в библиотеку, ты вернёшься на карту. Это ещё не эфир. ХАБ рядом тоже сдаёт снятое и закрывает комнату, только выкидывает в хаб, а не на карту.", _ui.DoneRect);
                     },
                     _ui.SlotRects())));
             }
@@ -1804,10 +1878,10 @@ namespace RealityDirector
             Time.timeScale = 0f;
             BossCoach.Ensure().Freeze(
                 BossMood.Stern,
-                "Рука снизу — карты этой съёмки. Цифра на карте — цена в Hell Token. Кубик качает злость и отношения, это не бросок «попал / не попал». Навёл — справа написано, кого проймёт.",
+                "Рука снизу — карты этой съёмки. Цифра на карте — цена в Hell Token. Кубик качает злость и отношения, это не бросок «попал / не попал». Наведи на карту — над ней написано, что она сделает, как играть и кого проймёт.",
                 () => BossCoach.Ensure().Freeze(
                     BossMood.Think,
-                    "Полоска слева — бюджет на карты этого выпуска. Кончился — кидать нечем. На следующий выпуск он не переносится.",
+                    "Полоска слева — Hell Token этой съёмки. Каждая карта тратит его, кончился — кидать нечем. В следующей съёмке бюджет снова полный.",
                     () => BossCoach.Ensure().Freeze(
                         BossMood.Grin,
                         "Справа драма, трэш и семья. Карты и годные кадры их качают, пустой угол режет. К концу сезона победивший тон выбирает концовку.",
@@ -1908,7 +1982,7 @@ namespace RealityDirector
             if (ep == null)
                 _ui.SetHell(EpisodeState.HellCap, EpisodeState.HellCap);
             else
-                _ui.SetHell(ep.hell, ep.hellMax > 0 ? ep.hellMax : EpisodeState.HellCap);
+                _ui.SetHell(ep.hell, ep.hellRoomMax > 0f ? ep.hellRoomMax : ep.hellMax > 0 ? ep.hellMax : EpisodeState.HellCap);
             _ui.SetFootage(_capture.Moments.Count, _capture.Capacity);
         }
 
@@ -2010,6 +2084,9 @@ namespace RealityDirector
                 string id = GameSession.Hand[i];
                 if (string.IsNullOrEmpty(id) || (played != null && id == played.id) || _state.played.Contains(id))
                     continue;
+                // «Держим в запасе»: защищённую карту эффекты сброса не трогают.
+                if (_state.retained.Contains(id))
+                    continue;
                 slots.Add(i);
             }
 
@@ -2054,11 +2131,12 @@ namespace RealityDirector
 
         bool DeckPlay(EventDefinition def)
         {
-            if (def == null || def.effects == null || def.category != "DeckManagement")
+            if (def == null || !CardRuntime.HasDeckEffect(def))
                 return false;
             var notes = new List<string>();
             int peek = 0;
             bool took = false;
+            bool kept = false;
             foreach (var e in def.effects)
             {
                 if (e == null)
@@ -2163,9 +2241,32 @@ namespace RealityDirector
                         break;
                     case CardEffectType.RetainCard:
                     case CardEffectType.ProtectCard:
-                        if (!notes.Contains("держим в запасе"))
-                            notes.Add("держим в запасе");
+                    {
+                        // Самая сильная другая карта руки: не сбросится эффектами колоды и придёт в руку следующей съёмки.
+                        if (kept)
+                            break;
+                        string best = null;
+                        float bestCost = -1f;
+                        foreach (int slot in OtherSlots(def))
+                        {
+                            var other = _content.Find(GameSession.Hand[slot]);
+                            if (other != null && other.cost > bestCost)
+                            {
+                                bestCost = other.cost;
+                                best = other.id;
+                            }
+                        }
+
+                        if (best != null)
+                        {
+                            kept = true;
+                            _state.retained.Add(best);
+                            _ui.MarkKept(best);
+                            notes.Add("«" + _content.Find(best).displayName + "» в запасе: не сбросится и останется в руке");
+                        }
+
                         break;
+                    }
                 }
             }
 
@@ -2174,6 +2275,26 @@ namespace RealityDirector
             return true;
         }
 
+
+        // Участник под курсором (по телу, не только по ногам) — для прогноза реакции при наведении карты.
+        NPCController ActorNear(Vector2 world)
+        {
+            NPCController best = null;
+            float bestD = 0.9f;
+            foreach (var npc in _cast)
+            {
+                if (npc == null || !npc.gameObject.activeInHierarchy)
+                    continue;
+                float d = Vector2.Distance(world, (Vector2)npc.transform.position + Vector2.up * 0.8f);
+                if (d < bestD)
+                {
+                    bestD = d;
+                    best = npc;
+                }
+            }
+
+            return best;
+        }
 
         static Vector2 MouseWorld()
         {

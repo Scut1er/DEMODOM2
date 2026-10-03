@@ -89,6 +89,12 @@ namespace RealityDirector.UI.Hub
             _title = Label(_panel, "Title", _titleFont, 52, Gold, TextAnchor.UpperLeft);
             UiTypography.Apply(_title, TextRole.Title);
             Place((RectTransform)_title.transform, 0f, 1f, 1f, 1f, new Vector2(470f, -150f), new Vector2(-40f, -78f));
+            // Длинные названия событий не обрезаются: шрифт ужимается под строку.
+            _title.horizontalOverflow = HorizontalWrapMode.Wrap;
+            _title.verticalOverflow = VerticalWrapMode.Truncate;
+            _title.resizeTextForBestFit = true;
+            _title.resizeTextMinSize = 26;
+            _title.resizeTextMaxSize = _title.fontSize;
             _body = Label(_panel, "Body", _font, 25, Light, TextAnchor.UpperLeft);
             UiTypography.Apply(_body, TextRole.Body);
             Place((RectTransform)_body.transform, 0f, 1f, 1f, 1f, new Vector2(470f, -440f), new Vector2(-40f, -160f));
@@ -172,7 +178,7 @@ namespace RealityDirector.UI.Hub
         {
             var button = MakeButton(_choices, "Choice", "", c.available ? ChoiceColor : ChoiceLocked, Light, 26);
             var rect = (RectTransform)button.transform;
-            rect.sizeDelta = new Vector2(0f, 98f);
+            rect.sizeDelta = new Vector2(0f, 104f);
             var plate = button.GetComponent<Image>();
             UiKit.Dress(plate, UiKit.Frame.Dialog, 1.6f);
             if (!c.available && plate != null)
@@ -181,17 +187,31 @@ namespace RealityDirector.UI.Hub
             label.text = c.label;
             label.alignment = TextAnchor.UpperLeft;
             label.color = c.available ? Light : Muted;
-            Place((RectTransform)label.transform, 0f, 0f, 1f, 1f, new Vector2(24f, 0f), new Vector2(-260f, -12f));
+            Place((RectTransform)label.transform, 0f, 0f, 1f, 1f, new Vector2(24f, 0f), new Vector2(-260f, -10f));
 
-            var sub = Label(rect, "Sub", _font, 18, Muted, TextAnchor.LowerLeft);
+            // Под названием — к чему это приведёт: при успехе и при провале (направление каждого эффекта).
+            var sub = Label(rect, "Sub", _font, 17, Muted, TextAnchor.UpperLeft);
             UiTypography.Apply(sub, TextRole.Caption);
-            Place((RectTransform)sub.transform, 0f, 0f, 1f, 1f, new Vector2(24f, 10f), new Vector2(-260f, -48f));
-            sub.text = c.available ? c.description : "Закрыто: " + c.reason + (string.IsNullOrEmpty(c.description) ? "" : "   ·   " + c.description);
+            sub.supportRichText = true;
+            Place((RectTransform)sub.transform, 0f, 0f, 1f, 1f, new Vector2(24f, 6f), new Vector2(-260f, -44f));
+            var lines = new List<string>();
+            if (!c.available)
+                lines.Add("Закрыто: " + c.reason);
+            if (!string.IsNullOrEmpty(c.description))
+                lines.Add(c.description);
+            if (c.available || !string.IsNullOrEmpty(c.preview))
+                lines.Add("<color=#7FE08A>Если получится:</color> " + (string.IsNullOrEmpty(c.preview) ? "без видимых последствий" : c.preview));
+            if (c.chance < 100)
+                lines.Add("<color=#FF7A5C>Если нет:</color> " + (string.IsNullOrEmpty(c.failPreview) ? "ничего не изменится" : c.failPreview));
+            sub.text = string.Join("\n", lines);
 
+            // Справа — цена и риск словами: надёжно / риск / большой риск.
             var side = Label(rect, "Side", _font, 20, c.available ? Gold : Muted, TextAnchor.MiddleRight);
             UiTypography.Apply(side, TextRole.Label);
+            side.supportRichText = true;
             Place((RectTransform)side.transform, 1f, 0f, 1f, 1f, new Vector2(-250f, 0f), new Vector2(-24f, 0f));
-            side.text = Join(c.costLabel, c.chanceLabel);
+            string risk = c.chance >= 100 ? "" : c.chance >= 80 ? "<color=#7FE08A>надёжно</color>" : c.chance >= 50 ? "<color=#F2C35C>риск</color>" : "<color=#FF7A5C>большой риск</color>";
+            side.text = Join(c.costLabel, c.chanceLabel) + (risk.Length > 0 ? "\n" + risk : "");
 
             button.interactable = c.available;
             int index = c.index;
@@ -211,10 +231,10 @@ namespace RealityDirector.UI.Hub
             _choices.gameObject.SetActive(false);
             _result.gameObject.SetActive(true);
             _stamp.gameObject.SetActive(showStamp);
-            _stamp.text = outcome.success ? "ПОЛУЧИЛОСЬ" : "ПРОВАЛ";
+            _stamp.text = outcome.success ? "ПОЛУЧИЛОСЬ" : "НЕ ПОЛУЧИЛОСЬ";
             _stamp.color = outcome.success ? Good : Bad;
             _resultText.text = outcome.text;
-            _summary.text = outcome.summary;
+            _summary.text = string.IsNullOrEmpty(outcome.summary) ? "" : "ЧТО ИЗМЕНИЛОСЬ:   " + outcome.summary;
             StopAllCoroutines();
             StartCoroutine(Punch(_result));
         }

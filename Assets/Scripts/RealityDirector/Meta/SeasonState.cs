@@ -37,6 +37,11 @@ namespace RealityDirector.Meta
         // Долгие флаги сезона (условия и эффекты контента).
         public readonly List<string> flags = new List<string>();
         public readonly List<string> castPick = new List<string>();
+        // Кандидаты в каст текущего выпуска (случайные из пула актёров) и для какого выпуска их выбрали.
+        public readonly List<string> castCandidates = new List<string>();
+        public int candidatesEpisode = -1;
+        // Карты «держим в запасе» (Retain / Protect): не сбрасываются эффектами колоды и приходят в руку следующей съёмки первыми.
+        public readonly List<string> retained = new List<string>();
         public int sponsorReputation = 25;
         public bool wantsTutorial;
         public int tutorialBeat;
@@ -70,6 +75,9 @@ namespace RealityDirector.Meta
             seasonLength = 0;
             flags.Clear();
             castPick.Clear();
+            castCandidates.Clear();
+            candidatesEpisode = -1;
+            retained.Clear();
             sponsorReputation = 25;
             wantsTutorial = false;
             tutorialBeat = 0;

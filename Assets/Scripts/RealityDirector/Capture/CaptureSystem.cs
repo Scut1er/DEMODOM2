@@ -39,6 +39,64 @@ namespace RealityDirector.Capture
         readonly List<ClipHit> _take = new List<ClipHit>();
 
         public IReadOnlyList<CapturedMoment> Moments => _moments;
+        // Рамка на площадке: центр и видна ли (для плашки «В кадре» у её края).
+        public Vector2 FrameCenter => _reticle != null ? (Vector2)_reticle.position : Vector2.zero;
+        public bool FrameVisible => _reticle != null && _reticle.gameObject.activeSelf;
+
+        // «Нужный момент» (карта NextCaptureBonus): запись, начатая до этого времени, получает бонус качества.
+        public static float BonusUntil;
+#if UNITY_EDITOR
+        public static Vector2? DebugAim;
+#endif
+
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        static void ResetStatics()
+        {
+            BonusUntil = 0f;
+#if UNITY_EDITOR
+            DebugAim = null;
+#endif
+        }
+        public static bool BonusActive => Time.unscaledTime <= BonusUntil;
+        bool _bonus;
+
+        // Что сейчас в рамке — по тем же правилам, по которым кадр попадёт в футаж.
+        public class FrameScan
+        {
+            public readonly List<NPCController> actors = new List<NPCController>();
+            public readonly List<string> tags = new List<string>();
+            public bool fire;
+            public Vector2 center;
+        }
+
+        public bool Scan(FrameScan scan)
+        {
+            scan.actors.Clear();
+            scan.tags.Clear();
+            scan.fire = false;
+            if (_reticle == null || _cast == null || !Mode)
+                return false;
+            Vector2 origin = _reticle.position;
+            scan.center = origin;
+            for (int i = 0; i < _cast.Count; i++)
+            {
+                if (_cast[i] == null)
+                    continue;
+                Vector2 p = _cast[i].transform.position;
+                if (Mathf.Abs(p.x - origin.x) <= HalfX && Mathf.Abs(p.y - origin.y) <= HalfY)
+                    scan.actors.Add(_cast[i]);
+            }
+
+            bool fridgeIn = InFrame(origin, _fridge) && _sceneOnFire != null && _sceneOnFire();
+            var cues = new List<string>();
+            if (scan.actors.Count > 0)
+                scan.tags.AddRange(FramedTags(origin, scan.actors, cues));
+            if (!fridgeIn)
+                scan.tags.Remove(MomentTags.Fire);
+            AddLiveTags(scan.tags, scan.actors, fridgeIn, cues);
+            scan.fire = fridgeIn;
+            return true;
+        }
         public bool IsFull => _moments.Count >= Capacity;
         public bool Recording => _recording;
         public float Recorded => _recording ? Mathf.Min(MaxClip, Time.unscaledTime - _recordStart) : 0f;
@@ -93,6 +151,7 @@ namespace RealityDirector.Capture
                 return false;
             _recording = true;
             _recordStart = Time.unscaledTime;
+            _bonus = BonusActive;
             _nextSample = SampleStep;
             _take.Clear();
             TakeSample();
@@ -114,6 +173,13 @@ namespace RealityDirector.Capture
 
             var moment = Fold(_take, Time.unscaledTime - _recordStart);
             _take.Clear();
+            if (_bonus)
+            {
+                // Качество кадра выше: монтаж и эфир читают это из cues футажа.
+                CapturedMoment.AddCue(moment.cues, "Quality", "+1");
+                BonusUntil = 0f;
+                _bonus = false;
+            }
             _moments.Add(moment);
             Captured?.Invoke(moment);
         }
@@ -593,6 +659,14 @@ namespace RealityDirector.Capture
                 return;
 
             Vector2 screen = Mouse.current.position.ReadValue();
+#if UNITY_EDITOR
+            // Автотесты из редактора (UiTour): навести рамку на точку мира, не трогая мышь.
+            if (DebugAim.HasValue)
+            {
+                _reticle.position = DebugAim.Value;
+                return;
+            }
+#endif
             float dist = Mathf.Abs(Camera.main.transform.position.z);
             Vector3 world = Camera.main.ScreenToWorldPoint(new Vector3(screen.x, screen.y, dist));
             world.z = 0f;

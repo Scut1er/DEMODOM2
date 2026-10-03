@@ -12,6 +12,10 @@ namespace RealityDirector.Meta
         public Sprite portrait;
         public string secretHidden;
         public string secretKnown;
+        // Видимая черта (по ней — описание и склонности на карточке кандидата).
+        public NPC.TraitId trait;
+        public string traitText;
+        public string[] hints;
     }
 
     // Участники для хаба: из ассетов Resources/Content/Characters (ActorDefinition).
@@ -23,6 +27,50 @@ namespace RealityDirector.Meta
         public static int Seats(int castLevel)
         {
             return Mathf.Clamp(castLevel + 1, 2, MaxSeats);
+        }
+
+        // Кандидаты выпуска: случайные N из доступных. Выбираются один раз на выпуск и живут в сейве
+        // (SeasonState.castCandidates) — возврат на экран каста и перезагрузка их не меняют.
+        public static CastMember[] Candidates(CastMember[] all, SeasonState state, int count)
+        {
+            if (all == null || state == null)
+                return all;
+            bool valid = state.candidatesEpisode == state.episodeIndex && state.castCandidates.Count > 0;
+            if (valid)
+            {
+                foreach (var id in state.castCandidates)
+                {
+                    if (System.Array.FindIndex(all, m => m.id == id) < 0)
+                        valid = false;
+                }
+            }
+
+            if (!valid)
+            {
+                var ids = new List<string>();
+                foreach (var m in all)
+                    ids.Add(m.id);
+                for (int i = ids.Count - 1; i > 0; i--)
+                {
+                    int j = Random.Range(0, i + 1);
+                    (ids[i], ids[j]) = (ids[j], ids[i]);
+                }
+
+                state.castCandidates.Clear();
+                for (int i = 0; i < ids.Count && i < Mathf.Max(1, count); i++)
+                    state.castCandidates.Add(ids[i]);
+                state.candidatesEpisode = state.episodeIndex;
+            }
+
+            var list = new List<CastMember>();
+            foreach (var id in state.castCandidates)
+            {
+                int at = System.Array.FindIndex(all, m => m.id == id);
+                if (at >= 0)
+                    list.Add(all[at]);
+            }
+
+            return list.ToArray();
         }
 
         public static CastMember[] All()
@@ -79,7 +127,8 @@ namespace RealityDirector.Meta
                 portrait = def.portrait != null ? def.portrait
                     : GameArt.HeadByPrefix(def.artPrefix, Face.Neutral) ?? GameArt.Head(def.Id, Face.Neutral) ?? IllustratedArt.PersonKind,
                 secretHidden = string.IsNullOrEmpty(def.hiddenTraitLabel) ? "" : def.hiddenTraitLabel,
-                secretKnown = SecretName(def.hiddenTrait)
+                secretKnown = SecretName(def.hiddenTrait),
+                trait = def.mainTrait
             };
         }
 
@@ -105,7 +154,8 @@ namespace RealityDirector.Meta
                     traits = new[] { "агрессивный" },
                     portrait = GameArt.Head("npc_zloi", Face.Happy) ?? IllustratedArt.PersonAngry,
                     secretHidden = "скрытая черта: ???",
-                    secretKnown = "пранкер"
+                    secretKnown = "пранкер",
+                    trait = NPC.TraitId.Aggressive
                 },
                 new CastMember
                 {
@@ -114,7 +164,8 @@ namespace RealityDirector.Meta
                     traits = new[] { "паникер" },
                     portrait = GameArt.Head("npc_dobryak", Face.Happy) ?? IllustratedArt.PersonKind,
                     secretHidden = "скрытая черта: ???",
-                    secretKnown = "клептоман"
+                    secretKnown = "клептоман",
+                    trait = NPC.TraitId.Panicker
                 },
                 new CastMember
                 {
@@ -123,7 +174,8 @@ namespace RealityDirector.Meta
                     traits = new[] { "ревнивая" },
                     portrait = GameArt.Head("npc_kira", Face.Neutral) ?? IllustratedArt.PersonAngry,
                     secretHidden = "",
-                    secretKnown = ""
+                    secretKnown = "",
+                    trait = NPC.TraitId.Jealous
                 },
                 new CastMember
                 {
@@ -132,7 +184,8 @@ namespace RealityDirector.Meta
                     traits = new[] { "тщеславный" },
                     portrait = GameArt.Head("npc_max", Face.Neutral) ?? IllustratedArt.PersonKind,
                     secretHidden = "скрытая черта: ???",
-                    secretKnown = "поёт"
+                    secretKnown = "поёт",
+                    trait = NPC.TraitId.Vain
                 },
                 new CastMember
                 {
@@ -141,7 +194,8 @@ namespace RealityDirector.Meta
                     traits = new[] { "застенчивая" },
                     portrait = IllustratedArt.PersonKind,
                     secretHidden = "",
-                    secretKnown = ""
+                    secretKnown = "",
+                    trait = NPC.TraitId.Shy
                 }
             };
         }

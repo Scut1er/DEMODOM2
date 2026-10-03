@@ -12,7 +12,7 @@ namespace RealityDirector.EditorTools
     public class CardWorkshop : EditorWindow
     {
         static readonly string[] Modes = { "Карточка", "Таблица", "Обзор" };
-        static readonly string[] Filters = { "Все", "Стартовые", "Магазин хаба (кр)", "Магазин выпуска (нал)", "Спонсоры", "Негде взять", "Драма", "Трэш", "Семья", "Черновики", "На тесте", "Готовые", "Выключенные" };
+        static readonly string[] Filters = { "Все", "Стартовые", "Магазин хаба (кр)", "Магазин выпуска (нал)", "Спонсоры", "Негде взять", "Драма", "Трэш", "Семья", "Черновики", "На тесте", "Готовые", "Выключенные", "NOT RUNTIME SUPPORTED" };
 
         int _mode;
         int _filter;
@@ -163,6 +163,7 @@ namespace RealityDirector.EditorTools
                 case 10: list = list.Where(c => c.status == CardStatus.Testing); break;
                 case 11: list = list.Where(c => c.status == CardStatus.Ready); break;
                 case 12: list = list.Where(c => c.status == CardStatus.Disabled); break;
+                case 13: list = list.Where(c => !RealityDirector.Cards.CardRuntime.Playable(c)); break;
             }
 
             if (!string.IsNullOrEmpty(_search))
@@ -229,7 +230,11 @@ namespace RealityDirector.EditorTools
             for (int i = 0; card.moods != null && i < card.moods.Count && i < CardInsight.MoodLimit; i++)
                 EditorGUI.DrawRect(new Rect(rect.x + 12, rect.y + 6 + i * 13, 4, 11), MoodStyle.ColorOf(card.moods[i]));
             GUI.Label(new Rect(rect.x + 22, rect.y + 3, rect.width - 90, 18), card.displayName, EditorStyles.boldLabel);
-            GUI.Label(new Rect(rect.x + 22, rect.y + 19, rect.width - 90, 16), card.id + "  ·  " + CardInsight.TargetNames[(int)card.targetType], EditorStyles.miniLabel);
+            bool works = RealityDirector.Cards.CardRuntime.Playable(card);
+            var sub = new GUIStyle(EditorStyles.miniLabel);
+            if (!works)
+                sub.normal.textColor = new Color(1f, 0.4f, 0.35f);
+            GUI.Label(new Rect(rect.x + 22, rect.y + 19, rect.width - 90, 16), works ? card.id + "  ·  " + CardInsight.TargetNames[(int)card.targetType] : "NOT RUNTIME SUPPORTED", sub);
             var badge = new GUIStyle(EditorStyles.miniBoldLabel) { alignment = TextAnchor.MiddleRight };
             if (!CardInsight.Obtainable(card))
                 badge.normal.textColor = new Color(1f, 0.45f, 0.4f);
@@ -407,6 +412,7 @@ namespace RealityDirector.EditorTools
                 Row("Магазин выпуска (нал)", all.Count(c => c.runPrice > 0), Avg(all.Where(c => c.runPrice > 0).Select(c => c.runPrice), "нал"));
                 Row("Спонсоры", all.Count(c => c.sponsor), Avg(all.Where(c => c.sponsor).Select(c => c.sponsorPay), "кр платят"));
                 Row("Негде взять", all.Count(c => !CardInsight.Obtainable(c)), "не попадут к игроку");
+                Row("NOT RUNTIME SUPPORTED", all.Count(c => !RealityDirector.Cards.CardRuntime.Playable(c)), "квартира исполнит не всё — в старт и магазин хаба не попадут");
 
                 Header("Тон (по первым двум меткам)");
                 foreach (ShowMood mood in System.Enum.GetValues(typeof(ShowMood)))
@@ -453,7 +459,8 @@ namespace RealityDirector.EditorTools
                 foreach (var c in all)
                 {
                     if (c.status != CardStatus.Disabled && !CardInsight.Obtainable(c)) { Problem(c, "негде взять"); problems++; }
-                    if (!c.sponsor && (c.tags == null || c.tags.Count == 0)) { Problem(c, "без тегов — участники не реагируют"); problems++; }
+                    if (!c.sponsor && (c.tags == null || c.tags.Count == 0) && (c.effects == null || c.effects.Count == 0)) { Problem(c, "ни эффектов, ни тегов — участники не реагируют"); problems++; }
+                    foreach (var why in RealityDirector.Cards.CardRuntime.Problems(c)) { Problem(c, "NOT RUNTIME SUPPORTED: " + why); problems++; }
                     if (c.sponsor && c.sponsorPay <= 0) { Problem(c, "спонсор без оплаты"); problems++; }
                     if (CardSync.MissingFields(c).Count > 0) { Problem(c, "нет новых полей — синхронизировать"); problems++; }
                 }

@@ -90,6 +90,34 @@ namespace RealityDirector.EditorTools
             UnityEditor.EditorApplication.update += tick;
         }
 
+        // Жать кнопку раз в interval секунд, пока она есть (до times раз) — пролистать реплики босса.
+        public static void ClickRepeat(string key, int times, float interval)
+        {
+            int done = 0;
+            double next = UnityEditor.EditorApplication.timeSinceStartup + interval;
+            UnityEditor.EditorApplication.CallbackFunction tick = null;
+            tick = () =>
+            {
+                if (!Application.isPlaying || done >= times)
+                {
+                    UnityEditor.EditorApplication.update -= tick;
+                    return;
+                }
+
+                if (UnityEditor.EditorApplication.timeSinceStartup < next)
+                    return;
+                next = UnityEditor.EditorApplication.timeSinceStartup + interval;
+                if (Click(key).StartsWith("not found"))
+                {
+                    UnityEditor.EditorApplication.update -= tick;
+                    return;
+                }
+
+                done++;
+            };
+            UnityEditor.EditorApplication.update += tick;
+        }
+
         // Клик по кнопке, чей путь заканчивается на key или чья подпись содержит key.
         public static string Click(string key)
         {
@@ -105,6 +133,24 @@ namespace RealityDirector.EditorTools
                 }
             }
             return "not found: " + key;
+        }
+
+        // Навести мышь на объект UI (подсказки карт): pointerEnter по имени объекта; exit — увести.
+        public static string Hover(string name, bool exit = false)
+        {
+            foreach (var rect in Object.FindObjectsByType<RectTransform>())
+            {
+                if (!rect.gameObject.activeInHierarchy || rect.name != name)
+                    continue;
+                var data = new UnityEngine.EventSystems.PointerEventData(UnityEngine.EventSystems.EventSystem.current);
+                if (exit)
+                    UnityEngine.EventSystems.ExecuteEvents.Execute(rect.gameObject, data, UnityEngine.EventSystems.ExecuteEvents.pointerExitHandler);
+                else
+                    UnityEngine.EventSystems.ExecuteEvents.Execute(rect.gameObject, data, UnityEngine.EventSystems.ExecuteEvents.pointerEnterHandler);
+                return "hovered " + PathOf(rect);
+            }
+
+            return "not found: " + name;
         }
 
         // Дерево UI с якорями, размерами, спрайтами и текстами — в файл.

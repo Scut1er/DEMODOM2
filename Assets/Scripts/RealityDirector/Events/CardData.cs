@@ -331,5 +331,53 @@ namespace RealityDirector.Events
         {
             return (DieSize)Mathf.Clamp((int)die + steps, 0, (int)DieSize.D12);
         }
+
+        // Сам бросок — без картинки: d4 → d6 → d8 → d10 → d12 по ступеням, преимущество/помеха, прибавка.
+        // Как его показать (кубик над головой), решает сцена.
+        public static DieRoll Roll(DiceEffect d, int steps)
+        {
+            var die = Step(d.die, steps);
+            int faces = Faces(die);
+            int count = Mathf.Max(1, d.count);
+            int value = Sum(count, faces);
+            if (d.roll == DiceRoll.Advantage)
+                value = Mathf.Max(value, Sum(count, faces));
+            else if (d.roll == DiceRoll.Disadvantage)
+                value = Mathf.Min(value, Sum(count, faces));
+            value = Mathf.Max(0, value + d.bonus);
+            return new DieRoll { die = die, value = value, steps = (int)die - (int)d.die };
+        }
+
+        static int Sum(int count, int faces)
+        {
+            int value = 0;
+            for (int i = 0; i < count; i++)
+                value += UnityEngine.Random.Range(1, faces + 1);
+            return value;
+        }
+
+        // «1d6», «2d8+1» — как кубик записан в таблице (с учётом ступеней).
+        public static string Notation(DiceEffect d, int steps = 0)
+        {
+            string text = Mathf.Max(1, d.count) + "d" + Faces(Step(d.die, steps));
+            if (d.bonus > 0)
+                text += "+" + d.bonus;
+            else if (d.bonus < 0)
+                text += d.bonus;
+            return text;
+        }
+
+        // Среднее значение броска — для прогноза.
+        public static float Average(DiceEffect d, int steps = 0)
+        {
+            return Mathf.Max(1, d.count) * (Faces(Step(d.die, steps)) + 1) * 0.5f + d.bonus;
+        }
+    }
+
+    public struct DieRoll
+    {
+        public DieSize die;
+        public int value;
+        public int steps;
     }
 }
