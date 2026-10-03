@@ -24,6 +24,8 @@ namespace RealityDirector.Meta
         public static bool ReturnToMap;
         // Игрок сам вышел со съёмки («Хаб»). Комната засчитана, как по «Снято!», но хаб не прыгает обратно на карту.
         public static bool ExitToHub;
+        // Пауза съёмки → «В главное меню»: хаб открывает меню, комнату не закрывает (съёмка осталась открытой в сейве).
+        public static bool ToMenu;
 
         public static bool Active => State != null;
         public static bool InEpisode => Active && State.episode != null;
@@ -43,6 +45,7 @@ namespace RealityDirector.Meta
             RoomNodeId = null;
             ReturnToMap = false;
             ExitToHub = false;
+            ToMenu = false;
             Hand.Clear();
             FootageReel.ReleaseAll();
             Application.quitting -= Save;

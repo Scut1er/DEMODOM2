@@ -12,18 +12,18 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: f5eb2a5822915fc4da80d4de86239c33, type: 3}
   m_Name: EpisodeMap_First
   m_EditorClassIdentifier: Assembly-CSharp::RealityDirector.Meta.EpisodeMapConfig
-  floors: 5
-  lanes: 3
-  paths: 3
+  floors: 3
+  lanes: 1
+  paths: 1
   seed: 0
   situationWeight: 60
   eventWeight: 25
   marketingWeight: 15
   minSpecialFloor: 1
-  guaranteedMarketingFloor: 2
+  guaranteedMarketingFloor: -1
   guaranteedEventFloor: 1
   noRepeatSpecial: 1
-  situationBeforeMontage: 1
+  situationBeforeMontage: 0
   opening: {fileID: 11400000, guid: 2a41c3df406acd14c8fbf477d4a5e54e, type: 2}
   montage: {fileID: 11400000, guid: 87a3fb525de005e4688aad84e3d4bb6c, type: 2}
   pool: []

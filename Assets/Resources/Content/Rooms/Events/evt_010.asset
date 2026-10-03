@@ -43,10 +43,18 @@ MonoBehaviour:
     costMoney: 0
     costCash: 0
     chance: 70
-    effects: []
+    effects:
+    - type: 9
+      key: confidence
+      value: 10
+      mood: 0
     resultText: 
     resultTags: []
-    failEffects: []
+    failEffects:
+    - type: 9
+      key: hostility
+      value: 10
+      mood: 0
     failText: 
     failTags: []
     designNote: "\u0423\u0441\u043F\u0435\u0445: Gift prop next Situation; Confidence +2\n\u041F\u0440\u043E\u0432\u0430\u043B: Jealousy event \u0443 \u0434\u0440\u0443\u0433\u0438\u0445"

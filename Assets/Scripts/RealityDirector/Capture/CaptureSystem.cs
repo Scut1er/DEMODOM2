@@ -45,6 +45,8 @@ namespace RealityDirector.Capture
 
         // «Нужный момент» (карта NextCaptureBonus): запись, начатая до этого времени, получает бонус качества.
         public static float BonusUntil;
+        // Плохой звук (события «снимать на запасной / как есть»): следующий снятый кадр — качеством ниже.
+        public static bool PenaltyNext;
 #if UNITY_EDITOR
         public static Vector2? DebugAim;
 #endif
@@ -53,12 +55,14 @@ namespace RealityDirector.Capture
         static void ResetStatics()
         {
             BonusUntil = 0f;
+            PenaltyNext = false;
 #if UNITY_EDITOR
             DebugAim = null;
 #endif
         }
         public static bool BonusActive => Time.unscaledTime <= BonusUntil;
         bool _bonus;
+        bool _penalty;
 
         // Что сейчас в рамке — по тем же правилам, по которым кадр попадёт в футаж.
         public class FrameScan
@@ -152,6 +156,7 @@ namespace RealityDirector.Capture
             _recording = true;
             _recordStart = Time.unscaledTime;
             _bonus = BonusActive;
+            _penalty = PenaltyNext;
             _nextSample = SampleStep;
             _take.Clear();
             TakeSample();
@@ -179,6 +184,14 @@ namespace RealityDirector.Capture
                 CapturedMoment.AddCue(moment.cues, "Quality", "+1");
                 BonusUntil = 0f;
                 _bonus = false;
+            }
+
+            if (_penalty)
+            {
+                // Качество ниже: монтаж читает «Quality|-1» так же, как бонус.
+                CapturedMoment.AddCue(moment.cues, "Quality", "-1");
+                PenaltyNext = false;
+                _penalty = false;
             }
             _moments.Add(moment);
             Captured?.Invoke(moment);

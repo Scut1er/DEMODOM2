@@ -142,6 +142,10 @@ namespace RealityDirector.Meta
         public List<string> narrativeTags = new List<string>();
         public List<Modifier> nextRoomModifiers = new List<Modifier>();
         public List<Modifier> broadcastModifiers = new List<Modifier>();
+        // Ключи модификаторов эфира (эффект BroadcastModifier, читает эфир в HubFlow).
+        public const string AirRating = "rating";          // оценка эфира, в десятых балла
+        public const string AirPay = "pay";                // кр к выплате за эфир
+        public const string AirSponsorPay = "sponsorPay";  // кр к выплате спонсора, если реклама вышла в эфир
         public List<ActorRuntime> actors = new List<ActorRuntime>();
 
         public void OpenHell(string roomId)
@@ -184,6 +188,8 @@ namespace RealityDirector.Meta
                 actors = new List<ActorRuntime>();
             if (nextRoomModifiers == null)
                 nextRoomModifiers = new List<Modifier>();
+            if (broadcastModifiers == null)
+                broadcastModifiers = new List<Modifier>();
             for (int i = 0; i < contracts.Count; i++)
             {
                 if (contracts[i].matchingFootageIds == null)
@@ -264,9 +270,11 @@ namespace RealityDirector.Meta
         public static int Sum(List<Modifier> list, string key)
         {
             int total = 0;
+            if (list == null)
+                return 0;
             for (int i = 0; i < list.Count; i++)
             {
-                if (list[i].key == key)
+                if (list[i] != null && list[i].key == key)
                     total += list[i].value;
             }
 

@@ -330,17 +330,17 @@ namespace RealityDirector.UI.Hub
             var title = UiKit.Txt("Title", rt, "ПЕРВЫЙ ВЫПУСК", 34, UiKit.Gold, TextAnchor.UpperLeft, UiKit.Body);
             title.fontStyle = FontStyle.Bold;
             UiKit.Place(title.rectTransform, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(40f, -30f), new Vector2(900f, 46f));
-            var lead = UiKit.Txt("Lead", rt, "Студия пока закрыта — сначала сними выпуск. Вот как он пройдёт:", 20, UiKit.Muted, TextAnchor.UpperLeft, UiKit.Body);
+            var lead = UiKit.Txt("Lead", rt, "Студия пока закрыта. Каст первого выпуска собран за тебя, а сам выпуск — три комнаты:", 20, UiKit.Muted, TextAnchor.UpperLeft, UiKit.Body);
             UiKit.Place(lead.rectTransform, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(40f, -80f), new Vector2(1050f, 30f));
 
-            string[] heads = { "КАСТ", "КАРТА ВЫПУСКА", "МОНТАЖ И ЭФИР" };
+            string[] heads = { "СЪЁМКА", "СОБЫТИЕ", "МОНТАЖ И ЭФИР" };
             string[] bodies =
             {
-                "Из 5 кандидатов выбери 2. Видна их черта и как они реагируют. Скрытая черта всплывёт на съёмке.",
-                "Иди по комнатам: съёмки, событие, маркетинг. На съёмке карты меняют людей — снимай, что из этого вышло.",
-                "Собери 3 лучших кадра в историю. Зрители HellTube оценят — и платят за это."
+                "Карты меняют поведение участников. Камерой снимай, что из этого вышло, — это твои кадры.",
+                "Случай за кадром. Камеры нет: ты выбираешь, как поступить, и получаешь последствия.",
+                "Собери снятое в историю: до 3 кадров, порядок важен. Зрители HellTube оценят и заплатят."
             };
-            string[] icons = { "icon_heart", "icon_camera", "icon_clapperboard" };
+            string[] icons = { "icon_camera", "icon_drama", "icon_clapperboard" };
             for (int i = 0; i < 3; i++)
             {
                 var step = UiKit.Img("Step" + i, rt, null, Color.white);

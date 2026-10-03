@@ -148,6 +148,10 @@ namespace RealityDirector.Meta
                     }
 
                     break;
+                case EffectType.SponsorReputation:
+                    if (s != null)
+                        s.sponsorReputation = Mathf.Clamp(s.sponsorReputation + fx.value, 0, 100);
+                    break;
             }
         }
 
@@ -198,9 +202,22 @@ namespace RealityDirector.Meta
                         if (fx.value != 0)
                             parts.Add(ModifierName(fx.key) + (fx.value > 0 ? " ↑" : " ↓") + " в след. съёмке");
                         break;
-                    case EffectType.SetEpisodeFlag:
-                    case EffectType.SetSeasonFlag:
                     case EffectType.BroadcastModifier:
+                        if (fx.value != 0)
+                            parts.Add(AirText(fx.key, fx.value, true));
+                        break;
+                    case EffectType.SponsorReputation:
+                        if (fx.value != 0)
+                            parts.Add("репутация спонсоров" + (fx.value > 0 ? " ↑" : " ↓"));
+                        break;
+                    case EffectType.SetEpisodeFlag:
+                        string flag = FlagText(fx.key);
+                        if (flag != null)
+                            parts.Add(flag);
+                        else
+                            later = true;
+                        break;
+                    case EffectType.SetSeasonFlag:
                         later = true;
                         break;
                 }
@@ -219,7 +236,41 @@ namespace RealityDirector.Meta
                 case "anger": return "злость каста";
                 case "sadness": return "грусть каста";
                 case "hostility": return "вражда в касте";
+                case "attraction": return "влечение в касте";
+                case "confidence": return "уверенность каста";
                 default: return key;
+            }
+        }
+
+        // Флаги выпуска, которые игра исполняет сама (квартира, эфир): игроку они видны словами, а не «последствия позже».
+        public static string FlagText(string key)
+        {
+            switch (key)
+            {
+                case "TechPenalty": return "первый кадр следующей съёмки хуже";
+                case "CaptureSlotMinus": return "−1 слот футажа в следующей съёмке";
+                case "ExtraCaptureSlot": return "+1 слот футажа в следующей съёмке";
+                case "RevealDiscount": return "следующее разоблачение дешевле на $1";
+                case "ProvocationDiscount": return "провокации дешевле на $0.25 в следующей съёмке";
+                default: return null;
+            }
+        }
+
+        // Модификатор эфира словами: оценка — в десятых балла, выплаты — в кр.
+        static string AirText(string key, int value, bool brief)
+        {
+            string sign = value > 0 ? "+" : "−";
+            int abs = Mathf.Abs(value);
+            switch (key)
+            {
+                case EpisodeState.AirRating:
+                    return brief ? "оценка эфира" + (value > 0 ? " ↑" : " ↓") : "оценка эфира " + sign + (abs / 10f).ToString("0.0");
+                case EpisodeState.AirPay:
+                    return sign + abs + " кр за эфир";
+                case EpisodeState.AirSponsorPay:
+                    return sign + abs + " кр к выплате спонсора" + (brief ? "" : " (если реклама выйдет в эфир)");
+                default:
+                    return key + " " + sign + abs;
             }
         }
 
@@ -252,6 +303,19 @@ namespace RealityDirector.Meta
                     case EffectType.NextRoomModifier:
                         if (fx.value != 0)
                             parts.Add(ModifierName(fx.key) + (fx.value > 0 ? " +" : " ") + fx.value + " в следующей съёмке");
+                        break;
+                    case EffectType.BroadcastModifier:
+                        if (fx.value != 0)
+                            parts.Add(AirText(fx.key, fx.value, false));
+                        break;
+                    case EffectType.SponsorReputation:
+                        if (fx.value != 0)
+                            parts.Add("репутация спонсоров " + (fx.value > 0 ? "+" : "") + fx.value);
+                        break;
+                    case EffectType.SetEpisodeFlag:
+                        string flag = FlagText(fx.key);
+                        if (flag != null)
+                            parts.Add(flag);
                         break;
                     case EffectType.AddTempCard:
                         parts.Add("карта «" + card + "» до эфира");
