@@ -142,6 +142,14 @@ namespace RealityDirector.EditorTools
         public static List<string> Play(EventDefinition c)
         {
             var lines = new List<string>();
+            if (c.effects != null && c.effects.Count > 0)
+            {
+                lines.AddRange(RealityDirector.Cards.CardBrief.What(c));
+                foreach (var why in RealityDirector.Cards.CardRuntime.Problems(c))
+                    lines.Add("NOT RUNTIME SUPPORTED: " + why);
+                return lines;
+            }
+
             if (c.status == CardStatus.Disabled)
                 lines.Add("Карта выключена — её нет в игре.");
             if (c.PlayTarget != c.targetType)

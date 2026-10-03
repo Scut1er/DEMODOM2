@@ -136,6 +136,8 @@ namespace RealityDirector.UI
         EventDefinition _armedDef;
         Card _hoverCard;
         GameObject _tip;
+        // Полный разбор карты (эффекты, кубики, условия, прогноз) — даёт квартира (CardBrief). Нет — короткая подсказка.
+        public Func<EventDefinition, float, string> Explain;
         RectTransform _tipRect;
         Text _tipTitle;
         Text _tipBody;
@@ -642,6 +644,30 @@ namespace RealityDirector.UI
                     color *= 0.72f;
                 _cards[i].Frame.color = color;
                 _cards[i].Root.localScale = on ? new Vector3(1.06f, 1.06f, 1f) : Vector3.one;
+            }
+        }
+
+        // «Держим в запасе»: лента на карте — её не сбросят, и она останется в руке на следующую съёмку.
+        public void MarkKept(string id)
+        {
+            for (int i = 0; i < _cards.Count; i++)
+            {
+                var card = _cards[i];
+                if (card.Def == null || card.Def.id != id || card.Root == null || card.Root.Find("kept") != null)
+                    continue;
+                var ribbon = Panel("kept", card.Root, new Color(0.2f, 0.55f, 0.35f, 0.95f));
+                ribbon.raycastTarget = false;
+                var rect = ribbon.rectTransform;
+                rect.anchorMin = rect.anchorMax = new Vector2(0.5f, 1f);
+                rect.pivot = new Vector2(0.5f, 0.5f);
+                rect.anchoredPosition = new Vector2(0f, -4f);
+                rect.sizeDelta = new Vector2(118f, 22f);
+                var text = MakeText(ribbon.transform, "В ЗАПАСЕ", 13, Paper, TextAnchor.MiddleCenter);
+                text.fontStyle = FontStyle.Bold;
+                var tr = text.rectTransform;
+                tr.anchorMin = Vector2.zero;
+                tr.anchorMax = Vector2.one;
+                tr.offsetMin = tr.offsetMax = Vector2.zero;
             }
         }
 
@@ -1690,7 +1716,7 @@ namespace RealityDirector.UI
             _tipRect = plate.rectTransform;
             _tipRect.anchorMin = _tipRect.anchorMax = new Vector2(0.5f, 0.5f);
             _tipRect.pivot = new Vector2(0.5f, 0f);
-            _tipRect.sizeDelta = new Vector2(340f, 10f);
+            _tipRect.sizeDelta = new Vector2(Explain != null ? 420f : 340f, 10f);
             var layout = _tip.AddComponent<VerticalLayoutGroup>();
             layout.padding = new RectOffset(16, 16, 12, 14);
             layout.spacing = 6f;
@@ -1749,6 +1775,22 @@ namespace RealityDirector.UI
         {
             const string Key = "<color=#F2D14A>";
             var lines = new List<string>();
+            if (Explain != null)
+            {
+                lines.Add(Explain(def, _hell));
+                if (def.moods != null && def.moods.Count > 0)
+                {
+                    var gain = new List<string>();
+                    for (int i = 0; i < def.moods.Count && i < 2; i++)
+                        gain.Add("+" + SeasonTone.CardGain + " " + MoodStyle.Short(def.moods[i]));
+                    lines.Add(Key + "Тон шоу:</color> " + string.Join(", ", gain));
+                }
+
+                if (def.sponsor)
+                    lines.Add(Key + "Спонсор:</color> платит, если кадр с рекламой попадёт в эфир.");
+                return string.Join("\n", lines);
+            }
+
             string target = string.IsNullOrEmpty(def.hint) || !def.hint.StartsWith("клик")
                 ? (def.PlayTarget == TargetType.Actor ? "кликни по участнику" : "кликни по предмету")
                 : def.hint.Replace("клик по", "кликни по");

@@ -235,6 +235,45 @@ namespace RealityDirector.Cards
             Track(go, () => target.position, offset, float.MaxValue, 0f, false);
         }
 
+        // Подсказка над тем, на кого сейчас наведена карта: прогноз реакции. Одна на сцену, живёт, пока наводят.
+        GameObject _hint;
+        Text _hintText;
+        Transform _hintTarget;
+
+        public void Hint(Transform target, string text)
+        {
+            if (target == null || string.IsNullOrEmpty(text))
+            {
+                _hintTarget = null;
+                if (_hint != null)
+                    _hint.SetActive(false);
+                return;
+            }
+
+            if (_hint == null)
+            {
+                _hint = new GameObject("aimHint", typeof(RectTransform), typeof(Image));
+                var plate = _hint.GetComponent<Image>();
+                UiKit.Dress(plate, UiKit.Frame.Dark);
+                plate.color = new Color(1f, 1f, 1f, 0.94f);
+                plate.raycastTarget = false;
+                _hintText = MakeText(_hint.transform, "", 16, UiKit.Paper);
+                _hintText.lineSpacing = 1.05f;
+                Track(_hint, () => _hintTarget != null ? _hintTarget.position + Vector3.up * 1.9f : new Vector3(9999f, 0f, 0f), new Vector2(0f, 60f), float.MaxValue, 0f, false);
+            }
+
+            _hintTarget = target;
+            if (_hintText.text != text)
+            {
+                _hintText.text = text;
+                ((RectTransform)_hint.transform).sizeDelta = new Vector2(Mathf.Max(220f, _hintText.preferredWidth) + 30f, Mathf.Max(30f, _hintText.preferredHeight) + 16f);
+            }
+
+            if (!_hint.activeSelf)
+                _hint.SetActive(true);
+            _hint.transform.SetAsLastSibling();
+        }
+
         // Полёт карты из руки в точку на площадке: видно, куда «ударил» продюсер.
         public IEnumerator CardFly(EventDefinition def, Vector3 world, float duration = 0.42f)
         {

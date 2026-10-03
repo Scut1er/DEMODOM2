@@ -248,6 +248,25 @@ namespace RealityDirector.Meta
                 }
             }
 
+            // «Всегда в стартовой руке» и «держим в запасе» — первыми, за ними перетасованная колода.
+            var first = new List<string>();
+            foreach (var id in deck)
+            {
+                var def = Find(id);
+                if (def != null && def.specialRules != null && def.specialRules.Contains(SpecialRule.Innate))
+                    first.Add(id);
+            }
+
+            foreach (var id in _state.retained)
+            {
+                if (deck.Contains(id) && !first.Contains(id))
+                    first.Add(id);
+            }
+
+            _state.retained.Clear();
+            foreach (var id in first)
+                deck.Remove(id);
+            order.AddRange(first);
             order.AddRange(deck);
 #if UNITY_EDITOR
             // Мастерская карт → «Проверить в квартире»: эта карта первой в руке.
@@ -497,7 +516,7 @@ namespace RealityDirector.Meta
                     continue;
                 if (shop)
                 {
-                    if (owned || def.sponsor || def.price <= 0)
+                    if (owned || def.sponsor || def.price <= 0 || !RealityDirector.Cards.CardRuntime.Playable(def))
                         continue;
                 }
                 else if (!owned)

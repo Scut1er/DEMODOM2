@@ -236,7 +236,7 @@ namespace RealityDirector.UI.Hub
 
         void BeginSeason()
         {
-            GameSession.NewSeason(_content.StarterIds(), season);
+            GameSession.NewSeason(_content.SeasonDeck(season), season);
             Bind();
             GameSession.State.wantsTutorial = true;
             GameSession.State.tutorialBeat = 0;
@@ -694,7 +694,7 @@ namespace RealityDirector.UI.Hub
             }
 
             if (!GameSession.Active && !GameSession.Continue())
-                GameSession.NewSeason(_content.StarterIds(), season);
+                GameSession.NewSeason(_content.SeasonDeck(season), season);
             Bind();
             if (!_episode.Active)
             {

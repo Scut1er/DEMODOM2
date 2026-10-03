@@ -33,7 +33,7 @@ MonoBehaviour:
   sponsor: 0
   sponsorPay: 0
   sponsorScoreHit: 0
-  starter: 0
+  starter: 1
   limitTrait: 0
   targetTrait: 0
   status: 2

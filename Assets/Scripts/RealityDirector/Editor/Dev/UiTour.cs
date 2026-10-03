@@ -107,6 +107,24 @@ namespace RealityDirector.EditorTools
             return "not found: " + key;
         }
 
+        // Навести мышь на объект UI (подсказки карт): pointerEnter по имени объекта; exit — увести.
+        public static string Hover(string name, bool exit = false)
+        {
+            foreach (var rect in Object.FindObjectsByType<RectTransform>())
+            {
+                if (!rect.gameObject.activeInHierarchy || rect.name != name)
+                    continue;
+                var data = new UnityEngine.EventSystems.PointerEventData(UnityEngine.EventSystems.EventSystem.current);
+                if (exit)
+                    UnityEngine.EventSystems.ExecuteEvents.Execute(rect.gameObject, data, UnityEngine.EventSystems.ExecuteEvents.pointerExitHandler);
+                else
+                    UnityEngine.EventSystems.ExecuteEvents.Execute(rect.gameObject, data, UnityEngine.EventSystems.ExecuteEvents.pointerEnterHandler);
+                return "hovered " + PathOf(rect);
+            }
+
+            return "not found: " + name;
+        }
+
         // Дерево UI с якорями, размерами, спрайтами и текстами — в файл.
         public static void Dump(string rootName, string file, int maxDepth = 6)
         {

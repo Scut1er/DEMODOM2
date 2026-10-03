@@ -18,8 +18,20 @@ namespace RealityDirector.Meta
         [Min(0)] public int startingCash = 90;
         [Tooltip("HellToken ($) на каждую съёмку: из него платят за розыгрыш карт. Заливается заново в каждой комнате.")]
         [Min(1)] public float hellTokenBudget = 10f;
+        [Tooltip("Production Slots на съёмку: сколько объектов окружения (карты с правилом «Занимает Production Slot») может стоять одновременно.")]
+        [Min(1)] public int productionSlots = 3;
         [Tooltip("Карт в руке на съёмке. Колода тасуется в начале каждой съёмки, сыгранная карта уходит в «Использовано», на её место добирается следующая.")]
         [Min(1)] public int handSize = 5;
+
+        [Header("Стартовая колода")]
+        [Tooltip("Стартовые карты отмечаются у самой карты галочкой «В стартовой колоде» (Card Workshop, колонка «старт»). "
+                 + "Здесь — сколько случайных карт добавить к ним при создании сезона. Выбираются один раз и живут в сейве.")]
+        [Min(0)] public int randomStarterCardCount = 2;
+        [Tooltip("Категории, которые не попадают в случайный старт (спонсорские приходят только с контрактом).")]
+        public List<string> randomStarterExclude = new List<string> { "Sponsor", "DeckManagement" };
+        [Tooltip("Брать в случайный старт и карты со статусом «На тесте». Выключено — только «Готова». "
+                 + "Карта, которую квартира не умеет исполнить целиком (NOT RUNTIME SUPPORTED), и старые карты без эффектов не попадут никогда.")]
+        public bool randomStarterIncludeTesting;
 
         [Header("Каст")]
         [Tooltip("Минимум участников в выпуске.")]

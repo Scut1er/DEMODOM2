@@ -88,6 +88,7 @@ namespace RealityDirector
             // Карты играют на площадке по своим данным: кубики, реквизит, действия людей.
             _stage = gameObject.AddComponent<CardStage>();
             _stage.Init(_cast, () => _bedOpen, () => _bathOpen, _ui.Toast, _shake, _fridge.transform);
+            _ui.Explain = (def, hell) => CardBrief.Tooltip(def, _cast, hell, Cost(def));
             _executor.Stage = _stage;
             _capture = gameObject.AddComponent<CaptureSystem>();
             _capture.Init(_context, _cast, () => _fridge != null && _fridge.IsOnFire, _fridge.transform, _bathroom.transform, () => _bathOpen);
@@ -109,7 +110,7 @@ namespace RealityDirector
         {
             if (!GameSession.Active && !GameSession.Continue())
             {
-                GameSession.NewSeason(_content.StarterIds());
+                GameSession.NewSeason(_content.SeasonDeck(null));
                 GameSession.Commit();
             }
             if (GameSession.Embarked)
@@ -179,6 +180,9 @@ namespace RealityDirector
             {
                 bool zone = _phase == PitchPhase.Play && _armed != null && _armed.targetType == TargetType.Zone && Mouse.current != null;
                 _stage.Preview(zone ? _armed : null, zone ? MouseWorld() : Vector2.zero);
+                bool aimActor = _phase == PitchPhase.Play && _armed != null && _armed.PlayTarget == TargetType.Actor && Mouse.current != null;
+                var aimed = aimActor ? ActorNear(MouseWorld()) : null;
+                _stage.PreviewActor(aimed != null ? _armed : null, aimed);
             }
         }
 
@@ -714,6 +718,7 @@ namespace RealityDirector
             ResetSet();
             RestoreMood();
             RestoreSet();
+            _stage.ProductionSlots = _state.episode != null && _state.episode.productionSlots > 0 ? _state.episode.productionSlots : 3;
             if (ShootLesson() && !_state.played.Contains("fridge_fire") && !GameSession.Hand.Contains("fridge_fire"))
             {
                 // «Поджога» нет в колоде — урок всё равно на нём. Лишняя карта уходит наверх библиотеки.
@@ -1081,6 +1086,13 @@ namespace RealityDirector
                     return;
                 }
 
+                if (!_stage.SlotFree(_armed))
+                {
+                    _ui.Toast("Все Production Slots заняты (" + _stage.SlotsUsed + "/" + _stage.ProductionSlots + "): объекты стоят до конца съёмки.");
+                    Sfx.Play(Cue.Miss, 0.4f);
+                    return;
+                }
+
                 if (!Pay(_armed))
                     return;
                 EventDefinition placed = _armed;
@@ -1089,6 +1101,8 @@ namespace RealityDirector
                 Echo(placed, null, null, world);
                 _ui.MarkUsed(placed.id);
                 NoteCard(placed);
+                if (CardRuntime.HasDeckEffect(placed))
+                    DeckPlay(placed);
                 _armed = null;
                 _ui.SetArmed(null);
                 _stage.Preview(null, Vector2.zero);
@@ -1127,6 +1141,8 @@ namespace RealityDirector
                 Echo(_armed, null, npc, null);
                 _ui.MarkUsed(_armed.id);
                 NoteCard(_armed);
+                if (CardRuntime.HasDeckEffect(_armed))
+                    DeckPlay(_armed);
                 _armed = null;
                 _ui.SetArmed(null);
                 return;
@@ -1157,6 +1173,8 @@ namespace RealityDirector
             Echo(played, obj, null, null);
             _ui.MarkUsed(played.id);
             NoteCard(played);
+            if (CardRuntime.HasDeckEffect(played))
+                DeckPlay(played);
             _armed = null;
             _ui.SetArmed(null);
             if (openBath)
@@ -1564,6 +1582,7 @@ namespace RealityDirector
             if (_state.episode != null)
                 _state.episode.tempCards.Remove(def.id);
             _state.played.Add(def.id);
+            _state.retained.Remove(def.id);
             DrawInto(def);
             if (def.sponsor && _state.episode != null)
             {
@@ -1972,6 +1991,9 @@ namespace RealityDirector
                 string id = GameSession.Hand[i];
                 if (string.IsNullOrEmpty(id) || (played != null && id == played.id) || _state.played.Contains(id))
                     continue;
+                // «Держим в запасе»: защищённую карту эффекты сброса не трогают.
+                if (_state.retained.Contains(id))
+                    continue;
                 slots.Add(i);
             }
 
@@ -2016,11 +2038,12 @@ namespace RealityDirector
 
         bool DeckPlay(EventDefinition def)
         {
-            if (def == null || def.effects == null || def.category != "DeckManagement")
+            if (def == null || !CardRuntime.HasDeckEffect(def))
                 return false;
             var notes = new List<string>();
             int peek = 0;
             bool took = false;
+            bool kept = false;
             foreach (var e in def.effects)
             {
                 if (e == null)
@@ -2125,9 +2148,32 @@ namespace RealityDirector
                         break;
                     case CardEffectType.RetainCard:
                     case CardEffectType.ProtectCard:
-                        if (!notes.Contains("держим в запасе"))
-                            notes.Add("держим в запасе");
+                    {
+                        // Самая сильная другая карта руки: не сбросится эффектами колоды и придёт в руку следующей съёмки.
+                        if (kept)
+                            break;
+                        string best = null;
+                        float bestCost = -1f;
+                        foreach (int slot in OtherSlots(def))
+                        {
+                            var other = _content.Find(GameSession.Hand[slot]);
+                            if (other != null && other.cost > bestCost)
+                            {
+                                bestCost = other.cost;
+                                best = other.id;
+                            }
+                        }
+
+                        if (best != null)
+                        {
+                            kept = true;
+                            _state.retained.Add(best);
+                            _ui.MarkKept(best);
+                            notes.Add("«" + _content.Find(best).displayName + "» в запасе: не сбросится и останется в руке");
+                        }
+
                         break;
+                    }
                 }
             }
 
@@ -2136,6 +2182,26 @@ namespace RealityDirector
             return true;
         }
 
+
+        // Участник под курсором (по телу, не только по ногам) — для прогноза реакции при наведении карты.
+        NPCController ActorNear(Vector2 world)
+        {
+            NPCController best = null;
+            float bestD = 0.9f;
+            foreach (var npc in _cast)
+            {
+                if (npc == null || !npc.gameObject.activeInHierarchy)
+                    continue;
+                float d = Vector2.Distance(world, (Vector2)npc.transform.position + Vector2.up * 0.8f);
+                if (d < bestD)
+                {
+                    bestD = d;
+                    best = npc;
+                }
+            }
+
+            return best;
+        }
 
         static Vector2 MouseWorld()
         {

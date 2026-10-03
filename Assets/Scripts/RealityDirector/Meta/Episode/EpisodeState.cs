@@ -101,6 +101,8 @@ namespace RealityDirector.Meta
         public const int DefaultHandSize = 5;
         [Tooltip("Карт в руке на съёмке (из SeasonConfig).")]
         public int handSize = DefaultHandSize;
+        [Tooltip("Production Slots на съёмку (из SeasonConfig).")]
+        public int productionSlots = 3;
         public string setRoom;
         public bool setOnFire;
         public bool setBathOpen;
