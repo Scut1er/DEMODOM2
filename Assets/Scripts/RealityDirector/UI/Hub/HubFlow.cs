@@ -33,7 +33,6 @@ namespace RealityDirector.UI.Hub
         EpisodeService _episode;
         MapNode _selected;
         string _hubNotice;
-        bool _runShop;
         MarketingRoomDefinition _marketing;
         MarketingView _market;
         string _marketNode;
@@ -52,6 +51,8 @@ namespace RealityDirector.UI.Hub
             _cast = CastRoster.All();
             if (season == null)
                 season = SeasonConfig.CreateDefault();
+            // Хаб обещает столько мест, сколько реально займут: конфиг, кандидаты выпуска, живой ростер.
+            CastRoster.SeatCap = Mathf.Min(season.castMax, Mathf.Min(season.castCandidates, _cast.Length));
             EnsureEventSystem();
             Sfx.Bind(gameObject);
             _eventView = EventRoomView.Create(map.transform.parent, TitleFont());
@@ -100,39 +101,10 @@ namespace RealityDirector.UI.Hub
                 _selected = node;
                 RefreshMap();
             };
-            map.Deck.Close += () =>
-            {
-                Click();
-                if (_runShop)
-                {
-                    map.Deck.Hide();
-                    LeaveRunShop();
-                    return;
-                }
-
-                BeginFilming(_selected);
-            };
-            map.Deck.Cancel += () =>
-            {
-                Click();
-                map.Deck.Hide();
-                if (_runShop)
-                    LeaveRunShop();
-            };
-            map.Deck.Buy += id =>
-            {
-                bool ok = _meta.TryBuyRun(id);
-                Sfx.Play(ok ? Cue.Coin : Cue.Miss, ok ? 0.5f : 0.45f);
-                if (ok)
-                    GameSession.Save();
-                map.Deck.Show(_meta.BuildRunShop());
-            };
             // В хаб посреди выпуска: выпуск не прерывается, «Начать съёмку» в хабе вернёт на карту.
             map.Back += () =>
             {
                 Click();
-                map.Deck.Hide();
-                _runShop = false;
                 GameSession.Save();
                 ShowHub();
             };
@@ -243,8 +215,12 @@ namespace RealityDirector.UI.Hub
         {
             GameSession.NewSeason(_content.SeasonDeck(season), season);
             Bind();
-            GameSession.State.wantsTutorial = true;
-            GameSession.State.tutorialBeat = 0;
+            // Обучение — только пока его ни разу не прошли и не пропустили; студию ветерану тоже не объясняем.
+            bool veteran = GameSession.TutorialDone;
+            GameSession.State.wantsTutorial = !veteran;
+            GameSession.State.tutorialBeat = veteran ? 6 : 0;
+            if (veteran)
+                GameSession.State.SetFlag(StudioTaught);
             Show(intro.gameObject);
             intro.Play();
         }
@@ -258,11 +234,20 @@ namespace RealityDirector.UI.Hub
             }
 
             Bind();
-            if (GameSession.Embarked && GameSession.InEpisode && !string.IsNullOrEmpty(GameSession.RoomNodeId))
+            if (GameSession.InEpisode && !string.IsNullOrEmpty(GameSession.RoomNodeId))
             {
-                MusicBed.Play(MusicBed.Scene);
-                SceneFlow.ToScene(string.IsNullOrEmpty(GameSession.SceneId) ? SceneFlow.Episode : GameSession.SceneId);
-                return;
+                if (GameSession.Embarked)
+                {
+                    MusicBed.Play(MusicBed.Scene);
+                    SceneFlow.ToScene(string.IsNullOrEmpty(GameSession.SceneId) ? SceneFlow.Episode : GameSession.SceneId);
+                    return;
+                }
+
+                // Съёмку уже сдали («СНЯТО!» / «Хаб»), но игра закрылась до того, как хаб засчитал комнату (Start).
+                // Засчитываем сейчас — иначе комнату можно снять второй раз, а её кадры уже в библиотеке.
+                GameSession.RoomNodeId = null;
+                _episode.FinishSceneRoom();
+                GameSession.Save();
             }
 
             Resume();
@@ -500,7 +485,6 @@ namespace RealityDirector.UI.Hub
         // Съёмка: сразу в квартиру. Карты не выбираются у двери — колода тасуется и сдаёт руку уже на площадке (GDD 0.3).
         void StartFilming(MapNode node)
         {
-            _runShop = false;
             _meta.ClearReject();
             BeginFilming(node);
         }
@@ -523,7 +507,6 @@ namespace RealityDirector.UI.Hub
             {
                 GameSession.Save();
                 Sfx.Play(Cue.Miss, 0.4f);
-                map.Deck.Hide();
                 RefreshMap();
                 return;
             }
@@ -615,12 +598,11 @@ namespace RealityDirector.UI.Hub
                 }
 
                 RefreshDeals();
-            }, LeaveRunShop);
+            }, LeaveMarketing);
         }
 
-        void LeaveRunShop()
+        void LeaveMarketing()
         {
-            _runShop = false;
             _screens.Hide();
             if (_market != null)
                 _market.Hide();
@@ -789,7 +771,6 @@ namespace RealityDirector.UI.Hub
         {
             if (!_episode.Map.Choose(node))
                 return;
-            map.Deck.Hide();
             _episode.Current.EnsureLists();
             Sfx.Play(Cue.Blip, 0.5f);
             int slots = Progression.AirSlots;
@@ -916,11 +897,13 @@ namespace RealityDirector.UI.Hub
                 result = FeedbackGenerator.ApplySponsor(result, hit);
             bool hadTasks = GameSession.State.tasks.Count > 0;
             bool wishDone = GameSession.State.Resolve(moments, GameSession.Tone);
-            int pay = Progression.Payout(result.score, GameSession.State.castLevel, wishDone) + sponsorMoney;
+            // Пустой эфир не оплачивается: зрителю нечего было смотреть.
+            bool empty = cut.Count == 0;
+            int pay = empty ? 0 : Progression.Payout(result.score, GameSession.State.castLevel, wishDone) + sponsorMoney;
             GameSession.State.money += pay;
             GameSession.State.ratingSum += result.score;
             GameSession.State.rated++;
-            string line = PayLine(pay, hadTasks, wishDone);
+            string line = empty ? "0 кр   ·   эфир пустой — платить не за что" : PayLine(pay, hadTasks, wishDone);
             if (sponsorMoney > 0)
                 line += "   ·   спонсор +" + sponsorMoney + " кр, отзывы −" + hit;
             else if (playedAd)

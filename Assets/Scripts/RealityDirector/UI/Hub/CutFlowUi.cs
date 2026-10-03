@@ -231,7 +231,7 @@ namespace RealityDirector.UI.Hub
 
             if (_library.Count == 0)
             {
-                var empty = TextOn(_libraryRow, "Пусто. В эфир можно сдать и так.", 18, new Color(0.7f, 0.64f, 0.6f, 1f), TextAnchor.MiddleLeft);
+                var empty = TextOn(_libraryRow, "Пусто. Сдать можно, но пустой эфир не оплачивается.", 18, new Color(0.7f, 0.64f, 0.6f, 1f), TextAnchor.MiddleLeft);
                 empty.rectTransform.sizeDelta = new Vector2(600f, 40f);
             }
         }

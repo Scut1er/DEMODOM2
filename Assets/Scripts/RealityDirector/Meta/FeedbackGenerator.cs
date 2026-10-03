@@ -192,6 +192,9 @@ namespace RealityDirector.Meta
         public static FeedbackResult BuildCut(IReadOnlyList<CapturedMoment> cut, SeasonTone tone, int coherence, bool sponsorAired,
             CutReport report = null, string brand = null)
         {
+            // Пустой эфир: смотреть нечего. Раньше общие отзывы давали ~4/10 и 50–60 кр за пустоту.
+            if (cut == null || cut.Count == 0)
+                return EmptyAir(tone);
             var result = Build(null, cut, tone);
             if (result.reviews == null)
                 result.reviews = new List<ViewerReview>();
@@ -216,6 +219,32 @@ namespace RealityDirector.Meta
             if (report != null && report.clips.Count > 0 && result.score > 0f)
                 result.score = UnityEngine.Mathf.Clamp(UnityEngine.Mathf.Round((result.score + report.ratingBonus) * 10f) / 10f, 1f, 10f);
             return result;
+        }
+
+        static FeedbackResult EmptyAir(SeasonTone tone)
+        {
+            var reviews = new List<ViewerReview>
+            {
+                new ViewerReview { author = "Аня", score = 1, body = "Серия вышла, а смотреть нечего. Это шутка такая?" },
+                new ViewerReview { author = "Кирилл", score = 1, body = "Пустой эфир. Даже обоев не показали." },
+                new ViewerReview
+                {
+                    author = "Марина",
+                    score = 1,
+                    offer = true,
+                    wish = ViewerWishId.Cry,
+                    body = OfferBody(ViewerWishId.Cry, new List<string>(), tone)
+                },
+                new ViewerReview { author = "суккуб_с_попкорном", score = 1, body = "серия вышла, а смотреть нечего" }
+            };
+
+            return new FeedbackResult
+            {
+                reviews = reviews,
+                score = 1f,
+                wish = OfferLabel(ViewerWishId.Cry, tone),
+                nextWish = ViewerWishId.Cry
+            };
         }
 
         static List<ViewerReview> Extras(IReadOnlyList<CapturedMoment> cut, int coherence, bool sponsorAired)

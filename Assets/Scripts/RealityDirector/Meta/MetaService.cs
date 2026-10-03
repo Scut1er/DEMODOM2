@@ -184,32 +184,6 @@ namespace RealityDirector.Meta
             return true;
         }
 
-        // Магазин выпуска: карта в руку до эфира, потом сгорает. Платит нал, не кр.
-        public bool TryBuyRun(string id)
-        {
-            var ep = _state.episode;
-            if (ep == null || ep.tempCards.Contains(id))
-                return false;
-            var def = Find(id);
-            int cost = def != null ? def.runPrice : 0;
-            if (def == null || cost <= 0 || ep.cash < cost)
-            {
-                Reject = "Не хватает нала.";
-                return false;
-            }
-
-            if (!def.sponsor && _state.Owns(id))
-            {
-                Reject = "Уже в колоде сезона.";
-                return false;
-            }
-
-            ep.cash -= cost;
-            ep.tempCards.Add(id);
-            Reject = null;
-            return true;
-        }
-
         // Контракт не списывает нал. Выплата — только если карта сыграна и кадр в монтаже.
         public bool TryTakeContract(string cardId, int payout, int scoreHit)
         {
@@ -621,34 +595,6 @@ namespace RealityDirector.Meta
                     if (def != null)
                         list.Add(CardOf(def, true, "нал"));
                 }
-            }
-
-            return list.ToArray();
-        }
-
-        public PrepModel BuildRunShop()
-        {
-            var prep = BuildPrep();
-            prep.moneyText = MoneyLine();
-            prep.shopFooter = "Только до эфира этого выпуска, потом сгорят. Спонсор в кадре: больше кр, отзывы хуже.";
-            prep.shop = CollectRun();
-            return prep;
-        }
-
-        PrepCard[] CollectRun()
-        {
-            var list = new List<PrepCard>();
-            var ep = _state.episode;
-            if (_catalog == null || ep == null)
-                return list.ToArray();
-            for (int i = 0; i < _catalog.Count; i++)
-            {
-                var def = _catalog[i];
-                if (def == null || def.sponsor || def.runPrice <= 0 || ep.tempCards.Contains(def.id))
-                    continue;
-                if (!def.sponsor && _state.Owns(def.id))
-                    continue;
-                list.Add(CardOf(def, false, "нал"));
             }
 
             return list.ToArray();

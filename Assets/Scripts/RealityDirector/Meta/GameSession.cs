@@ -59,6 +59,8 @@ namespace RealityDirector.Meta
                 State.money = config.startingBudget;
             }
 
+            // Номер сезона в карьере: сейв стирается в конце сезона, счётчик живёт в PlayerPrefs.
+            State.seasonNumber = SeasonsDone + 1;
             Tone = new SeasonTone();
             SceneTitle = null;
             SceneId = null;
@@ -67,6 +69,24 @@ namespace RealityDirector.Meta
             RoomNodeId = null;
             Hand.Clear();
             FootageReel.ReleaseAll();
+        }
+
+        // Карьера вне сейва сезона (season.json удаляется на итогах сезона).
+        const string TutorialDoneKey = "career.tutorialDone";
+        const string SeasonsDoneKey = "career.seasonsDone";
+
+        // Обучение пройдено или пропущено хотя бы раз — новый сезон его не повторяет.
+        public static bool TutorialDone => PlayerPrefs.GetInt(TutorialDoneKey, 0) != 0;
+
+        // Сколько сезонов доснято до итогов.
+        public static int SeasonsDone => Mathf.Max(0, PlayerPrefs.GetInt(SeasonsDoneKey, 0));
+
+        public static void MarkTutorialDone()
+        {
+            if (TutorialDone)
+                return;
+            PlayerPrefs.SetInt(TutorialDoneKey, 1);
+            PlayerPrefs.Save();
         }
 
         public static void Commit()
@@ -91,6 +111,9 @@ namespace RealityDirector.Meta
             SceneTitle = state.sceneTitle;
             SceneId = state.sceneId;
             Committed = true;
+            // Сейвы до счётчика карьеры: обучение в них уже позади — запоминаем.
+            if (!state.wantsTutorial && state.tutorialBeat >= 6)
+                MarkTutorialDone();
             return true;
         }
 
@@ -109,6 +132,13 @@ namespace RealityDirector.Meta
 
         public static void EndSeason()
         {
+            // Повторный показ итогов в той же сессии сезон второй раз не засчитывает.
+            if (Committed)
+            {
+                PlayerPrefs.SetInt(SeasonsDoneKey, SeasonsDone + 1);
+                PlayerPrefs.Save();
+            }
+
             Committed = false;
             SaveSystem.Delete();
         }

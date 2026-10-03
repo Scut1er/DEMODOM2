@@ -124,11 +124,35 @@ namespace RealityDirector.Meta
             var failed = Rules.FirstFailed(c.conditions, ctx);
             if (failed != null)
                 return Rules.FailText(failed);
-            if (c.costMoney > 0 && (ctx.season == null || ctx.season.money < c.costMoney))
-                return "Нужно " + c.costMoney + " кр";
-            if (c.costCash > 0 && (ctx.episode == null || ctx.episode.cash < c.costCash))
-                return "Нужно " + c.costCash + " нал";
+            // Минус к бюджету в эффектах — та же цена: без денег вариант закрыт, а не бесплатен
+            // (Rules.Apply не уводит бюджет ниже нуля). С шансом — по худшему исходу.
+            int money = c.costMoney + WorstLoss(c, EffectType.Budget);
+            int cash = c.costCash + WorstLoss(c, EffectType.Cash);
+            if (money > 0 && (ctx.season == null || ctx.season.money < money))
+                return "Нужно " + money + " кр";
+            if (cash > 0 && (ctx.episode == null || ctx.episode.cash < cash))
+                return "Нужно " + cash + " нал";
             return null;
+        }
+
+        static int WorstLoss(EventChoice c, EffectType type)
+        {
+            int win = Loss(c.effects, type);
+            return c.chance < 100 ? Mathf.Max(win, Loss(c.failEffects, type)) : win;
+        }
+
+        static int Loss(IList<Effect> effects, EffectType type)
+        {
+            int loss = 0;
+            if (effects == null)
+                return 0;
+            foreach (var e in effects)
+            {
+                if (e != null && e.type == type && e.value < 0)
+                    loss -= e.value;
+            }
+
+            return loss;
         }
 
         public static string CostLabel(EventChoice c)

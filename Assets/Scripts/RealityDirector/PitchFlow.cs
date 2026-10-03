@@ -68,8 +68,8 @@ namespace RealityDirector
         SeasonTone _tone => GameSession.Tone;
         SeasonState _state => GameSession.State;
         EventDefinition[] _hand = new EventDefinition[0];
-        // Когда в этой съёмке сыграна спонсорская карта (Time.time) — кадр до розыгрыша рекламу не несёт.
-        readonly Dictionary<string, float> _sponsorPlayedAt = new Dictionary<string, float>();
+        // Слотов футажа у этой съёмки целиком (часть могла уйти в библиотеку до выхода из игры).
+        int _roomCapacity;
 
         void Awake()
         {
@@ -505,7 +505,9 @@ namespace RealityDirector
             new Vector2(-4.1f, 1.65f),
             new Vector2(-5.2f, 3.2f),
             new Vector2(0.4f, 1.7f),
-            new Vector2(1.8f, 3.1f)
+            new Vector2(1.8f, 3.1f),
+            // Шестое место (CastRoster.MaxSeats): пол кухни слева, мимо стола и холодильника.
+            new Vector2(-1.6f, 1.45f)
         };
 
         void SpawnCast()
@@ -771,8 +773,23 @@ namespace RealityDirector
                     _state.episode.flags.Remove("CaptureSlotMinus");
                 }
             }
-            _capture.Capacity = Mathf.Max(1, Progression.CaptureSlots(_state.operatorLevel) + extra);
+            _roomCapacity = Mathf.Max(1, Progression.CaptureSlots(_state.operatorLevel) + extra);
+            string node = GameSession.RoomNodeId ?? "";
+            int banked = 0;
+            if (_state.episode != null && node.Length > 0 && _state.episode.setRoom == node)
+            {
+                // Вернулись в ту же съёмку после выхода из игры: лимит комнаты прежний, снятое уже в библиотеке.
+                if (_state.episode.setCapacity > 0)
+                    _roomCapacity = _state.episode.setCapacity;
+                banked = BankedHere();
+            }
+
+            _capture.Capacity = Mathf.Max(0, _roomCapacity - banked);
             _ui.SetCaptureCapacity(_capture.Capacity);
+            if (banked > 0)
+                _ui.Toast("Уже снято здесь: " + banked + " — эти кадры в библиотеке выпуска.");
+            if (_capture.IsFull)
+                _ui.SetWrapReady(true);
             string scene = string.IsNullOrEmpty(GameSession.SceneTitle) ? "" : "  ·  " + GameSession.SceneTitle;
             string roles = _state.episode != null && !string.IsNullOrEmpty(_state.episode.roleBrief) ? "\n" + _state.episode.roleBrief : "";
             _ui.SetEpisodeTitle("СЕРИЯ " + (_state.episodeIndex + 1) + scene + roles + "\nты режиссёр, не участник");
@@ -866,45 +883,52 @@ namespace RealityDirector
             _ui.PlaySlate(scene, BackToHub);
         }
 
+        // Конец съёмки. Каждый кадр лёг в библиотеку ещё в момент съёмки (Bank); недописанный ролик
+        // дописывается здесь же через Detach → OnCaptured. Остаётся отпустить пустые моменты.
         void DepositFootage()
         {
-            var episode = _state.episode;
             var taken = _capture.Detach();
-            if (episode != null)
-                episode.EnsureLists();
-            if (episode == null)
-            {
-                for (int i = 0; i < taken.Count; i++)
-                    taken[i].Release();
-                return;
-            }
-
             for (int i = 0; i < taken.Count; i++)
-            {
-                var clip = FootageReel.Adopt(taken[i], GameSession.RoomNodeId);
-                StampSponsor(episode, clip);
-                episode.footage.Add(FootageReel.Entry(clip));
-            }
+                taken[i].Release();
         }
 
-        void StampSponsor(EpisodeState episode, FootageClip clip)
+        // Кадр сразу уходит в библиотеку выпуска и в сейв: выход из игры посреди съёмки его не теряет.
+        // Без выпуска (квартира из редактора) кадр живёт до конца сцены и отпускается в DepositFootage.
+        void Bank(CapturedMoment moment)
+        {
+            var episode = _state.episode;
+            if (episode == null)
+                return;
+            episode.EnsureLists();
+            var clip = FootageReel.Adopt(moment, GameSession.RoomNodeId);
+            StampSponsor(episode, clip);
+            episode.footage.Add(FootageReel.Entry(clip));
+        }
+
+        // Сколько кадров этой съёмки уже в библиотеке (снято до выхода из игры).
+        int BankedHere()
+        {
+            var episode = _state.episode;
+            if (episode == null || episode.footage == null)
+                return 0;
+            string node = GameSession.RoomNodeId ?? "";
+            int n = 0;
+            for (int i = 0; i < episode.footage.Count; i++)
+            {
+                if (episode.footage[i] != null && (episode.footage[i].nodeId ?? "") == node)
+                    n++;
+            }
+
+            return n;
+        }
+
+        // Кадр банкуется в момент съёмки, поэтому несёт только спонсоров, сыгранных до него.
+        static void StampSponsor(EpisodeState episode, FootageClip clip)
         {
             if (episode.pendingSponsors == null || episode.pendingSponsors.Count == 0)
                 return;
-            // Рекламу несёт только кадр, снятый после розыгрыша карты. Спонсор из прошлой съёмки ждёт любой кадр.
-            int pick = -1;
-            for (int i = 0; i < episode.pendingSponsors.Count; i++)
-            {
-                if (_sponsorPlayedAt.TryGetValue(episode.pendingSponsors[i], out float playedAt) && clip.time < playedAt)
-                    continue;
-                pick = i;
-                break;
-            }
-
-            if (pick < 0)
-                return;
-            string cardId = episode.pendingSponsors[pick];
-            episode.pendingSponsors.RemoveAt(pick);
+            string cardId = episode.pendingSponsors[0];
+            episode.pendingSponsors.RemoveAt(0);
             if (!clip.tags.Contains(MomentTags.Sponsor))
                 clip.tags.Add(MomentTags.Sponsor);
             clip.sponsorCardId = cardId;
@@ -1410,10 +1434,10 @@ namespace RealityDirector
             {
                 if (_capture.Recording)
                     return "Ролик. Веди рамку. Отпусти ЛКМ — или само встанет на 3 секундах.";
-                if (_capture.Moments.Count == 0)
-                    return "Зажми ЛКМ и веди рамку. Пустой угол съест слот.";
                 if (_capture.IsFull)
                     return "Слоты полные. Карты ещё можно кидать. СНЯТО! — на карту выпуска.";
+                if (_capture.Moments.Count == 0)
+                    return "Зажми ЛКМ и веди рамку. Пустой угол съест слот.";
                 return "Кадр есть. Сними ещё или жми СНЯТО! — вернёшься на карту выпуска.";
             }
 
@@ -1561,6 +1585,7 @@ namespace RealityDirector
             episode.setOnFire = _fridge != null && _fridge.IsOnFire;
             episode.setBathOpen = _bathOpen;
             episode.setBedOpen = _bedOpen;
+            episode.setCapacity = _roomCapacity;
         }
 
         void ClearSet()
@@ -1572,6 +1597,7 @@ namespace RealityDirector
             episode.setOnFire = false;
             episode.setBathOpen = false;
             episode.setBedOpen = false;
+            episode.setCapacity = 0;
         }
 
         void RestoreSet()
@@ -1696,7 +1722,6 @@ namespace RealityDirector
 
                 deal.cardWasPlayed = true;
                 episode.pendingSponsors.Add(def.id);
-                _sponsorPlayedAt[def.id] = Time.time;
             }
             _handUntil = Time.unscaledTime + 3.4f;
             _armed = null;
@@ -1738,6 +1763,8 @@ namespace RealityDirector
 
             int index = _capture.Moments.Count - 1;
             _ui.FlyPhoto(moment.photo, index, moment.screenPoint, moment.Framed);
+            Bank(moment);
+            Checkpoint();
             _ui.Pulse(new Color(1f, 1f, 1f, 0.72f));
             _shake.Punch(0.05f, 0.08f);
             Sfx.Play(Cue.Shutter, 0.8f);
@@ -1778,7 +1805,8 @@ namespace RealityDirector
             _inputLock = true;
             Time.timeScale = 0.02f;
             yield return new WaitForSecondsRealtime(0.16f);
-            if (_phase == PitchPhase.Play && !_frozen)
+            // Ролик, дописанный на «СНЯТО!», ловит стоп-кадр уже после смены фазы — время всё равно вернуть.
+            if (!_frozen)
                 Time.timeScale = 1f;
             _inputLock = false;
         }

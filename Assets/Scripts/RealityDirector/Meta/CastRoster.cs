@@ -24,9 +24,15 @@ namespace RealityDirector.Meta
     {
         public const int MaxSeats = 6;
 
+        // Сколько мест реально можно занять: SeasonConfig.castMax, число кандидатов и живой ростер.
+        // Ставит хаб (HubFlow). Без потолка кастинг ур. 5 обещал 6 мест, а в выпуск брали 5.
+        public static int SeatCap = MaxSeats;
+
+        public static int SeatLimit => Mathf.Clamp(SeatCap, 2, MaxSeats);
+
         public static int Seats(int castLevel)
         {
-            return Mathf.Clamp(castLevel + 1, 2, MaxSeats);
+            return Mathf.Clamp(castLevel + 1, 2, SeatLimit);
         }
 
         // Кандидаты выпуска: случайные N из доступных. Выбираются один раз на выпуск и живут в сейве

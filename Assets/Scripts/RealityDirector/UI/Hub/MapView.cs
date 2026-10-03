@@ -42,10 +42,6 @@ namespace RealityDirector.UI.Hub
         [SerializeField] Text shootLabel;
         [Tooltip("«← В хаб»: выпуск не прерывается, вернуться — кнопкой старта в хабе.")]
         [SerializeField] Button back;
-        [Tooltip("Выбор карт перед съёмкой — прямо на карте, без возврата в хаб.")]
-        [SerializeField] DeckPanelView deck;
-
-        public DeckPanelView Deck => deck;
 
         public event Action<string> Select;
         public event Action Shoot;
@@ -319,12 +315,6 @@ namespace RealityDirector.UI.Hub
 
             if (shoot != null)
                 shoot.interactable = teach && talking ? false : _shootCan;
-            if (deck != null)
-                deck.SetLocked(teach && talking);
-            if (teach && deck != null)
-                deck.SetCancelEnabled(false);
-            else if (deck != null)
-                deck.SetCancelEnabled(true);
         }
 
         public void Notice(string title, string body)

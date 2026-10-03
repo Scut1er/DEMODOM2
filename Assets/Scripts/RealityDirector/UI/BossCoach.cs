@@ -134,7 +134,11 @@ namespace RealityDirector.UI
             {
                 state.tutorialBeat = next;
                 if (next >= DoneBeat)
+                {
                     state.wantsTutorial = false;
+                    GameSession.MarkTutorialDone();
+                }
+
                 GameSession.Save();
             });
         }
@@ -446,6 +450,7 @@ namespace RealityDirector.UI
                 // Пропустил обучение — и студию после первого эфира объяснять не будем.
                 if (!state.flags.Contains("tut_skipped"))
                     state.flags.Add("tut_skipped");
+                GameSession.MarkTutorialDone();
                 GameSession.Save();
             }
 

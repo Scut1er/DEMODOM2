@@ -124,7 +124,7 @@ namespace RealityDirector.Persistence
 
             try
             {
-                File.WriteAllText(FilePath, JsonUtility.ToJson(data, true));
+                WriteAtomic(FilePath, JsonUtility.ToJson(data, true));
             }
             catch (Exception e)
             {
@@ -212,10 +212,43 @@ namespace RealityDirector.Persistence
             return true;
         }
 
+        // Сначала во временный файл, потом подмена: падение посреди записи не портит прошлый сейв.
+        static void WriteAtomic(string path, string text)
+        {
+            string tmp = path + ".tmp";
+            File.WriteAllText(tmp, text);
+            if (!File.Exists(path))
+            {
+                File.Move(tmp, path);
+                return;
+            }
+
+            try
+            {
+                File.Replace(tmp, path, null);
+            }
+            catch (Exception)
+            {
+                // Файловая система без атомарной подмены — копия поверх и уборка.
+                File.Copy(tmp, path, true);
+                File.Delete(tmp);
+            }
+        }
+
+        // Удаляет и сейв чужой версии, и недописанный временный файл.
         public static void Delete()
         {
-            if (HasSave)
-                File.Delete(FilePath);
+            try
+            {
+                if (File.Exists(FilePath))
+                    File.Delete(FilePath);
+                if (File.Exists(FilePath + ".tmp"))
+                    File.Delete(FilePath + ".tmp");
+            }
+            catch (Exception e)
+            {
+                Debug.LogWarning("Save delete failed: " + e.Message);
+            }
         }
     }
 }
