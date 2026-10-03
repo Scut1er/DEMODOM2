@@ -9,11 +9,11 @@ namespace RealityDirector.Meta
     {
         [Header("Размер карты")]
         [Tooltip("Рядов (шагов) слева направо, включая старт и монтаж.")]
-        [Range(2, 20)] public int floors = 6;
+        [Min(2)] public int floors = 6;
         [Tooltip("Дорожек по вертикали — максимум комнат в одном ряду.")]
-        [Range(1, 7)] public int lanes = 3;
+        [Min(1)] public int lanes = 3;
         [Tooltip("Сколько путей прокладывается. Больше путей — больше комнат и развилок.")]
-        [Range(1, 8)] public int paths = 3;
+        [Min(1)] public int paths = 3;
         [Tooltip("0 — новая карта каждый выпуск. Любое другое число — всегда одна и та же карта (удобно для теста).")]
         public int seed;
 
@@ -27,6 +27,9 @@ namespace RealityDirector.Meta
         [Min(0)] public int minSpecialFloor = 1;
         [Tooltip("Ряд, где все комнаты — маркетинг. -1 — без гарантии.")]
         public int guaranteedMarketingFloor = -1;
+        [Tooltip("Ряд, где все комнаты — события. -1 — без гарантии. Вместе с рядом маркетинга и «съёмкой перед монтажом» "
+                 + "гарантирует первый выпуск: 2 съёмки, событие, маркетинг, монтаж — на любом пути.")]
+        public int guaranteedEventFloor = -1;
         [Tooltip("Событие не идёт сразу за событием, маркетинг — за маркетингом.")]
         public bool noRepeatSpecial = true;
         [Tooltip("Ряд перед монтажом — только съёмки.")]

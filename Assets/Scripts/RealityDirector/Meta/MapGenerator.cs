@@ -12,32 +12,13 @@ namespace RealityDirector.Meta
     {
         public const string MontageId = "montage";
 
-        // Обучение: одна съёмка, одно событие, монтаж. Без развилок и маркетинга.
-        public static MapGraph Tutorial(RoomCatalog catalog, RuleContext ctx)
-        {
-            var config = catalog.Config;
-            var graph = new MapGraph { Layers = 3, Lanes = 1 };
-            var shoot = new MapNode { id = "tut_shoot", layer = 0, row = 0f, type = RoomType.Situation };
-            var happening = new MapNode { id = "tut_event", layer = 1, row = 0f, type = RoomType.Event };
-            var montage = new MapNode { id = MontageId, layer = 2, row = 0f, type = RoomType.Montage };
-            SetRoom(shoot, config.opening != null ? config.opening : First(catalog.Available(RoomType.Situation, ctx)) ?? catalog.Placeholder(RoomType.Situation));
-            SetRoom(happening, First(catalog.Available(RoomType.Event, ctx)) ?? catalog.Placeholder(RoomType.Event));
-            SetRoom(montage, config.montage != null ? config.montage : First(catalog.Available(RoomType.Montage, ctx)) ?? catalog.Placeholder(RoomType.Montage));
-            shoot.next.Add(happening.id);
-            happening.next.Add(montage.id);
-            graph.nodes.Add(shoot);
-            graph.nodes.Add(happening);
-            graph.nodes.Add(montage);
-            return graph;
-        }
-
         public static MapGraph Generate(RoomCatalog catalog, int seed, RuleContext ctx)
         {
             var config = catalog.Config;
             var rng = new System.Random(seed);
-            int floors = Mathf.Max(2, config.floors);
-            int lanes = Mathf.Max(1, config.lanes);
-            int paths = Mathf.Max(1, config.paths);
+            int floors = Mathf.Clamp(config.floors, 2, 20);
+            int lanes = Mathf.Clamp(config.lanes, 1, 7);
+            int paths = Mathf.Clamp(config.paths, 1, 8);
             int last = floors - 2; // последний обычный ряд; floors-1 — монтаж
 
             var used = new bool[floors - 1, lanes];
@@ -182,9 +163,13 @@ namespace RealityDirector.Meta
 
             // Комнаты, которые уже встречались на любом пути до узла, — для uniquePerEpisode.
             var ancestors = new Dictionary<string, HashSet<string>>();
+            // События, уже стоящие где-то на карте: одно событие — один раз за выпуск, пока хватает пула.
+            var placedEvents = new HashSet<string>();
             int last = floors - 2;
             for (int f = 0; f <= last; f++)
             {
+                // Соседи по ряду (в том числе дети одной развилки) — всегда разные комнаты.
+                var floorRooms = new HashSet<string>();
                 for (int l = 0; l < lanes; l++)
                 {
                     var node = byCell[f, l];
@@ -209,6 +194,8 @@ namespace RealityDirector.Meta
                         type = RoomType.Situation;
                     else if (f == config.guaranteedMarketingFloor && pools[RoomType.Marketing].Count > 0)
                         type = RoomType.Marketing;
+                    else if (f == config.guaranteedEventFloor && pools[RoomType.Event].Count > 0)
+                        type = RoomType.Event;
                     else if (f < config.minSpecialFloor || (config.situationBeforeMontage && f == last))
                         type = RoomType.Situation;
                     else
@@ -217,8 +204,11 @@ namespace RealityDirector.Meta
                     node.type = type;
                     var room = f == 0 && config.opening != null
                         ? config.opening
-                        : PickRoom(rng, pools[type], from, seen) ?? catalog.Placeholder(type);
+                        : PickRoom(rng, pools[type], from, seen, floorRooms, type == RoomType.Event ? placedEvents : null) ?? catalog.Placeholder(type);
                     SetRoom(node, room);
+                    floorRooms.Add(node.roomId);
+                    if (type == RoomType.Event)
+                        placedEvents.Add(node.roomId);
                 }
             }
         }
@@ -255,12 +245,17 @@ namespace RealityDirector.Meta
             return RoomType.Marketing;
         }
 
-        // По весу; сначала без повтора на пути (unique) и без повтора родителя, потом правила ослабляются.
-        static RoomDefinition PickRoom(System.Random rng, List<RoomDefinition> pool, List<MapNode> parents, HashSet<string> seen)
+        // По весу. Правила по убыванию строгости, ослабляются только когда пул реально исчерпан:
+        // 1) не как у родителя, не как у соседа по ряду, не встречалась на пути (unique), событие — не стоит на карте;
+        // 2) не как у родителя и не как у соседа по ряду; 3) не как у соседа; 4) не как у родителя; 5) любая.
+        static RoomDefinition PickRoom(System.Random rng, List<RoomDefinition> pool, List<MapNode> parents, HashSet<string> seen,
+            HashSet<string> floor = null, HashSet<string> placed = null)
         {
             if (pool == null || pool.Count == 0)
                 return null;
             var strict = new List<RoomDefinition>();
+            var fresh = new List<RoomDefinition>();
+            var sibling = new List<RoomDefinition>();
             var loose = new List<RoomDefinition>();
             for (int i = 0; i < pool.Count; i++)
             {
@@ -272,14 +267,20 @@ namespace RealityDirector.Meta
                         parentSame |= parents[j].roomId == r.Id;
                 }
 
+                bool floorSame = floor != null && floor.Contains(r.Id);
+                if (!floorSame)
+                    sibling.Add(r);
                 if (parentSame)
                     continue;
                 loose.Add(r);
-                if (!(r.uniquePerEpisode && seen.Contains(r.Id)))
+                if (floorSame)
+                    continue;
+                fresh.Add(r);
+                if (!(r.uniquePerEpisode && seen.Contains(r.Id)) && !(placed != null && placed.Contains(r.Id)))
                     strict.Add(r);
             }
 
-            var from = strict.Count > 0 ? strict : loose.Count > 0 ? loose : pool;
+            var from = strict.Count > 0 ? strict : fresh.Count > 0 ? fresh : sibling.Count > 0 ? sibling : loose.Count > 0 ? loose : pool;
             return WeightedRoom(rng, from);
         }
 

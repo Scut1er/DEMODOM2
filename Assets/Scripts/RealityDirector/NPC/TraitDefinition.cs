@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 
 namespace RealityDirector.NPC
@@ -59,5 +60,12 @@ namespace RealityDirector.NPC
         public bool fightProne;
         [Tooltip("Чаще паникует: реакции «паника» получают бонус к весу.")]
         public bool panicProne;
+
+        [Header("Для игрока (карточка кандидата в касте)")]
+        [Tooltip("Одна фраза: какой это человек в кадре. Пусто — встроенная фраза черты.")]
+        [TextArea(1, 3)] public string shortDescription;
+        [Tooltip("2–3 склонности простыми словами: «чужой флирт → злость», «легко плачет». "
+                 + "Пусто — соберутся сами из чувствительности и правил реакций черты.")]
+        public List<string> gameplayHints = new List<string>();
     }
 }

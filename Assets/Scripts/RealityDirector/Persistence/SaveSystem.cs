@@ -38,6 +38,8 @@ namespace RealityDirector.Persistence
         public string producerName = "";
         public List<string> castPick = new List<string>();
         public List<string> retained = new List<string>();
+        public List<string> castCandidates = new List<string>();
+        public int candidatesEpisode = -1;
         public int sponsorReputation = 25;
         public bool wantsTutorial;
         public int tutorialBeat;
@@ -102,6 +104,8 @@ namespace RealityDirector.Persistence
                 producerName = state.producerName,
                 castPick = new List<string>(state.castPick),
                 retained = new List<string>(state.retained),
+                castCandidates = new List<string>(state.castCandidates),
+                candidatesEpisode = state.candidatesEpisode,
                 sponsorReputation = state.sponsorReputation,
                 wantsTutorial = state.wantsTutorial,
                 tutorialBeat = state.tutorialBeat,
@@ -164,6 +168,9 @@ namespace RealityDirector.Persistence
                 state.castPick.AddRange(data.castPick);
             if (data.retained != null)
                 state.retained.AddRange(data.retained);
+            if (data.castCandidates != null)
+                state.castCandidates.AddRange(data.castCandidates);
+            state.candidatesEpisode = data.candidatesEpisode;
             state.sponsorReputation = data.sponsorReputation;
             state.wantsTutorial = data.wantsTutorial;
             state.tutorialBeat = data.tutorialBeat;

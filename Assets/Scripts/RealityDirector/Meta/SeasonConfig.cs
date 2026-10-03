@@ -34,6 +34,8 @@ namespace RealityDirector.Meta
         public bool randomStarterIncludeTesting;
 
         [Header("Каст")]
+        [Tooltip("Сколько кандидатов предлагает экран каста: случайные из доступных актёров, один раз на выпуск.")]
+        [Min(1)] public int castCandidates = 5;
         [Tooltip("Минимум участников в выпуске.")]
         [Min(1)] public int castMin = 2;
         [Tooltip("Максимум участников в выпуске (места ещё ограничивает уровень Кастинга).")]

@@ -52,10 +52,9 @@ namespace RealityDirector.Meta
             var config = MapConfig(ep.index);
             _catalog = new RoomCatalog(config);
             ep.mapSeed = config.seed != 0 ? config.seed + ep.index : Random.Range(1, int.MaxValue);
-            bool teach = _state.wantsTutorial && _state.tutorialBeat < 6;
-            var graph = teach
-                ? MapGenerator.Tutorial(_catalog, Context)
-                : MapGenerator.Generate(_catalog, ep.mapSeed, Context);
+            // Первый выпуск — тоже настоящая карта с развилками: его форму задаёт карта выпуска 1 в SeasonConfig
+            // (гарантированные ряды события и маркетинга), а конкретные комнаты внутри типа — случайные.
+            var graph = MapGenerator.Generate(_catalog, ep.mapSeed, Context);
             ep.nodes = graph.nodes;
             ep.mapLayers = graph.Layers;
             ep.mapLanes = graph.Lanes;

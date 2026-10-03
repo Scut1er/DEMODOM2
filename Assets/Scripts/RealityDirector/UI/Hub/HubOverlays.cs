@@ -219,7 +219,8 @@ namespace RealityDirector.UI.Hub
             }
 
             Title("КАСТ ВЫПУСКА");
-            var intro = Label(_page.transform, "Кого пустишь в кадр в этом выпуске. Мест: " + max + (min > 0 ? ", минимум " + min : "") + ". Нажми на карточку, чтобы взять или убрать.",
+            var intro = Label(_page.transform, all.Length + " кандидатов — в кадр пойдут " + (min == max ? max.ToString() : min + "–" + max)
+                                               + ". Смотри на черту: так человек реагирует на карты и на других. Нажми на карточку, чтобы взять или убрать.",
                 20, CastMuted);
             UiTypography.Apply(intro, TextRole.Body);
             Pin(intro.rectTransform, 80f, 112f, 1100f, 60f);
@@ -246,10 +247,10 @@ namespace RealityDirector.UI.Hub
             // Карточки.
             int n = all.Length;
             float width = Mathf.Min(330f, (1760f - (n - 1) * 20f) / Mathf.Max(1, n));
-            const float Height = 500f;
-            const float Top = 180f;
-            const float Photo = 270f;
-            var cards = new List<(CastMember member, Image border, Image badge, Text hint, CanvasGroup group)>();
+            const float Height = 640f;
+            const float Top = 176f;
+            const float Photo = 196f;
+            var cards = new List<(CastMember member, Image border, Image badge, Text hint, CanvasGroup group, float x)>();
             for (int i = 0; i < n; i++)
             {
                 var member = all[i];
@@ -323,13 +324,44 @@ namespace RealityDirector.UI.Hub
                     chipX += w + 8f;
                 }
 
-                string secret = reveal ? member.secretKnown : member.secretHidden;
-                if (!string.IsNullOrEmpty(secret))
+                // Что это за человек в кадре и как он ломается — из данных черты (TraitDefinition / ReactionRuleSet).
+                float y = chipY + 38f;
+                if (!string.IsNullOrEmpty(member.traitText))
                 {
-                    var secretText = Label(body.transform, reveal ? "Скрытая черта: " + secret : secret, 16, CastMuted);
+                    var about = Label(body.transform, member.traitText, 17, CastLight);
+                    UiTypography.Apply(about, TextRole.Caption);
+                    about.horizontalOverflow = HorizontalWrapMode.Wrap;
+                    Pin(about.rectTransform, 14f, y, width - 36f, 48f);
+                    y += 52f;
+                }
+
+                if (member.hints != null && member.hints.Length > 0)
+                {
+                    var head = Label(body.transform, "НА СЪЁМКЕ", 13, CastGold);
+                    UiTypography.Apply(head, TextRole.Caption);
+                    head.fontStyle = FontStyle.Bold;
+                    Pin(head.rectTransform, 14f, y, width - 36f, 20f);
+                    y += 22f;
+                    foreach (var line in member.hints)
+                    {
+                        var tip = Label(body.transform, "•  " + line, 16, CastMuted);
+                        UiTypography.Apply(tip, TextRole.Caption);
+                        tip.horizontalOverflow = HorizontalWrapMode.Wrap;
+                        Pin(tip.rectTransform, 14f, y, width - 36f, 42f);
+                        y += tip.preferredHeight > 24f ? 42f : 24f;
+                    }
+                }
+
+                string secret = reveal ? member.secretKnown : member.secretHidden;
+                if (!string.IsNullOrEmpty(secret) || !reveal)
+                {
+                    string line = reveal && !string.IsNullOrEmpty(secret)
+                        ? "Скрытая черта: " + secret
+                        : "Скрытая черта: ???  ·  раскроется на съёмке";
+                    var secretText = Label(body.transform, line, 15, CastMuted);
                     UiTypography.Apply(secretText, TextRole.Caption);
                     secretText.fontStyle = FontStyle.Italic;
-                    Pin(secretText.rectTransform, 14f, chipY + 40f, width - 36f, 24f);
+                    Pin(secretText.rectTransform, 14f, Height - 86f, width - 36f, 24f);
                 }
 
                 var hint = Label(body.transform, "", 16, CastMuted);
@@ -337,7 +369,7 @@ namespace RealityDirector.UI.Hub
                 hint.alignment = TextAnchor.LowerCenter;
                 Pin(hint.rectTransform, 14f, Height - 50f, width - 36f, 28f);
 
-                cards.Add((member, border, badge, hint, group));
+                cards.Add((member, border, badge, hint, group, x));
                 button.onClick.AddListener(() =>
                 {
                     if (picked.Contains(member.id))
@@ -352,7 +384,7 @@ namespace RealityDirector.UI.Hub
 
             // Низ: кнопка «Утвердить» и подсказка.
             confirm = Box(_page.transform, "confirm", CastGold);
-            Pin(confirm.rectTransform, 80f, Top + Height + 40f, 460f, 76f);
+            Pin(confirm.rectTransform, 80f, Top + Height + 34f, 460f, 76f);
             confirmButton = confirm.gameObject.AddComponent<Button>();
             UiKit.Primary(confirmButton);
             confirmText = Label(confirm.transform, "УТВЕРДИТЬ КАСТ", 20, CastInk);
@@ -362,7 +394,7 @@ namespace RealityDirector.UI.Hub
             status = Label(_page.transform, "", 19, CastMuted);
             UiTypography.Apply(status, TextRole.Label);
             status.alignment = TextAnchor.MiddleLeft;
-            Pin(status.rectTransform, 524f, Top + Height + 40f, 900f, 64f);
+            Pin(status.rectTransform, 564f, Top + Height + 40f, 860f, 64f);
             confirmButton.onClick.AddListener(() =>
             {
                 if (picked.Count < min)
@@ -375,7 +407,7 @@ namespace RealityDirector.UI.Hub
             if (back != null)
             {
                 var backBox = Box(_page.transform, "back", CastChip);
-                Pin(backBox.rectTransform, 1440f, Top + Height + 40f, 400f, 76f);
+                Pin(backBox.rectTransform, 1440f, Top + Height + 34f, 400f, 76f);
                 var backButton = backBox.gameObject.AddComponent<Button>();
                 UiKit.Secondary(backButton);
                 var backText = Label(backBox.transform, "←  В ХАБ", 20, CastLight);
@@ -404,7 +436,10 @@ namespace RealityDirector.UI.Hub
                     bool on = picked.Contains(c.member.id);
                     c.border.color = on ? CastGold : CastChip;
                     c.badge.gameObject.SetActive(on);
-                    c.group.alpha = !on && full ? 0.45f : 1f;
+                    // Взятые — приподняты и в золоте; невзятые тускнеют, а когда мест нет — почти гаснут.
+                    Pin(c.border.rectTransform, c.x, on ? Top - 14f : Top, width, Height);
+                    c.border.rectTransform.localScale = on ? new Vector3(1.02f, 1.02f, 1f) : Vector3.one;
+                    c.group.alpha = on ? 1f : full ? 0.35f : picked.Count > 0 ? 0.78f : 1f;
                     c.hint.text = on ? "нажми, чтобы убрать" : full ? "мест нет" : "нажми, чтобы взять";
                     c.hint.color = on ? CastGold : CastMuted;
                 }
